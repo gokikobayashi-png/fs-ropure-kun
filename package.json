@@ -1,0 +1,13 @@
+{
+  "name": "fs-ropure-kun",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ゼンテクトFS商談ロープレ君（Gemini Live API 音声ロープレ）",
+  "dependencies": {
+    "@google/genai": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

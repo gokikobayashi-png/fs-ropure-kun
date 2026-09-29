@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FS商談ロープレ君</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --ink:#1B2430; --ink-2:#55636F; --line:#D6DDD9;
+  --accent:#0F6E56; --accent-soft:#E1EFE8; --bad:#B23A2E; --bad-soft:#F8E6E3;
+  --case:#1F4E79; --case-soft:#E8F0F8; --me:#DDEBE4; --live:#C9372C;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --sans:'Zen Kaku Gothic New','Hiragino Kaku Gothic ProN','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.75;margin:0;padding:0 16px 40px}
+.wrap{max-width:820px;margin:0 auto}
+header{padding:20px 0 10px;display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
+h1{font-size:22px;margin:0;line-height:1.3}
+header .sp{flex:1}
+.steps{display:flex;gap:4px;font-family:var(--mono);font-size:11px;color:var(--ink-2);padding:8px 0 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.steps span{padding:2px 10px;border-radius:999px;border:1px solid var(--line)}
+.steps span.on{color:var(--accent);border-color:var(--accent);font-weight:500}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-top:16px}
+.panel.case{border-left:5px solid var(--case)}
+.pl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--case)}
+h2{font-size:17px;margin:4px 0 10px}
+label.f{display:block;font-size:13px;color:var(--ink-2);margin-top:10px}
+input[type=text],select,textarea{width:100%;font-family:var(--sans);font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin-top:4px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media (max-width:560px){.g2{grid-template-columns:1fr}}
+.btn{font-family:var(--sans);font-size:14px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 16px;cursor:pointer}
+.btn:hover,.btn:focus-visible{border-color:var(--accent);outline:none}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.btn.stop{background:var(--live);color:#fff;border-color:var(--live);font-weight:700}
+.btn:disabled{opacity:.45;cursor:default}
+.hint{font-size:12px;color:var(--ink-2);margin:6px 0 0}
+.status{font-family:var(--mono);font-size:12px;color:var(--ink-2);min-height:18px;margin-top:8px}
+.status.err{color:var(--bad)}
+.brief{background:var(--case-soft);border-left:3px solid var(--case);border-radius:6px;padding:10px 14px;font-size:14px}
+.opening{margin-top:10px;font-size:15px}
+.opening b{color:var(--case)}
+.callbar{display:flex;gap:14px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.dot.live{background:var(--live);box-shadow:0 0 0 0 rgba(201,55,44,.5);animation:pulse 1.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(201,55,44,.5)}100%{box-shadow:0 0 0 12px rgba(201,55,44,0)}}
+.timer{font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+.meter{height:6px;width:120px;background:var(--line);border-radius:3px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .08s}
+.transcript{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow-y:auto;padding:2px}
+.msg{max-width:88%;padding:8px 13px;border-radius:10px;font-size:14px;line-height:1.7;white-space:pre-wrap}
+.msg.them{background:var(--case-soft);border:1px solid var(--line);align-self:flex-start;border-top-left-radius:3px}
+.msg.me{background:var(--me);align-self:flex-end;border-top-right-radius:3px}
+.msg.sys{background:transparent;color:var(--ink-2);font-size:12px;align-self:center}
+.msg .who{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-2);display:block}
+.opts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+@media (max-width:420px){.opts{grid-template-columns:1fr 1fr}}
+.opt{font-family:var(--sans);font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:9px 10px;cursor:pointer;text-align:left}
+.opt .k{font-family:var(--mono);color:var(--ink-2);margin-right:6px;font-size:12px}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:700}
+.opt.correct{background:var(--accent-soft);border-color:var(--accent)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.verdict{margin-top:12px;padding:12px 14px;border-radius:6px;background:var(--accent-soft);font-size:14px;white-space:pre-wrap}
+.verdict.ng{background:var(--bad-soft)}
+.verdict .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--accent);display:block;margin-bottom:4px}
+.verdict.ng .lab{color:var(--bad)}
+details{font-size:13px;color:var(--ink-2);margin-top:10px}
+details summary{cursor:pointer;color:var(--ink)}
+details ul{margin:6px 0 0;padding-left:18px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><div class="eyebrow">ゼンテクト / FS商談 / 音声ロープレ</div><h1>FS商談ロープレ君</h1></div>
+  <span class="sp"></span>
+  <button class="btn" id="logout" type="button" hidden>ログアウト</button>
+</header>
+<div class="steps"><span id="s1" class="on">① ケース設定</span><span id="s2">② 相手を生成</span><span id="s3">③ 音声ロープレ</span><span id="s4">④ 課題はどれか</span></div>
+
+<!-- ログイン -->
+<section class="panel" id="login" hidden>
+  <h2>パスワード</h2>
+  <input type="text" id="pw" placeholder="共有パスワード" autocomplete="off">
+  <div class="row"><button class="btn primary" id="pw-ok" type="button">入る</button></div>
+  <div class="status err" id="pw-status"></div>
+</section>
+
+<!-- ① 設定 -->
+<section class="panel" id="step1">
+  <div class="pl">STEP 1</div>
+  <h2>どんな相手と練習するか</h2>
+  <p class="hint">空欄なら毎回AIが変えます。慣れるまでは「おまかせ」で回すのがおすすめ。</p>
+  <div class="g2">
+    <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介"></label>
+    <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
+    <label class="f">規模<input type="text" id="size" placeholder="例：従業員30名、営業2名"></label>
+    <label class="f">本当の課題（答え）
+      <select id="answer"><option value="">おまかせ（ランダム）</option><option value="A">A 戦略</option><option value="B">B 手法</option><option value="C">C 量</option><option value="D">D 質</option></select></label>
+    <label class="f">難易度
+      <select id="difficulty"><option value="easy">協力的</option><option value="normal" selected>普通</option><option value="hard">手強い</option></select></label>
+  </div>
+  <div class="row"><button class="btn primary" id="gen" type="button">相手を生成する</button></div>
+  <div class="status" id="gen-status"></div>
+  <details><summary>4分類と判定順序（カンニング用）</summary><ul>
+    <li>戦略＝誰に・何を・どうやって が未決 or 未検証／手法＝やりたい手法はあるが実行できない／量＝率は悪くないが行動量不足／質＝行動量はあるが率が悪い</li>
+    <li>戦略は決まっているか→手法は実行できているか→量は足りているか→質は伴っているか。上から降りて止まったところが課題。</li>
+    <li>アポは取れるが受注しない：受注先に共通点があれば質、なければ戦略。</li></ul></details>
+</section>
+
+<!-- ② ペルソナ -->
+<section class="panel case" id="step2" hidden>
+  <div class="pl">STEP 2 ／ 相手企業</div>
+  <h2 id="p-company"></h2>
+  <div class="brief" id="p-brief"></div>
+  <p class="opening"><b id="p-name"></b>「<span id="p-opening"></span>」</p>
+  <p class="hint">事前に分かるのはここまで。あとは声で聞く。相手の営業を「誰に・何を・どう売って・月に何件商談し・何%決まるか」まで自分の言葉で説明できるまで広げる。</p>
+  <div class="row">
+    <button class="btn primary" id="call" type="button">🎙 商談を始める</button>
+    <button class="btn" id="regen" type="button">別の相手にする</button>
+  </div>
+  <div class="status" id="call-status"></div>
+</section>
+
+<!-- ③ 通話 -->
+<section class="panel" id="step3" hidden>
+  <div class="pl" style="color:var(--accent)">STEP 3 ／ 音声ロープレ</div>
+  <div class="callbar">
+    <span class="dot" id="dot"></span><span class="timer" id="timer">00:00</span>
+    <span class="meter"><i id="meter"></i></span>
+    <span class="sp" style="flex:1"></span>
+    <button class="btn stop" id="hangup" type="button" disabled>商談を終える</button>
+  </div>
+  <div class="transcript" id="transcript"></div>
+  <p class="hint">相手が話し終えてから話す。かぶせると相手は止まる（本物と同じ）。文字起こしは参考程度。</p>
+</section>
+
+<!-- ④ 判定 -->
+<section class="panel" id="step4" hidden>
+  <div class="pl">STEP 4</div>
+  <h2>課題はどれか。</h2>
+  <div class="opts" id="opts">
+    <button class="opt" data-k="A" type="button" aria-pressed="false"><span class="k">A</span>戦略</button>
+    <button class="opt" data-k="B" type="button" aria-pressed="false"><span class="k">B</span>手法</button>
+    <button class="opt" data-k="C" type="button" aria-pressed="false"><span class="k">C</span>量</button>
+    <button class="opt" data-k="D" type="button" aria-pressed="false"><span class="k">D</span>質</button>
+  </div>
+  <label class="f">相手の課題を自分の言葉で言い直す（商談で実際に言った文でいい）
+    <textarea id="rephrase" rows="3" placeholder="例：4.4万の買い切りを1社4台で積んでいる限り、月100万の代行費を回収できる構造にならないですよね"></textarea></label>
+  <div class="row">
+    <button class="btn primary" id="grade" type="button">判定してもらう</button>
+    <button class="btn" id="again" type="button" hidden>もう1社やる</button>
+  </div>
+  <div class="status" id="grade-status"></div>
+  <div class="verdict" id="verdict" hidden></div>
+  <div class="verdict" id="feedback" hidden style="background:var(--surface);border:1px solid var(--line)"></div>
+</section>
+</div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
