@@ -32,7 +32,7 @@ function status(id, text, err) { const e = $(id); e.textContent = text || ""; e.
 async function generate() {
   $("gen").disabled = true; $("regen").disabled = true; status("gen-status", "相手を用意しています（10〜20秒）…");
   try {
-    persona = await api("persona", { industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), answer: $("answer").value, difficulty: $("difficulty").value });
+    persona = await api("persona", { industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), difficulty: $("difficulty").value });
     $("p-company").textContent = persona.company;
     $("p-brief").textContent = persona.brief;
     $("p-name").textContent = persona.name;
