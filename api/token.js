@@ -1,6 +1,6 @@
 // POST /api/token  { persona }  → 短命トークン＋ブラウザが Live API に渡す設定
 // APIキーはサーバの中だけ。ブラウザには30分だけ有効な使い捨てトークンを渡す。
-import { client, auth, readJson, personaSystemInstruction, LIVE_MODEL } from "./_lib.js";
+import { client, auth, readJson, personaSystemInstruction, LIVE_MODEL, loadKnowledge, knowledgeText } from "./_lib.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -9,13 +9,15 @@ export default async function handler(req, res) {
     const { persona } = await readJson(req);
     if (!persona || !persona.company) return res.status(400).json({ error: "persona が必要です" });
 
+    let knowledge = "";
+    try { knowledge = knowledgeText(await loadKnowledge(), 6000); } catch (e) { console.error(e); }
     const liveConfig = {
       responseModalities: ["AUDIO"],
       speechConfig: {
         languageCode: "ja-JP",
         voiceConfig: { prebuiltVoiceConfig: { voiceName: persona.voice || "Charon" } },
       },
-      systemInstruction: personaSystemInstruction(persona),
+      systemInstruction: personaSystemInstruction(persona, knowledge),
       inputAudioTranscription: {},
       outputAudioTranscription: {},
     };

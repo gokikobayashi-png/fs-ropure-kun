@@ -16,9 +16,37 @@ async function api(path, body) {
   return j;
 }
 function showLogin() { $("login").hidden = false; $("step1").hidden = true; }
-$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("logout").hidden = false; });
+$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("logout").hidden = false; loadKnow(); });
 $("logout").addEventListener("click", () => { try { sessionStorage.removeItem("pw"); } catch (_) {} location.reload(); });
 if (pw()) $("logout").hidden = false;
+
+
+/* ---------- 知見（Notion） ---------- */
+async function loadKnow() {
+  try {
+    const r = await fetch("/api/knowledge", { headers: { "x-app-password": pw() } });
+    const j = await r.json();
+    if (r.status === 401) { $("know-status").textContent = "ログイン後に表示"; showLogin(); return; }
+    if (!j.enabled) { $("know-status").textContent = "未接続（Notion連携を設定すると使えます）"; $("know-add").disabled = true; return; }
+    $("know-status").textContent = j.count + " 件の知見をロープレに反映中";
+    $("know-add").disabled = false;
+    const ul = $("know-list"); ul.textContent = "";
+    (j.items || []).slice().reverse().forEach(it => { const li = document.createElement("li"); li.textContent = (it.type.startsWith("heading") ? "■ " : "") + it.text; ul.appendChild(li); });
+    $("know-list-wrap").hidden = !(j.items && j.items.length);
+  } catch (e) { $("know-status").textContent = "読み込み失敗：" + e.message; }
+}
+$("know-add").addEventListener("click", async () => {
+  const text = $("know-text").value.trim(); if (text.length < 50) { status("know-result", "本文が短すぎます（50字以上）", true); return; }
+  $("know-add").disabled = true; status("know-result", "AIが知見に変換しています（10〜30秒）…");
+  try {
+    const j = await api("knowledge", { text, title: $("know-title").value.trim() });
+    status("know-result", "追記しました：" + (j.summary || "") + "（" + j.lines.length + "行）");
+    $("know-text").value = ""; $("know-title").value = "";
+    loadKnow();
+  } catch (e) { status("know-result", e.message, true); }
+  finally { $("know-add").disabled = false; }
+});
+loadKnow();
 
 /* ---------- 画面遷移 ---------- */
 function step(n) {
@@ -169,7 +197,7 @@ $("grade").addEventListener("click", async () => {
     const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = (r.correct ? "正解" : "不正解") + " ／ 答え：" + r.answer + " " + r.answerLabel; v.appendChild(lab);
     v.appendChild(document.createTextNode(r.exp + "\n\n言い直しの模範例：" + r.rephrase_example));
     const f = $("feedback"); f.hidden = false; f.textContent = ""; const l2 = document.createElement("span"); l2.className = "lab"; l2.textContent = "COACH"; f.appendChild(l2); f.appendChild(document.createTextNode(r.feedback));
-    status("grade-status", ""); $("again").hidden = false;
+    status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
 $("again").addEventListener("click", () => { step(1); $("call").disabled = false; $("regen").disabled = false; window.scrollTo(0, 0); });

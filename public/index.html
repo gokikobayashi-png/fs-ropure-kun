@@ -71,6 +71,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 details{font-size:13px;color:var(--ink-2);margin-top:10px}
 details summary{cursor:pointer;color:var(--ink)}
 details ul{margin:6px 0 0;padding-left:18px}
+details.cheat h4{font-size:13px;margin:12px 0 4px;color:var(--ink)}
+details.cheat ul{margin:0;padding-left:18px}
+details.cheat li{margin:2px 0}
+.tbl{overflow-x:auto;margin:6px 0}
+.tbl table{border-collapse:collapse;font-size:12px;min-width:640px}
+.tbl th,.tbl td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
+.tbl th{background:var(--bg);color:var(--ink-2);font-weight:500}
+#know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -105,10 +113,76 @@ details ul{margin:6px 0 0;padding-left:18px}
   </div>
   <div class="row"><button class="btn primary" id="gen" type="button">相手を生成する</button></div>
   <div class="status" id="gen-status"></div>
-  <details><summary>4分類と判定順序（カンニング用）</summary><ul>
-    <li>戦略＝誰に・何を・どうやって が未決 or 未検証／手法＝やりたい手法はあるが実行できない／量＝率は悪くないが行動量不足／質＝行動量はあるが率が悪い</li>
-    <li>戦略は決まっているか→手法は実行できているか→量は足りているか→質は伴っているか。上から降りて止まったところが課題。</li>
-    <li>アポは取れるが受注しない：受注先に共通点があれば質、なければ戦略。</li></ul></details>
+  <details class="cheat"><summary>カンニング用：FS商談の考え方（教材の要約）</summary>
+    <h4>0. 終着点</h4>
+    <ul>
+      <li>ゴール＝相手の課題を整理して「こういうやり方ならできますよね」を1つ出し、相手が合意する。商談は売る場ではなく相手の営業を診断する場。</li>
+      <li>自分の現在地を測る3問：①全体像（誰に・何を・どう売って・数字は）を掴めたか ②課題を4分類に落とし、相手より一段深い言葉で言い直せたか ③「こういうやり方なら」に頷いたか</li>
+    </ul>
+    <h4>1. 広げる → 深掘る → 狭める</h4>
+    <ul>
+      <li><b>広げる</b>＝事業と営業の全体像を掴む（課題を探しに行かない。全体像が見えれば課題は浮く）</li>
+      <li><b>深掘る</b>＝広げる側の最後。浮いた課題を4分類に落とすための「なぜ」</li>
+      <li><b>狭める</b>＝「こういうやり方ならできますよね」に収束させて合意を取る</li>
+      <li>課題は「聞き出す」のではなく「言い直す」。例：「営業組織が弱い」→「4.4万の買い切りを1社4台で積んでいる限り、月100万の代行費を回収できる構造にならない」→「その通りです」</li>
+    </ul>
+    <h4>2. 思考の順番（ゼンテクトは最後）</h4>
+    <ul><li>①事業とお金の流れ（誰に売って、どこで利益が出るか。単価・課金形態）→②営業の構造（体制・商談ソース・販路・月の商談数・受注率）→③課題はどこか（4分類・仮説でよい）→④うちなら何ができるか</li></ul>
+    <h4>3. 押さえる5項目</h4>
+    <ul>
+      <li>①相手は誰でどんなミッションか（役割・経歴・決裁権・なぜ今来たか）②事業・ターゲット・手法・営業戦略（体制・商談ソース・販路・数字）③課題は戦略／手法／量／質のどれか ④解決するやり方（うちが実行する前提）⑤採算に無理はないか</li>
+      <li>①②が広げる、③が深掘る、④⑤が狭める。「4分類の判定」と「採算の検算」が済んだらヒアリングは終わっていい</li>
+    </ul>
+    <h4>4. 課題の4分類（上から順に降りる一本道）</h4>
+    <div class="tbl"><table>
+      <tr><th></th><th>定義</th><th>サイン</th><th>うちが売るもの</th></tr>
+      <tr><td><b>戦略</b></td><td>誰の・どんな課題に・どうやって のどれかが未決 or 未検証。「新しいターゲットに行きたいがやり方が分からない」も</td><td>ターゲットを聞くと業種が複数並ぶ／なぜ刺さるか説明できない／受注に共通点がない</td><td>セグメントを切って短いスパンで検証を回す仕組み（一気通貫130万）</td></tr>
+      <tr><td><b>手法</b></td><td>戦略はあり、やりたいアプローチも見えているが実行できていない（人・スキル・怖くて引く）</td><td>「やりたいが手が回らない」／門前払いで引く／営業がエンジニア出身</td><td>実行部隊 IS／FS（IS90万〜一気通貫130万）</td></tr>
+      <tr><td><b>量</b></td><td>手法は動いているが、手法1つに対する行動量が足りない</td><td>コール数・商談数が目標に対し明らかに少ない。率は悪くない</td><td>稼働の上乗せ（ISのみ90万 or 1セグメント1ヶ月）。値段勝負になりやすい</td></tr>
+      <tr><td><b>質</b></td><td>手法は動いて量もあるが率が悪い</td><td>アポ率・受注率が基準未満／断られる理由が分からない／リスト・トークが放置</td><td>全活動をデータ化し、断り理由と受注要因を分析してリスト・トークに戻す（IS90万＋分析）</td></tr>
+    </table></div>
+    <ul>
+      <li>判定順：戦略は決まっているか→手法は実行できているか→量は足りているか→質は伴っているか。相手が「量が足りない」と言っても、戦略が未決なら量を増やしても失敗する</li>
+      <li>境目：アポは取れるが受注しない→受注先に共通点があれば質、なければ戦略／量が足りないと言うが率も悪い→質か戦略／手法が1つで頭打ち→手法の追加＝戦略の見直し／数字を持っていない→「把握していないこと」自体が課題。見える化から始める検証を売る</li>
+    </ul>
+    <h4>5. 採算の検算（口に出さず頭の中で）</h4>
+    <ul>
+      <li>投資額＝期間(月)×月費用＋準備費　／　回収額＝期間内の受注数×1受注の売上（受注数＝稼働量×アポ率×受注率）</li>
+      <li>回収額≧投資額→成立→フル提案。＜→不成立→絞る or 座組みを変える</li>
+      <li>変数：期間3〜6ヶ月／月費用 IS90万・一気通貫130万・準備費20万／基準ファネル 100コール→1アポ、20商談→1受注（5%）／1受注の売上＝単価×導入数 or ARR（月額×12×アカウント）。「1社あたり何台」「月額いくら×何アカウント」を必ず聞く</li>
+      <li>聞く4つ：単価・課金形態／月の受注数／1受注あたりの導入数／受注率</li>
+      <li>不成立の3手：投資を落とす（ISのみ・1セグメント・1ヶ月。単価は下げない）／1受注を大きくする（レイヤーを上げる、まとめ買い・全社導入）／座組みを変える（成果報酬・アライアンス・紹介経由）。どれも無理なら受けない</li>
+      <li>実例・不成立：4.4万買い切り×1社4台＝1受注17.6万。半年540万→必要31件→月100商談超→無理。だから「1セグメント1ヶ月」＋「ゼネコンDX部に直で行く（年度末予算）」</li>
+      <li>実例・成立：POC 250万、目標半年10〜20件。780万÷250万＝4件で回収→フル提案。KPIの目線合わせと体制の話に時間を使う</li>
+    </ul>
+    <h4>6. よくある誤解</h4>
+    <ul>
+      <li>「なんで？なんで？」で狭める→なぜは4分類に落とす深掘り。狭めるのは「こういうやり方なら」への収束</li>
+      <li>ゼンテクトで解ける課題から考える→事業とお金→営業の構造→分類→うちに何ができるか、の順</li>
+      <li>深ぼる要素が見つからない→一本道を上から降りて止まった所が深ぼる要素</li>
+    </ul>
+    <h4>7. ゼンテクトの料金（社長役はこれを知っている）</h4>
+    <ul>
+      <li>固定：ISプラン 月90万／一気通貫 月130万（各130h/人月、PM費10%別、準備費20万、最低6ヶ月）</li>
+      <li>成果報酬：準備費20万＋アポ1件 役員以上7万／部長5万／担当者3万</li>
+    </ul>
+  </details>
+</section>
+
+
+<!-- 知見（Notion） -->
+<section class="panel" id="know">
+  <div class="pl" style="color:var(--accent)">知見 ／ <span id="know-status">読み込み中…</span></div>
+  <h2>実商談の議事録で、ロープレを賢くする</h2>
+  <p class="hint">議事録やメモを貼ると、AIが「社長役の反応・反論・数字感」として使える形に要約してNotionの「ロープレ知見」に追記します。次に相手を生成するときから反映。ロープレの判定時にも、その回の気づきが自動で追記されます。</p>
+  <label class="f">タイトル（任意）<input type="text" id="know-title" placeholder="例：〇〇社 初回商談 9/29"></label>
+  <label class="f">議事録・メモ<textarea id="know-text" rows="6" placeholder="議事録の本文を貼る（社名・個人名はAIが業種＋規模に置き換えます）"></textarea></label>
+  <div class="row">
+    <button class="btn primary" id="know-add" type="button">知見として追記する</button>
+    <a class="btn" id="know-open" href="#" target="_blank" rel="noopener" hidden>Notionで開く</a>
+  </div>
+  <div class="status" id="know-result"></div>
+  <details id="know-list-wrap" hidden><summary>最近の知見を見る</summary><ul id="know-list"></ul></details>
 </section>
 
 <!-- ② ペルソナ -->

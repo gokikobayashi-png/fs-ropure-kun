@@ -34,9 +34,18 @@ public/pcm-capture.js  AudioWorklet（ダウンサンプル）
    - `APP_PASSWORD` … 任意。設定すると最初にパスワード画面が出る（社内共有用）
    - `GEMINI_LIVE_MODEL` … 任意。既定 `gemini-3.8-live`
    - `GEMINI_TEXT_MODEL` … 任意。既定 `gemini-3.6-flash`
+   - `NOTION_TOKEN` … 任意。Notionの内部インテグレーションのトークン（知見の読み書き用）
+   - `NOTION_KNOWLEDGE_PAGE_ID` … 任意。「ロープレ知見」ページのID（URL末尾の32桁）。ページをインテグレーションに共有しておく
 4. Deploy → 発行されたURLを開く → マイク許可
 
 ローカルで試すなら `npm i -g vercel` → `vercel dev`（`.env` に上の変数を書く）。
+
+## 知見（Notion）で賢くする
+
+- Notionに「ロープレ知見」ページを作り、インテグレーションに共有し、上の2つの環境変数を入れる
+- アプリの「知見」欄に商談の議事録を貼ると、AIが「社長役の反応・反論・数字感」に要約してページに追記する
+- ロープレを判定するたびに、その回の気づきも自動で追記される
+- 相手を生成するときにページを読み込むので、Notionを直接編集しても反映される（60秒キャッシュ）
 
 ## 使うときのコツ
 
