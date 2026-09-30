@@ -60,10 +60,10 @@ function status(id, text, err) { const e = $(id); e.textContent = text || ""; e.
 async function generate() {
   $("gen").disabled = true; lockStart(true); status("gen-status", "相手を用意しています（10〜20秒）…");
   try {
-    persona = await api("persona", { industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), difficulty: $("difficulty").value });
+    persona = await api("persona", { industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value });
     $("p-company").textContent = persona.company;
     $("p-brief").textContent = persona.brief;
-    $("p-name").textContent = persona.name;
+    $("p-name").textContent = persona.name + "（役職は商談で確認）";
     $("p-opening").textContent = persona.opening_line;
     status("gen-status", ""); status("call-status", "");
     step(2);
@@ -168,7 +168,7 @@ async function startCall() {
     step(3); $("dot").classList.add("live"); $("hangup").disabled = false; status("call-status", "");
     startTimer();
 
-    // 会話は受講者から始める（社長は黙って待つ）
+    // 会話は受講者から始める（相手は黙って待つ）
     session.sendClientContent({ turns: [{ role: "user", parts: [{ text: "（商談が始まった。営業担当が着席した。営業担当が先に話すので、あなたは黙って待つ）" }] }], turnComplete: false });
     addMsg("sys", "あなたから話しかけてください（例：本日はお時間ありがとうございます。今回どのあたりにご興味を持っていただけたんでしょうか）");
   } catch (e) {
@@ -252,6 +252,7 @@ function logText(r) {
   const lines = transcript.map((t, i) => String(i + 1).padStart(2, "0") + " " + (t.who === "me" ? "営業（自分）" : persona.name) + "：" + t.text);
   return ["【FS商談ロープレ記録】" + persona.company + " " + persona.name + "（" + (mode === "chat" ? "チャット" : "音声") + "）",
     "会社概要：" + persona.brief,
+    "相手の役職：" + persona.role + "（決裁権：" + (persona.authority || "") + "）",
     "判定：" + picked + " " + CAT[picked] + "（" + (r.correct ? "正解" : "不正解") + "）／正解：" + r.answer + " " + r.answerLabel,
     "自分の言い直し：" + ($("rephrase").value.trim() || "（なし）"),
     "", "■ 会話ログ", ...lines, "", "■ コーチ（AI）の振り返り", r.feedback,
@@ -284,6 +285,7 @@ $("grade").addEventListener("click", async () => {
     document.querySelectorAll("#opts .opt").forEach(b => { b.disabled = true; if (b.dataset.k === r.answer) b.classList.add("correct"); else if (b.dataset.k === picked) b.classList.add("wrong"); });
     const v = $("verdict"); v.hidden = false; v.className = "verdict" + (r.correct ? "" : " ng"); v.textContent = "";
     const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = (r.correct ? "正解" : "不正解") + " ／ 答え：" + r.answer + " " + r.answerLabel; v.appendChild(lab);
+    v.appendChild(document.createTextNode("相手：" + persona.name + "（" + persona.role + "）決裁権：" + (persona.authority || "") + "\n\n"));
     v.appendChild(document.createTextNode(r.exp + "\n\n言い直しの模範例：" + r.rephrase_example));
     const f = $("feedback"); f.hidden = false; f.textContent = ""; const l2 = document.createElement("span"); l2.className = "lab"; l2.textContent = "COACH"; f.appendChild(l2); f.appendChild(document.createTextNode(r.feedback));
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();

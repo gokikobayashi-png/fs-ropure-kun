@@ -113,6 +113,8 @@ details.cheat li{margin:2px 0}
     <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介"></label>
     <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
     <label class="f">規模<input type="text" id="size" placeholder="例：従業員30名、営業2名"></label>
+    <label class="f">相手のレイヤー
+      <select id="layer"><option value="" selected>ランダム（役職は伏せて出る）</option><option value="ceo">社長</option><option value="director">取締役 営業本部長</option><option value="sales_mgr">営業部長</option><option value="section">営業課長</option><option value="marketing">マーケティング責任者</option><option value="bizdev">新規事業の事業部長</option><option value="planning">経営企画の担当</option><option value="is_lead">インサイドセールスのリーダー</option></select></label>
     <label class="f">難易度
       <select id="difficulty"><option value="easy">協力的</option><option value="normal" selected>普通</option><option value="hard">手強い</option></select></label>
   </div>
@@ -166,7 +168,7 @@ details.cheat li{margin:2px 0}
       <li>ゼンテクトで解ける課題から考える→事業とお金→営業の構造→分類→うちに何ができるか、の順</li>
       <li>深ぼる要素が見つからない→一本道を上から降りて止まった所が深ぼる要素</li>
     </ul>
-    <h4>7. ゼンテクトの料金（社長役はこれを知っている）</h4>
+    <h4>7. ゼンテクトの料金（相手役はこれを知っている）</h4>
     <ul>
       <li>固定：ISプラン 月90万／一気通貫 月130万（各130h/人月、PM費10%別、準備費20万、最低6ヶ月）</li>
       <li>成果報酬：準備費20万＋アポ1件 役員以上7万／部長5万／担当者3万</li>
@@ -179,7 +181,7 @@ details.cheat li{margin:2px 0}
 <section class="panel" id="know">
   <div class="pl" style="color:var(--accent)">知見 ／ <span id="know-status">読み込み中…</span></div>
   <h2>実商談の議事録で、ロープレを賢くする</h2>
-  <p class="hint">議事録やメモを貼ると、AIが「社長役の反応・反論・数字感」として使える形に要約してNotionの「ロープレ知見」に追記します。次に相手を生成するときから反映。ロープレの判定時にも、その回の気づきが自動で追記されます。</p>
+  <p class="hint">議事録やメモを貼ると、AIが「相手役の反応・反論・数字感」として使える形に要約してNotionの「ロープレ知見」に追記します。次に相手を生成するときから反映。ロープレの判定時にも、その回の気づきが自動で追記されます。</p>
   <label class="f">タイトル（任意）<input type="text" id="know-title" placeholder="例：〇〇社 初回商談 9/29"></label>
   <label class="f">議事録・メモ<textarea id="know-text" rows="6" placeholder="議事録の本文を貼る（社名・個人名はAIが業種＋規模に置き換えます）"></textarea></label>
   <div class="row">
@@ -216,7 +218,7 @@ details.cheat li{margin:2px 0}
   </div>
   <div class="transcript" id="transcript"></div>
   <div class="chatbox" id="chatbox" hidden>
-    <textarea id="chat-input" rows="2" placeholder="社長への質問や言い直しを入力（Enterで送信／Shift+Enterで改行）"></textarea>
+    <textarea id="chat-input" rows="2" placeholder="相手への質問や言い直しを入力（Enterで送信／Shift+Enterで改行）"></textarea>
     <button class="btn primary" id="chat-send" type="button">送る</button>
   </div>
   <div class="status" id="chat-status"></div>

@@ -1,5 +1,5 @@
 // POST /api/chat  { persona, history:[{who:"me"|"them", text}], message? }
-// → { reply }  テキストチャット版ロープレ。社長役の次の発言を1回分返す。
+// → { reply }  テキストチャット版ロープレ。相手役の次の発言を1回分返す。
 // 会話は営業担当（受講者）から始める。
 import { client, auth, readJson, personaSystemInstruction, generate, loadKnowledge, knowledgeText } from "./_lib.js";
 
