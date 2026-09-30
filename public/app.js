@@ -238,6 +238,39 @@ $("chat-input").addEventListener("keydown", e => {
 });
 $("hangup").addEventListener("click", () => endCall("商談終了 " + $("timer").textContent));
 
+/* ---------- ④ 記録（田村さんへの共有） ---------- */
+function copyBtn(id, text, done) {
+  const b = $(id); const label = b.dataset.label || (b.dataset.label = b.textContent);
+  b.textContent = label;
+  b.onclick = () => {
+    const ok = () => { b.textContent = done; setTimeout(() => { b.textContent = label; }, 2000); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok, () => fallbackCopy(text, ok)); else fallbackCopy(text, ok);
+  };
+}
+function fallbackCopy(text, ok) { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); ok(); } catch (_) {} t.remove(); }
+function logText(r) {
+  const lines = transcript.map((t, i) => String(i + 1).padStart(2, "0") + " " + (t.who === "me" ? "営業（自分）" : persona.name) + "：" + t.text);
+  return ["【FS商談ロープレ記録】" + persona.company + " " + persona.name + "（" + (mode === "chat" ? "チャット" : "音声") + "）",
+    "会社概要：" + persona.brief,
+    "判定：" + picked + " " + CAT[picked] + "（" + (r.correct ? "正解" : "不正解") + "）／正解：" + r.answer + " " + r.answerLabel,
+    "自分の言い直し：" + ($("rephrase").value.trim() || "（なし）"),
+    "", "■ 会話ログ", ...lines, "", "■ コーチ（AI）の振り返り", r.feedback,
+    "", "田村さん、ズレていたと思う行番号とアドバイスをお願いします。"].join("\n");
+}
+function showRecord(r) {
+  $("record").hidden = false;
+  $("record-link").hidden = $("record-copy").hidden = !r.recordUrl;
+  if (r.recordUrl) {
+    $("record-msg").textContent = "この回の会話をNotionに記録しました。リンクを田村さんに送ると、会話の行ごとにコメントでアドバイスをもらえます。";
+    $("record-link").href = r.recordUrl; copyBtn("record-copy", r.recordUrl, "コピーしました");
+  } else if (r.recordError) {
+    $("record-msg").textContent = "Notionへの記録に失敗しました（" + r.recordError + "）。代わりに会話ログをコピーして、Slackで田村さんに送ってください。";
+  } else {
+    $("record-msg").textContent = "Notion連携が未設定のため自動記録はできません。会話ログをコピーして、Slackで田村さんに送ってください（行番号付きなので「◯番がズレている」と返してもらえます）。";
+  }
+  copyBtn("log-copy", logText(r), "コピーしました");
+}
+
 /* ---------- ④ 判定 ---------- */
 document.querySelectorAll("#opts .opt").forEach(b => b.addEventListener("click", () => {
   if (b.disabled) return;
@@ -254,9 +287,7 @@ $("grade").addEventListener("click", async () => {
     v.appendChild(document.createTextNode(r.exp + "\n\n言い直しの模範例：" + r.rephrase_example));
     const f = $("feedback"); f.hidden = false; f.textContent = ""; const l2 = document.createElement("span"); l2.className = "lab"; l2.textContent = "COACH"; f.appendChild(l2); f.appendChild(document.createTextNode(r.feedback));
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();
-    const rec = $("record");
-    if (r.recordUrl) { rec.hidden = false; $("record-link").href = r.recordUrl; $("record-copy").onclick = () => { navigator.clipboard.writeText(r.recordUrl).then(() => { $("record-copy").textContent = "コピーしました"; }); }; }
-    else { rec.hidden = true; if (r.recordError) status("grade-status", "記録の保存に失敗：" + r.recordError, true); }
+    showRecord(r);
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
-$("again").addEventListener("click", () => { $("record").hidden = true; $("record-copy").textContent = "リンクをコピー"; step(1); lockStart(false); window.scrollTo(0, 0); });
+$("again").addEventListener("click", () => { $("record").hidden = true; step(1); lockStart(false); window.scrollTo(0, 0); });

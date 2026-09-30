@@ -41,7 +41,7 @@ JSONだけを返す：
     }
     let recordUrl = null, recordError = "";
     try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode }); } catch (e) { console.error(e); recordError = String(e.message || e); }
-    res.status(200).json({ recordUrl, recordError, correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, learnings, saved });
+    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, learnings, saved });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }
