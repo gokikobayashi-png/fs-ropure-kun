@@ -4,10 +4,10 @@ const $ = id => document.getElementById(id);
 const CAT = { A: "戦略", B: "手法", C: "量", D: "質" };
 let persona = null, session = null, transcript = [], picked = null;
 let micCtx = null, micStream = null, micNode = null, playCtx = null, nextPlay = 0, sources = [];
-let timerId = null, startedAt = 0, curIn = "", curOut = "", inEl = null, outEl = null;
+let timerId = null, startedAt = 0, curIn = "", curOut = "", inEl = null, outEl = null, mode = "voice", chatBusy = false;
 
 /* ---------- 認証（共有パスワード） ---------- */
-function pw() { try { return sessionStorage.getItem("pw") || ""; } catch (_) { return ""; } }
+function pw() { try { return (sessionStorage.getItem("pw") || "").normalize("NFKC").replace(/[^\x20-\x7E]/g, ""); } catch (_) { return ""; } }
 async function api(path, body) {
   const r = await fetch("/api/" + path, { method: "POST", headers: { "content-type": "application/json", "x-app-password": pw() }, body: JSON.stringify(body || {}) });
   const j = await r.json().catch(() => ({}));
@@ -16,7 +16,7 @@ async function api(path, body) {
   return j;
 }
 function showLogin() { $("login").hidden = false; $("step1").hidden = true; }
-$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("logout").hidden = false; loadKnow(); });
+$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("logout").hidden = false; loadKnow(); });
 $("logout").addEventListener("click", () => { try { sessionStorage.removeItem("pw"); } catch (_) {} location.reload(); });
 if (pw()) $("logout").hidden = false;
 
@@ -58,7 +58,7 @@ function status(id, text, err) { const e = $(id); e.textContent = text || ""; e.
 
 /* ---------- ① → ② ペルソナ生成 ---------- */
 async function generate() {
-  $("gen").disabled = true; $("regen").disabled = true; status("gen-status", "相手を用意しています（10〜20秒）…");
+  $("gen").disabled = true; lockStart(true); status("gen-status", "相手を用意しています（10〜20秒）…");
   try {
     persona = await api("persona", { industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), difficulty: $("difficulty").value });
     $("p-company").textContent = persona.company;
@@ -68,7 +68,7 @@ async function generate() {
     status("gen-status", ""); status("call-status", "");
     step(2);
   } catch (e) { status("gen-status", e.message, true); }
-  finally { $("gen").disabled = false; $("regen").disabled = false; }
+  finally { $("gen").disabled = false; lockStart(false); }
 }
 $("gen").addEventListener("click", generate);
 $("regen").addEventListener("click", generate);
@@ -115,8 +115,22 @@ function onMessage(m) {
   if (sc.turnComplete) flushOut();
 }
 
+function setMode(m) {
+  mode = m;
+  const chat = m === "chat";
+  $("mode-label").textContent = chat ? "チャットロープレ" : "音声ロープレ";
+  $("chatbox").hidden = !chat; $("chat-hint").hidden = !chat; $("voice-hint").hidden = chat;
+  $("meter").parentElement.hidden = chat;
+  status("chat-status", "");
+}
+function startTimer() {
+  startedAt = Date.now(); $("timer").textContent = "00:00";
+  timerId = setInterval(() => { const s = Math.floor((Date.now() - startedAt) / 1000); $("timer").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }, 500);
+}
+function lockStart(on) { $("call").disabled = on; $("chat-start").disabled = on; $("regen").disabled = on; }
+
 async function startCall() {
-  $("call").disabled = true; $("regen").disabled = true; status("call-status", "マイクの許可 → 接続中…");
+  lockStart(true); setMode("voice"); status("call-status", "マイクの許可 → 接続中…");
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     const { token, model, config } = await api("token", { persona });
@@ -152,13 +166,13 @@ async function startCall() {
     transcript = []; $("transcript").textContent = ""; curIn = curOut = ""; inEl = outEl = null;
     addMsg("sys", persona.company + " " + persona.name + "との商談。ゴール：課題を言い直して合意を取る");
     step(3); $("dot").classList.add("live"); $("hangup").disabled = false; status("call-status", "");
-    startedAt = Date.now(); timerId = setInterval(() => { const s = Math.floor((Date.now() - startedAt) / 1000); $("timer").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }, 500);
+    startTimer();
 
     // 相手から話し始めさせる
     session.sendClientContent({ turns: [{ role: "user", parts: [{ text: "（商談が始まった。営業担当が着席した。あなたから「本日はよろしくお願いします」と軽く挨拶し、続けて自分の課題認識をひとことで話して、相手の出方を待つ）" }] }], turnComplete: true });
   } catch (e) {
     status("call-status", "開始できませんでした：" + (e.message || e), true); cleanupAudio();
-    $("call").disabled = false; $("regen").disabled = false;
+    lockStart(false);
   }
 }
 function cleanupAudio() {
@@ -174,12 +188,52 @@ function endCall(note) {
   try { session && session.close(); } catch (_) {} session = null;
   cleanupAudio();
   $("dot").classList.remove("live"); $("hangup").disabled = true;
+  $("chat-input").disabled = true; $("chat-send").disabled = true;
   if (note) addMsg("sys", note);
   picked = null; document.querySelectorAll("#opts .opt").forEach(b => { b.setAttribute("aria-pressed", "false"); b.classList.remove("correct", "wrong"); b.disabled = false; });
   $("rephrase").value = ""; $("verdict").hidden = true; $("feedback").hidden = true; $("again").hidden = true; $("grade").disabled = false; status("grade-status", "");
   $("step3").hidden = false; step(4); $("step3").hidden = false;
 }
 $("call").addEventListener("click", startCall);
+
+/* ---------- ③ チャットロープレ ---------- */
+async function askPersona() {
+  chatBusy = true; $("chat-send").disabled = true;
+  const typing = addMsg("sys", persona.name + "が入力中…");
+  try {
+    const { reply } = await api("chat", { persona, history: transcript });
+    typing.remove();
+    if (!timerId) return; // 待っている間に商談を終えた
+    transcript.push({ who: "them", text: reply }); addMsg("them", reply);
+    status("chat-status", "");
+  } catch (e) {
+    typing.remove(); status("chat-status", e.message + "（もう一度「送る」で再送できます）", true);
+  } finally {
+    chatBusy = false; if (timerId) { $("chat-send").disabled = false; $("chat-input").focus(); }
+  }
+}
+async function startChat() {
+  lockStart(true); setMode("chat");
+  transcript = []; $("transcript").textContent = ""; curIn = curOut = ""; inEl = outEl = null;
+  addMsg("sys", persona.company + " " + persona.name + "との商談（チャット）。ゴール：課題を言い直して合意を取る");
+  step(3); $("dot").classList.add("live"); $("hangup").disabled = false; status("call-status", "");
+  $("chat-input").disabled = false; $("chat-input").value = "";
+  startTimer();
+  await askPersona(); // 相手から話し始める
+}
+async function sendChat() {
+  if (chatBusy || !timerId) return;
+  const text = $("chat-input").value.trim();
+  const last = transcript[transcript.length - 1];
+  if (text) { transcript.push({ who: "me", text }); addMsg("me", text); $("chat-input").value = ""; }
+  else if (!last || last.who !== "me") return; // 空送信は、直前が自分の発言（再送）のときだけ有効
+  await askPersona();
+}
+$("chat-start").addEventListener("click", startChat);
+$("chat-send").addEventListener("click", sendChat);
+$("chat-input").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
+});
 $("hangup").addEventListener("click", () => endCall("商談終了 " + $("timer").textContent));
 
 /* ---------- ④ 判定 ---------- */
@@ -200,4 +254,4 @@ $("grade").addEventListener("click", async () => {
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
-$("again").addEventListener("click", () => { step(1); $("call").disabled = false; $("regen").disabled = false; window.scrollTo(0, 0); });
+$("again").addEventListener("click", () => { step(1); lockStart(false); window.scrollTo(0, 0); });

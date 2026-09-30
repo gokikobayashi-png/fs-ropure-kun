@@ -78,6 +78,9 @@ details.cheat li{margin:2px 0}
 .tbl table{border-collapse:collapse;font-size:12px;min-width:640px}
 .tbl th,.tbl td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
 .tbl th{background:var(--bg);color:var(--ink-2);font-weight:500}
+.chatbox{display:flex;gap:8px;align-items:flex-end;margin-top:12px}
+.chatbox textarea{margin-top:0;flex:1;resize:vertical}
+.chatbox .btn{flex:none}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -85,11 +88,11 @@ details.cheat li{margin:2px 0}
 <body>
 <div class="wrap">
 <header>
-  <div><div class="eyebrow">ゼンテクト / FS商談 / 音声ロープレ</div><h1>FS商談ロープレ君</h1></div>
+  <div><div class="eyebrow">ゼンテクト / FS商談 / ロープレ</div><h1>FS商談ロープレ君</h1></div>
   <span class="sp"></span>
   <button class="btn" id="logout" type="button" hidden>ログアウト</button>
 </header>
-<div class="steps"><span id="s1" class="on">① ケース設定</span><span id="s2">② 相手を生成</span><span id="s3">③ 音声ロープレ</span><span id="s4">④ 課題はどれか</span></div>
+<div class="steps"><span id="s1" class="on">① ケース設定</span><span id="s2">② 相手を生成</span><span id="s3">③ ロープレ</span><span id="s4">④ 課題はどれか</span></div>
 
 <!-- ログイン -->
 <section class="panel" id="login" hidden>
@@ -191,9 +194,10 @@ details.cheat li{margin:2px 0}
   <h2 id="p-company"></h2>
   <div class="brief" id="p-brief"></div>
   <p class="opening"><b id="p-name"></b>「<span id="p-opening"></span>」</p>
-  <p class="hint">事前に分かるのはここまで。あとは声で聞く。相手の営業を「誰に・何を・どう売って・月に何件商談し・何%決まるか」まで自分の言葉で説明できるまで広げる。</p>
+  <p class="hint">事前に分かるのはここまで。あとは声かチャットで聞く。相手の営業を「誰に・何を・どう売って・月に何件商談し・何%決まるか」まで自分の言葉で説明できるまで広げる。</p>
   <div class="row">
-    <button class="btn primary" id="call" type="button">🎙 商談を始める</button>
+    <button class="btn primary" id="call" type="button">🎙 声で始める</button>
+    <button class="btn primary" id="chat-start" type="button">💬 チャットで始める</button>
     <button class="btn" id="regen" type="button">別の相手にする</button>
   </div>
   <div class="status" id="call-status"></div>
@@ -201,7 +205,7 @@ details.cheat li{margin:2px 0}
 
 <!-- ③ 通話 -->
 <section class="panel" id="step3" hidden>
-  <div class="pl" style="color:var(--accent)">STEP 3 ／ 音声ロープレ</div>
+  <div class="pl" style="color:var(--accent)">STEP 3 ／ <span id="mode-label">音声ロープレ</span></div>
   <div class="callbar">
     <span class="dot" id="dot"></span><span class="timer" id="timer">00:00</span>
     <span class="meter"><i id="meter"></i></span>
@@ -209,7 +213,13 @@ details.cheat li{margin:2px 0}
     <button class="btn stop" id="hangup" type="button" disabled>商談を終える</button>
   </div>
   <div class="transcript" id="transcript"></div>
-  <p class="hint">相手が話し終えてから話す。かぶせると相手は止まる（本物と同じ）。文字起こしは参考程度。</p>
+  <div class="chatbox" id="chatbox" hidden>
+    <textarea id="chat-input" rows="2" placeholder="社長への質問や言い直しを入力（Enterで送信／Shift+Enterで改行）"></textarea>
+    <button class="btn primary" id="chat-send" type="button">送る</button>
+  </div>
+  <div class="status" id="chat-status"></div>
+  <p class="hint" id="voice-hint">相手が話し終えてから話す。かぶせると相手は止まる（本物と同じ）。文字起こしは参考程度。</p>
+  <p class="hint" id="chat-hint" hidden>本番と同じく、1回に聞くのは1つずつ。長文でまとめて聞くと相手は一部しか答えない。</p>
 </section>
 
 <!-- ④ 判定 -->
