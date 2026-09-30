@@ -172,6 +172,69 @@ export async function appendKnowledge(lines, heading) {
   cache.at = 0;
   return true;
 }
+/* =========================================================
+   ロープレ記録：1回ごとにNotionページを作る（田村さんがコメントでアドバイスできるように）
+   置き場所は NOTION_RECORDS_PAGE_ID。無ければ「ロープレ知見」ページの中に「ロープレ記録」ページを自動で作る。
+   ========================================================= */
+const para = (text, bold = false) => ({ object: "block", type: "paragraph", paragraph: { rich_text: [{ type: "text", text: { content: String(text).slice(0, 1900) }, annotations: { bold } }] } });
+const h2 = text => ({ object: "block", type: "heading_2", heading_2: { rich_text: [{ type: "text", text: { content: text } }] } });
+const bullet = text => ({ object: "block", type: "bulleted_list_item", bulleted_list_item: { rich_text: [{ type: "text", text: { content: String(text).slice(0, 1900) } }] } });
+let recordsParent = process.env.NOTION_RECORDS_PAGE_ID || "";
+async function findRecordsParent() {
+  if (recordsParent) return recordsParent;
+  const id = process.env.NOTION_KNOWLEDGE_PAGE_ID;
+  let cursor;
+  for (let i = 0; i < 20; i++) {
+    const r = await fetch(`https://api.notion.com/v1/blocks/${id}/children?page_size=100` + (cursor ? `&start_cursor=${cursor}` : ""), { headers: notionHeaders() });
+    if (!r.ok) throw new Error("Notion読み込み失敗: " + r.status);
+    const j = await r.json();
+    const hit = (j.results || []).find(b => b.type === "child_page" && b.child_page && b.child_page.title === "ロープレ記録");
+    if (hit) return (recordsParent = hit.id);
+    if (!j.has_more) break;
+    cursor = j.next_cursor;
+  }
+  const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
+    parent: { page_id: id }, icon: { type: "emoji", emoji: "📼" },
+    properties: { title: { title: [{ type: "text", text: { content: "ロープレ記録" } }] } },
+    children: [para("FS商談ロープレ君で練習した1回ごとの記録。各記録の会話ログの行にコメントを付けてアドバイスする。")],
+  }) });
+  if (!r.ok) throw new Error("ロープレ記録ページを作れません: " + r.status + " " + (await r.text()).slice(0, 200));
+  return (recordsParent = (await r.json()).id);
+}
+export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode }) {
+  if (!knowledgeEnabled()) return null;
+  const parent = await findRecordsParent();
+  const title = `${jstNow()} ${persona.company}（${mode === "chat" ? "チャット" : "音声"}／判定:${CAT[picked]}${correct ? "○" : "×"}）`;
+  const blocks = [
+    { object: "block", type: "callout", callout: { icon: { type: "emoji", emoji: "🙏" }, rich_text: [{ type: "text", text: { content: "田村さんへ：ズレていたと思う発言の行を選んで、コメントでアドバイスをお願いします。" } }] } },
+    h2("相手"),
+    bullet(`${persona.company}／${persona.name}（${persona.role || ""}）／難易度：${persona.difficulty || ""}`),
+    bullet("会社概要：" + (persona.brief || "")),
+    bullet("冒頭のひとこと：" + (persona.opening_line || "")),
+    h2("判定"),
+    bullet(`受講者の判定：${picked} ${CAT[picked]}（${correct ? "正解" : "不正解"}）／正解：${persona.answer} ${CAT[persona.answer]}`),
+    bullet("受講者の言い直し：" + (rephrase || "（なし）")),
+    bullet("正解の理由：" + (persona.exp || "")),
+    bullet("言い直しの模範例：" + (persona.rephrase_example || "")),
+    h2("会話ログ"),
+  ];
+  (transcript.length ? transcript : [{ who: "sys", text: "（会話なし）" }]).forEach((t, i) => {
+    const who = t.who === "me" ? "営業（自分）" : t.who === "them" ? persona.name : "";
+    blocks.push(para(`${String(i + 1).padStart(2, "0")}　${who ? who + "：" : ""}${t.text}`, t.who === "me"));
+  });
+  blocks.push(h2("コーチ（AI）の振り返り"), para(feedback || ""));
+  blocks.push({ object: "block", type: "toggle", toggle: { rich_text: [{ type: "text", text: { content: "相手の事実（答え合わせ用）" } }], children: (persona.hidden_facts || []).slice(0, 90).map(bullet) } });
+  const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
+    parent: { page_id: parent }, properties: { title: { title: [{ type: "text", text: { content: title.slice(0, 1900) } }] } }, children: blocks.slice(0, 100),
+  }) });
+  if (!r.ok) throw new Error("記録の保存失敗: " + r.status + " " + (await r.text()).slice(0, 200));
+  const page = await r.json();
+  for (let i = 100; i < blocks.length; i += 100) {
+    const a = await fetch(`https://api.notion.com/v1/blocks/${page.id}/children`, { method: "PATCH", headers: notionHeaders(), body: JSON.stringify({ children: blocks.slice(i, i + 100) }) });
+    if (!a.ok) throw new Error("記録の追記失敗: " + a.status);
+  }
+  return page.url;
+}
 export function jstNow() {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).replace("T", " ");
 }

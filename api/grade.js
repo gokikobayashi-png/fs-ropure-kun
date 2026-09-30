@@ -1,12 +1,12 @@
 // POST /api/grade  { persona, transcript:[{who:"me"|"them", text}], picked:"A"|"B"|"C"|"D", rephrase }
 // → { correct, answer, feedback }
-import { client, auth, readJson, FRAMEWORK, ZENTECT, CAT, generate, knowledgeEnabled, appendKnowledge, jstNow } from "./_lib.js";
+import { client, auth, readJson, FRAMEWORK, ZENTECT, CAT, generate, knowledgeEnabled, appendKnowledge, jstNow, saveRecord } from "./_lib.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   if (!auth(req, res)) return;
   try {
-    const { persona, transcript = [], picked, rephrase = "" } = await readJson(req);
+    const { persona, transcript = [], picked, rephrase = "", mode = "voice" } = await readJson(req);
     if (!persona || !CAT[picked]) return res.status(400).json({ error: "persona と picked(A-D) が必要です" });
     const correct = picked === persona.answer;
     const log = transcript.map(t => (t.who === "me" ? "受講者" : persona.name) + "：" + t.text).join("\n") || "（会話なし）";
@@ -39,7 +39,9 @@ JSONだけを返す：
     if (knowledgeEnabled() && learnings.length) {
       try { await appendKnowledge(learnings, `[ロープレ] ${jstNow()} ${persona.company}（正解:${CAT[persona.answer]}／判定:${CAT[picked]}${correct ? "○" : "×"}）`); saved = true; } catch (e) { console.error(e); }
     }
-    res.status(200).json({ correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, learnings, saved });
+    let recordUrl = null, recordError = "";
+    try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode }); } catch (e) { console.error(e); recordError = String(e.message || e); }
+    res.status(200).json({ recordUrl, recordError, correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, learnings, saved });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }

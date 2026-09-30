@@ -247,13 +247,16 @@ $("grade").addEventListener("click", async () => {
   if (!picked) { status("grade-status", "A〜Dを選んでから", true); return; }
   $("grade").disabled = true; status("grade-status", "コーチが会話を振り返っています…");
   try {
-    const r = await api("grade", { persona, transcript, picked, rephrase: $("rephrase").value.trim() });
+    const r = await api("grade", { persona, transcript, picked, rephrase: $("rephrase").value.trim(), mode });
     document.querySelectorAll("#opts .opt").forEach(b => { b.disabled = true; if (b.dataset.k === r.answer) b.classList.add("correct"); else if (b.dataset.k === picked) b.classList.add("wrong"); });
     const v = $("verdict"); v.hidden = false; v.className = "verdict" + (r.correct ? "" : " ng"); v.textContent = "";
     const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = (r.correct ? "正解" : "不正解") + " ／ 答え：" + r.answer + " " + r.answerLabel; v.appendChild(lab);
     v.appendChild(document.createTextNode(r.exp + "\n\n言い直しの模範例：" + r.rephrase_example));
     const f = $("feedback"); f.hidden = false; f.textContent = ""; const l2 = document.createElement("span"); l2.className = "lab"; l2.textContent = "COACH"; f.appendChild(l2); f.appendChild(document.createTextNode(r.feedback));
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();
+    const rec = $("record");
+    if (r.recordUrl) { rec.hidden = false; $("record-link").href = r.recordUrl; $("record-copy").onclick = () => { navigator.clipboard.writeText(r.recordUrl).then(() => { $("record-copy").textContent = "コピーしました"; }); }; }
+    else { rec.hidden = true; if (r.recordError) status("grade-status", "記録の保存に失敗：" + r.recordError, true); }
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
-$("again").addEventListener("click", () => { step(1); lockStart(false); window.scrollTo(0, 0); });
+$("again").addEventListener("click", () => { $("record").hidden = true; $("record-copy").textContent = "リンクをコピー"; step(1); lockStart(false); window.scrollTo(0, 0); });
