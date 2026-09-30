@@ -1,9 +1,9 @@
 // POST /api/chat  { persona, history:[{who:"me"|"them", text}], message? }
 // → { reply }  テキストチャット版ロープレ。社長役の次の発言を1回分返す。
-// message が空なら「商談開始」の最初のひとことを返す。
+// 会話は営業担当（受講者）から始める。
 import { client, auth, readJson, personaSystemInstruction, generate, loadKnowledge, knowledgeText } from "./_lib.js";
 
-const KICKOFF = "（商談が始まった。営業担当が着席した。あなたから「本日はよろしくお願いします」と軽く挨拶し、続けて自分の課題認識をひとことで話して、相手の出方を待つ）";
+const KICKOFF = "（商談が始まった。営業担当が着席して、先に話しかけてきた）";
 const CHAT_NOTE = "\n\n■ 今回はテキストチャットでの商談。話し言葉のまま短く返す（2〜3文）。ト書き・括弧書きの動作描写・名前の見出しは付けず、セリフだけを書く。";
 
 export default async function handler(req, res) {

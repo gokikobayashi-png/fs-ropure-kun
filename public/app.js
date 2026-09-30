@@ -168,8 +168,9 @@ async function startCall() {
     step(3); $("dot").classList.add("live"); $("hangup").disabled = false; status("call-status", "");
     startTimer();
 
-    // 相手から話し始めさせる
-    session.sendClientContent({ turns: [{ role: "user", parts: [{ text: "（商談が始まった。営業担当が着席した。あなたから「本日はよろしくお願いします」と軽く挨拶し、続けて自分の課題認識をひとことで話して、相手の出方を待つ）" }] }], turnComplete: true });
+    // 会話は受講者から始める（社長は黙って待つ）
+    session.sendClientContent({ turns: [{ role: "user", parts: [{ text: "（商談が始まった。営業担当が着席した。営業担当が先に話すので、あなたは黙って待つ）" }] }], turnComplete: false });
+    addMsg("sys", "あなたから話しかけてください（例：本日はお時間ありがとうございます。今回どのあたりにご興味を持っていただけたんでしょうか）");
   } catch (e) {
     status("call-status", "開始できませんでした：" + (e.message || e), true); cleanupAudio();
     lockStart(false);
@@ -219,7 +220,8 @@ async function startChat() {
   step(3); $("dot").classList.add("live"); $("hangup").disabled = false; status("call-status", "");
   $("chat-input").disabled = false; $("chat-input").value = "";
   startTimer();
-  await askPersona(); // 相手から話し始める
+  addMsg("sys", "あなたから話しかけてください（例：本日はお時間ありがとうございます。今回どのあたりにご興味を持っていただけたんでしょうか）");
+  $("chat-send").disabled = false; $("chat-input").focus();
 }
 async function sendChat() {
   if (chatBusy || !timerId) return;
