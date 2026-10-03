@@ -292,6 +292,16 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .lg-hero:hover{border-color:var(--teal)}
 .lg-shot-img{border:0;background:transparent;min-height:0;display:flex;align-items:center}
 .lg-shot-img img{display:block;width:100%;height:auto;border-radius:6px}
+.lg-hero-sales{display:grid;grid-template-columns:1fr 1.1fr;gap:12px;align-items:center;padding:18px 16px;background:linear-gradient(110deg,#E0F5EF 0 46%,#F7F9FC 46%);text-decoration:none;color:var(--ink)}
+@media (max-width:560px){.lg-hero-sales{grid-template-columns:1fr}}
+.hs-tag{display:inline-block;background:#1A3A5C;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px}
+.hs-tag::first-letter{}
+.hs-lead{font-size:12.5px;line-height:1.8;margin:10px 0 12px;color:var(--ink)}
+.hs-cta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hs-cta .cta{padding:8px 6px}
+.hs-cta .cta small{font-size:9.5px}
+.hs-cta .cta b{font-size:12px}
+.hs-img{display:block;width:100%;height:auto}
 .lg-note{font-size:11px;color:var(--ink-2);text-align:center}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
@@ -321,13 +331,16 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   </div>
   <div class="lg-right">
     <h2 class="lg-h2">ゼンテクトの営業支援<br>ワンストップソリューション</h2>
-    <div class="lg-prod">
-      <div class="lg-shot lg-shot-img"><img src="/sales.jpg" alt="ゼンテクト営業支援：ターゲット企業の分析・選定、アプローチ文面の作成、フォーム送信・初期接点の創出、効果測定・改善"></div>
-      <div class="lg-ptext"><div class="lg-tag">事業内容 ／ 営業支援</div><div class="lg-pname">営業支援</div><div class="lg-pdesc">テレアポのみの営業代行でも、自社での新規採用でもない第三の選択肢。「営業戦略・戦術の構築、仮説立て、実行、改善」の全てを実行して成果を創出</div></div>
-      <div class="lg-cta">
-        <a class="cta light" href="https://zentect.com/contact-case" target="_blank" rel="noopener"><small>他社との違いや事例を多数ご用意</small><b>概要資料をダウンロードする ▸</b></a>
-        <a class="cta dark" href="https://zentect.com/contact-onlineconsulting" target="_blank" rel="noopener"><small>お悩みに合わせたご提案をいたします</small><b>無料オンライン相談をする ▸</b></a>
+    <div class="lg-hero lg-hero-sales">
+      <div class="hs-text">
+        <span class="hs-tag">事業内容　営業支援</span>
+        <p class="hs-lead">テレアポのみを実施する営業代行でも、自社での新規採用でもない第三の選択肢。新規拡大を創るうえで必要となる「営業戦略・戦術の構築、仮説立て、実行、改善」の全てを実行して、成果を創出します。</p>
+        <div class="hs-cta">
+          <a class="cta light" href="https://zentect.com/contact-case" target="_blank" rel="noopener"><small>他社との違いや事例を多数ご用意</small><b>概要資料をダウンロードする ▸</b></a>
+          <a class="cta dark" href="https://zentect.com/contact-onlineconsulting" target="_blank" rel="noopener"><small>お悩みに合わせたご提案をいたします</small><b>無料オンライン相談をする ▸</b></a>
+        </div>
       </div>
+      <img class="hs-img" src="/sales.jpg" alt="ターゲット企業の分析・選定、アプローチ文面の作成、フォーム送信・初期接点の創出、効果測定・改善。データ×AIの力で、営業をもっとスマートに。">
     </div>
     <a class="lg-hero" href="https://lp.zenformsend.com/" target="_blank" rel="noopener"><img src="/zenform.jpg" alt="ゼンフォーム：ターゲット企業を分析し、アポのきっかけになる初期接点を自動で創出。無料トライアルを始める／仕組みを見る"></a>
     <div class="lg-note">社内練習用アプリ。相手役の会社・人物はAIが作る架空のものです。</div>
