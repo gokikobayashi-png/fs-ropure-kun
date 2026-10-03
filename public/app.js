@@ -37,7 +37,7 @@ const CO_DEFAULT = {
   proof: "建設業向けサービス、AI・データ活用、製造業向け、物流向け、営業DX、リーガルテックなどの支援実績。建設現場CO2排出量算定サービスでは、不明瞭だった訴求軸を設計。相手の声「何社か話した中で一番納得感がある」。",
   pricing: "固定報酬型：ISプラン 月90万円／一気通貫プラン 月130万円（各130時間/人月、PM費用は月額の10%）、準備費用20万円、最低6ヶ月。成果報酬型：準備費用20万円＋アポ1件 役員以上7万／部長5万／担当者3万。",
   plans: [{ name: "ISプラン", monthly: 90 }, { name: "一気通貫プラン", monthly: 130 }],
-  prep: 20, months: 6, trial_months: 3, calls: 1000, apo_rate: 1, win_rate: 5,
+  prep: 20, months: 6, trial_months: 3, calls: 1000, apo_rate: 1, win_rate: 5, in_calls: 100, in_apo_rate: 30, in_win_rate: 20,
   objections: ["それ払って回収できるのか", "うちの単価で何件取れば元が取れるのか", "本当にうちの業界が分かるのか", "アポだけ取って質が低いんじゃないか", "前に営業代行を使って失敗した", "最低6ヶ月は長い"],
 };
 let company = null; // 保存済みの自社情報（null なら既定）
@@ -65,6 +65,7 @@ function fillCompany(c) {
   $("co-plans").textContent = ""; (c.plans && c.plans.length ? c.plans : [{ name: "", monthly: "" }]).forEach(pl => listRow($("co-plans"), pl, "plan"));
   $("co-prep").value = c.prep ?? ""; $("co-months").value = c.months ?? ""; $("co-trial").value = c.trial_months ?? "";
   $("co-calls").value = c.calls ?? ""; $("co-apo").value = c.apo_rate ?? ""; $("co-win").value = c.win_rate ?? "";
+  $("co-in-calls").value = c.in_calls ?? ""; $("co-in-apo").value = c.in_apo_rate ?? ""; $("co-in-win").value = c.in_win_rate ?? "";
   $("co-objs").textContent = ""; (c.objections || []).forEach(o => listRow($("co-objs"), o, "obj")); countObjs();
 }
 function readCompanyForm() {
@@ -75,6 +76,7 @@ function readCompanyForm() {
     plans: [...$("co-plans").querySelectorAll(".list-row")].map(r => { const i = r.querySelectorAll("input"); return { name: i[0].value.trim(), monthly: numOr(i[1].value, 0) }; }).filter(x => x.name && x.monthly > 0),
     prep: numOr($("co-prep").value, 0), months: numOr($("co-months").value, d.months), trial_months: numOr($("co-trial").value, d.trial_months),
     calls: numOr($("co-calls").value, d.calls), apo_rate: numOr($("co-apo").value, d.apo_rate), win_rate: numOr($("co-win").value, d.win_rate),
+    in_calls: numOr($("co-in-calls").value, d.in_calls), in_apo_rate: numOr($("co-in-apo").value, d.in_apo_rate), in_win_rate: numOr($("co-in-win").value, d.in_win_rate),
     objections: [...$("co-objs").querySelectorAll("input")].map(i => i.value.trim()).filter(Boolean),
   };
 }
@@ -414,7 +416,7 @@ function showResult() {
 function jaVoices() { return speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang)); }
 function pickVoice() {
   const vs = jaVoices(); let pref = ""; try { pref = localStorage.getItem("ropure-voice") || ""; } catch (_) {}
-  return vs.find(v => v.name === pref) || vs.find(v => /male|男|Ichiro|Keita|Otoya|Hattori/i.test(v.name)) || vs.find(v => /Google|Microsoft/i.test(v.name)) || vs[0] || null;
+  return vs.find(v => v.name === pref) || vs.find(v => /Otoya|Hattori|Ichiro|Keita|Daichi|Naoki|male|男/i.test(v.name) && !/female/i.test(v.name)) || vs.find(v => /Google|Microsoft/i.test(v.name)) || vs[0] || null;
 }
 function renderVoices() {
   const sel = $("voice-sel"); if (!sel) return; const vs = jaVoices(); sel.textContent = "";
@@ -428,8 +430,9 @@ $("voice-test").addEventListener("click", () => speak("判定は不正解です�
 function speak(text, btn, stopBtn) {
   if (!("speechSynthesis" in window)) { alert("このブラウザは読み上げに対応していません"); return; }
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(String(text || "").replace(/\n+/g, "。")); u.lang = "ja-JP"; u.rate = 1.05; u.pitch = 0.9;
+  const u = new SpeechSynthesisUtterance(String(text || "").replace(/\n+/g, "。")); u.lang = "ja-JP"; u.rate = 1.05;
   const v = pickVoice(); if (v) u.voice = v;
+  u.pitch = v && /Otoya|Hattori|Ichiro|Keita|Daichi|Naoki|male|男/i.test(v.name) ? 0.95 : 0.6; // 男声が無い端末では低めにする
   if (stopBtn) { stopBtn.hidden = false; u.onend = u.onerror = () => { stopBtn.hidden = true; }; }
   speechSynthesis.speak(u);
 }
@@ -803,12 +806,19 @@ function resetCalc() {
   const c = co(); const sel = $("c-plan"); sel.textContent = "";
   (c.plans || []).forEach((pl, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = pl.name + "（月" + pl.monthly + "万）"; sel.appendChild(o); });
   $("c-months").value = c.months ?? 6; $("c-prep").value = c.prep ?? 0;
-  $("c-calls").value = c.calls ?? ""; $("c-apo").value = c.apo_rate ?? ""; $("c-win").value = c.win_rate ?? "";
+  applyChannel();
   $("c-revenue").value = ""; guess = null;
   ["g-invest", "g-wins", "g-recover"].forEach(id => { $(id).value = ""; }); $("g-judge").value = "";
   $("guess").hidden = false; $("calc").hidden = true; $("calc-mental").hidden = true; $("g-check").disabled = false;
   calc();
 }
+function applyChannel() {
+  const c = co(); const inb = $("c-channel").value === "in";
+  $("c-calls-label").textContent = inb ? "月の対応リード数" : "稼働量（月のコール数）";
+  $("c-apo").previousSibling.textContent = inb ? "商談化率（%）" : "アポ率（%）";
+  $("c-calls").value = (inb ? c.in_calls : c.calls) ?? ""; $("c-apo").value = (inb ? c.in_apo_rate : c.apo_rate) ?? ""; $("c-win").value = (inb ? c.in_win_rate : c.win_rate) ?? "";
+}
+$("c-channel").addEventListener("change", () => { applyChannel(); if (guess) { guess = null; $("calc").hidden = true; $("calc-mental").hidden = true; $("g-check").disabled = false; } calc(); });
 let guess = null; // 答え合わせ前の暗算 {invest, wins, recover, judge, ok}
 function mentalTips(k) {
   const L = [];
@@ -851,7 +861,7 @@ function calc(render = true) {
   if (isNaN(rev) || $("c-revenue").value === "") { if (render) { box.className = "calc"; body.textContent = "投資額 " + fmt(invest) + "万円（" + m + "ヶ月×" + pl.monthly + "万＋" + prep + "万）。1受注の売上を入れると回収額を計算します。"; } return null; }
   const recover = wins * rev, ok = recover >= invest;
   const need = rev > 0 ? Math.ceil(invest / rev) : Infinity;
-  const out = { plan: pl.name, monthly: pl.monthly, months: m, prep, calls, apo_rate: apo, win_rate: win, revenue: rev, invest: Math.round(invest * 10) / 10, wins: Math.round(wins * 10) / 10, recover: Math.round(recover * 10) / 10, ok };
+  const out = { channel: $("c-channel").value === "in" ? "インバウンド" : "アウトバウンド", plan: pl.name, monthly: pl.monthly, months: m, prep, calls, apo_rate: apo, win_rate: win, revenue: rev, invest: Math.round(invest * 10) / 10, wins: Math.round(wins * 10) / 10, recover: Math.round(recover * 10) / 10, ok };
   if (!render) return out;
   box.className = "calc " + (ok ? "ok" : "ng");
   body.innerHTML = "";

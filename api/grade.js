@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const { persona, transcript = [], picked, rephrase = "", mode = "voice", overview = "", calc = null, proposal = "", company = null, quizzes = [], checks = [] } = await readJson(req);
     const cks = (Array.isArray(checks) ? checks : []).filter(c => c && c.key && c.title).slice(0, 12);
     const me = companyName(company);
-    const calcText = calc ? `プラン：${calc.plan}（月${calc.monthly}万）／期間${calc.months}ヶ月／準備費${calc.prep}万／月の稼働${calc.calls}コール／アポ率${calc.apo_rate}%／受注率${calc.win_rate}%／1受注の売上${calc.revenue}万
+    const calcText = calc ? `チャネル：${calc.channel || "アウトバウンド"}／プラン：${calc.plan}（月${calc.monthly}万）／期間${calc.months}ヶ月／準備費${calc.prep}万／月の稼働${calc.calls}コール／アポ率${calc.apo_rate}%／受注率${calc.win_rate}%／1受注の売上${calc.revenue}万
 → 投資額${calc.invest}万、期間内の受注数${calc.wins}件、回収額${calc.recover}万 → ${calc.ok ? "成立" : "不成立"}
 受講者が先に暗算で出した値：${calc.mine ? `投資額${calc.mine.invest ?? "?"}万／受注数${calc.mine.wins ?? "?"}件／回収額${calc.mine.recover ?? "?"}万／判定「${calc.mine.judge || "未選択"}」（${calc.mine.ok ? "判定は合っていた" : "判定がズレていた"}）` : "（暗算せず答えを見た）"}` : "（未入力）";
     const qz = (Array.isArray(quizzes) ? quizzes : []).slice(0, 12);
