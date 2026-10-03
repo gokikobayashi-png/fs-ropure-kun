@@ -13,12 +13,16 @@ function pw() { try { return (sessionStorage.getItem("pw") || "").normalize("NFK
 async function api(path, body) {
   const r = await fetch("/api/" + path, { method: "POST", headers: { "content-type": "application/json", "x-app-password": pw() }, body: JSON.stringify(body || {}) });
   const j = await r.json().catch(() => ({}));
-  if (r.status === 401) { showLogin(); throw new Error(j.error || "ログインが必要"); }
+  if (r.status === 401) { status("pw-status", j.error || "パスワードが違います"); showLogin(); throw new Error(j.error || "ログインが必要"); }
   if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
   return j;
 }
-function showLogin() { $("login").hidden = false; $("step1").hidden = true; $("co").hidden = true; $("missed").hidden = true; $("dash").hidden = true; $("fb").hidden = true; }
-$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("co").hidden = false; $("missed").hidden = false; $("dash").hidden = false; $("fb").hidden = false; $("logout").hidden = false; loadKnow(); });
+function showLogin() { $("login").hidden = false; document.body.style.overflow = "hidden"; setTimeout(() => $("pw").focus(), 50); }
+function hideLogin() { $("login").hidden = true; document.body.style.overflow = ""; }
+$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} if (!$("pw").value.trim()) { status("pw-status", "パスワードを入れてください", true); return; } hideLogin(); $("logout").hidden = false; status("pw-status", ""); loadKnow(); });
+$("pw").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); $("pw-ok").click(); } });
+$("pw-eye").addEventListener("click", () => { const i = $("pw"); i.type = i.type === "password" ? "text" : "password"; });
+if (!pw()) showLogin();
 $("logout").addEventListener("click", () => { try { sessionStorage.removeItem("pw"); } catch (_) {} location.reload(); });
 if (pw()) $("logout").hidden = false;
 
@@ -115,7 +119,7 @@ async function loadKnow() {
   try {
     const r = await fetch("/api/knowledge", { headers: { "x-app-password": pw() } });
     const j = await r.json();
-    if (r.status === 401) { $("know-status").textContent = "ログイン後に表示"; showLogin(); return; }
+    if (r.status === 401) { $("know-status").textContent = "ログイン後に表示"; status("pw-status", j.error || "パスワードが違います"); showLogin(); return; }
     if (!j.enabled) { $("know-status").textContent = "未接続（Notion連携を設定すると使えます）"; $("know-add").disabled = true; return; }
     $("know-status").textContent = j.count + " 件の知見をロープレに反映中";
     $("know-add").disabled = false;

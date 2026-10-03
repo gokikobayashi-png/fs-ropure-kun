@@ -236,6 +236,48 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .fb-item .c{font-size:13px;color:var(--ink-2);margin-top:2px}
 .fb-item .e{font-size:12px;color:var(--accent);margin-top:2px}
 .fb-item .m{font-size:11px;color:var(--ink-2);margin-top:2px}
+/* ログイン画面 */
+#login{position:fixed;inset:0;z-index:50;display:grid;grid-template-columns:1fr 1fr;overflow:auto}
+@media (max-width:820px){#login{grid-template-columns:1fr}}
+.lg-left{background:linear-gradient(160deg,#0B5A47 0%,#0F6E56 45%,#3BAE8E 100%);display:grid;place-items:center;padding:40px 24px;position:relative;color:#fff}
+.lg-card{background:#fff;color:var(--ink);border-radius:14px;padding:40px 36px 28px;width:100%;max-width:400px;display:grid;gap:14px;justify-items:center;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.lg-logo{display:block;margin-bottom:4px}
+.lg-title{font-size:20px;font-weight:700}
+.lg-sub{font-size:12px;color:var(--ink-2);text-align:center;margin-top:-8px}
+.lg-field{display:flex;align-items:center;gap:8px;width:100%;background:#EEF2F0;border:1px solid var(--line);border-radius:8px;padding:0 10px;margin-top:10px}
+.lg-field input{flex:1;background:transparent;border:0;margin:0;padding:12px 4px;font-size:15px}
+.lg-field input:focus{outline:none}
+.lg-ic{font-size:14px;opacity:.6}
+.lg-eye{background:none;border:0;cursor:pointer;font-size:15px;opacity:.6;padding:4px}
+.lg-btn{width:70%;margin-top:6px;background:var(--accent);color:#fff;border:0;border-radius:999px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans)}
+.lg-btn:hover{background:#0B5A47}
+.lg-copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:12px;color:#DDEBE4}
+.lg-right{background:#F3F5F4;padding:40px 32px;display:grid;gap:18px;align-content:start;justify-items:center}
+.lg-h2{font-size:22px;color:#0F6E56;text-align:center;margin:0 0 6px;line-height:1.5}
+.lg-prod{display:grid;grid-template-columns:200px 1fr;grid-template-rows:auto auto;gap:0 16px;width:100%;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;text-decoration:none;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.lg-prod:hover{border-color:var(--accent)}
+@media (max-width:560px){.lg-prod{grid-template-columns:1fr}}
+.lg-shot{grid-row:1;margin:14px 0 14px 14px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:9px;line-height:1.5;overflow:hidden;min-height:110px}
+@media (max-width:560px){.lg-shot{margin:14px 14px 0}}
+.ss-bar{background:#F3F5F4;border-bottom:1px solid var(--line);padding:4px 8px;font-weight:700;color:#0F6E56;display:flex;gap:5px;align-items:center}
+.ss-bar i{width:10px;height:10px;border-radius:2px;background:#0F6E56;display:inline-block}
+.ss-body{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 8px}
+.ss-col{display:grid;gap:2px;border:1px solid var(--line);border-radius:4px;padding:4px 6px;color:var(--ink-2)}
+.ss-col b{color:var(--ink)}
+.ss-col em{font-style:normal;background:#DDEBE4;color:#0F6E56;border-radius:3px;padding:0 4px;justify-self:start}
+.ss-col em.ok{background:#E1EFE8}
+.ss-steps{display:grid;gap:3px;padding:6px 8px;color:var(--ink)}
+.ss-steps span{background:#F3F5F4;border-radius:4px;padding:2px 6px}
+.ss-foot{padding:0 8px 6px;color:#0F6E56;font-style:italic}
+.lg-ptext{grid-row:1;padding:16px 16px 10px 0;display:grid;gap:4px;align-content:center}
+@media (max-width:560px){.lg-ptext{padding:12px 14px 6px}}
+.lg-tag{display:inline-block;justify-self:start;background:#0F6E56;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px}
+.lg-pname{font-size:18px;font-weight:700;letter-spacing:.04em}
+.lg-pdesc{font-size:12px;color:var(--ink-2);line-height:1.6}
+.lg-plinks{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+.lg-plinks span{text-align:center;padding:9px;font-size:13px;color:#0F6E56;font-weight:700}
+.lg-plinks span+span{border-left:1px solid var(--line)}
+.lg-note{font-size:11px;color:var(--ink-2);text-align:center}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -243,18 +285,39 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 <body>
 <div class="wrap">
 <header>
-  <div><div class="eyebrow">ゼンテクト / FS商談 / ロープレ</div><h1>FS商談ロープレ君</h1></div>
+  <div style="display:flex;gap:14px;align-items:center"><img src="/logo.png" alt="Zentect" width="118" height="30" style="display:block"><div><div class="eyebrow">FS商談 / ロープレ</div><h1>FS商談ロープレ君</h1></div></div>
   <span class="sp"></span>
   <button class="btn" id="logout" type="button" hidden>ログアウト</button>
 </header>
 <div class="steps"><span id="s1" class="on">① ケース設定</span><span id="s2">② 相手を生成</span><span id="s3">③ ロープレ</span><span id="s4">④ 振り返り3問</span></div>
 
 <!-- ログイン -->
-<section class="panel" id="login" hidden>
-  <h2>パスワード</h2>
-  <input type="text" id="pw" placeholder="共有パスワード" autocomplete="off">
-  <div class="row"><button class="btn primary" id="pw-ok" type="button">入る</button></div>
-  <div class="status err" id="pw-status"></div>
+<section id="login" hidden aria-label="ログイン">
+  <div class="lg-left">
+    <div class="lg-card">
+      <img src="/logo.png" alt="Zentect" width="157" height="40" class="lg-logo">
+      <div class="lg-title">FS商談ロープレ君</div>
+      <div class="lg-sub">AIが演じる相手と、FS商談を声かチャットで練習する</div>
+      <label class="lg-field"><span class="lg-ic">🔒</span><input type="password" id="pw" placeholder="共有パスワード" autocomplete="current-password"><button type="button" class="lg-eye" id="pw-eye" aria-label="パスワードを表示">👁</button></label>
+      <button class="lg-btn" id="pw-ok" type="button">ログイン</button>
+      <div class="status err" id="pw-status" style="text-align:center"></div>
+    </div>
+    <div class="lg-copy">© Zentect Inc.</div>
+  </div>
+  <div class="lg-right">
+    <h2 class="lg-h2">ゼンテクトの営業支援<br>ワンストップソリューション</h2>
+    <a class="lg-prod" href="https://zentect.com/service" target="_blank" rel="noopener">
+      <div class="lg-shot lg-shot-form"><div class="ss-bar"><i></i>ゼンフォーム</div><div class="ss-body"><div class="ss-col"><b>企業分析</b><span>デモ製造株式会社</span><em>解析完了</em><span>産業機器の設計・製造・保守</span><span>提案の切り口：保全情報を一元化</span></div><div class="ss-col"><b>企業別メッセージ</b><span>件名：設備保全情報の共有</span><span>本文：突然のご連絡失礼…</span><em class="ok">✓ 生成済み</em></div></div></div>
+      <div class="lg-ptext"><div class="lg-tag">業種・業界特化 × フォーム自動送信</div><div class="lg-pname">ゼンフォーム</div><div class="lg-pdesc">ターゲット企業を分析し、アポのきっかけになる初期接点を自動で創出。AIが1社1社に沿った文面を作成し、フォームへ自動送信</div></div>
+      <div class="lg-plinks"><span>無料トライアルを始める</span><span>仕組みを見る</span></div>
+    </a>
+    <a class="lg-prod" href="https://zentect.com/service" target="_blank" rel="noopener">
+      <div class="lg-shot lg-shot-sales"><div class="ss-bar"><i></i>ゼンテクト 営業支援</div><div class="ss-steps"><span>🎯 ターゲット企業の分析・選定</span><span>📄 アプローチ文面の作成</span><span>✉ フォーム送信・初期接点の創出</span><span>📈 効果測定・改善</span></div><div class="ss-foot">データ × AIの力で、営業をもっとスマートに。</div></div>
+      <div class="lg-ptext"><div class="lg-tag">事業内容 ／ 営業支援</div><div class="lg-pname">営業支援</div><div class="lg-pdesc">テレアポのみの営業代行でも、自社での新規採用でもない第三の選択肢。「営業戦略・戦術の構築、仮説立て、実行、改善」の全てを実行して成果を創出</div></div>
+      <div class="lg-plinks"><span>無料トライアルを始める</span><span>仕組みを見る</span></div>
+    </a>
+    <div class="lg-note">社内練習用アプリ。相手役の会社・人物はAIが作る架空のものです。</div>
+  </div>
 </section>
 
 <!-- 自社情報 -->
