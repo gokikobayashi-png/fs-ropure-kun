@@ -237,7 +237,7 @@ async function findRecordsParent() {
   const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
     parent: { page_id: id }, icon: { type: "emoji", emoji: "📼" },
     properties: { title: { title: [{ type: "text", text: { content: "ロープレ記録" } }] } },
-    children: [para("ゼンAIロープレで練習した1回ごとの記録。各記録の会話ログの行にコメントを付けてアドバイスする。")],
+    children: [para("ZenAIロープレで練習した1回ごとの記録。各記録の会話ログの行にコメントを付けてアドバイスする。")],
   }) });
   if (!r.ok) throw new Error("ロープレ記録ページを作れません: " + r.status + " " + (await r.text()).slice(0, 200));
   return (recordsParent = (await r.json()).id);

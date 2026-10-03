@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ゼンAIロープレ</title>
+<title>ZenAIロープレ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
@@ -256,7 +256,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .lg-copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:12px;color:#E0F5EF}
 .lg-right{background:#F7F9FC;padding:40px 32px;display:grid;gap:18px;align-content:start;justify-items:center}
 .lg-h2{font-size:22px;color:#1A3A5C;text-align:center;margin:0 0 6px;line-height:1.5}
-.lg-prod{display:grid;grid-template-columns:200px 1fr;grid-template-rows:auto auto;gap:0 16px;width:100%;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;text-decoration:none;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.lg-prod{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto auto;gap:0 16px;width:100%;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;text-decoration:none;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.05)}
 .lg-prod:hover{border-color:var(--accent)}
 @media (max-width:560px){.lg-prod{grid-template-columns:1fr}}
 .lg-shot{grid-row:1;margin:14px 0 14px 14px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:9px;line-height:1.5;overflow:hidden;min-height:110px}
@@ -290,6 +290,8 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .lg-hero{display:block;width:100%;max-width:640px;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05)}
 .lg-hero img{display:block;width:100%;height:auto}
 .lg-hero:hover{border-color:var(--teal)}
+.lg-shot-img{border:0;background:transparent;min-height:0;display:flex;align-items:center}
+.lg-shot-img img{display:block;width:100%;height:auto;border-radius:6px}
 .lg-note{font-size:11px;color:var(--ink-2);text-align:center}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
@@ -298,7 +300,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 <body>
 <div class="wrap">
 <header>
-  <div style="display:flex;gap:14px;align-items:center"><img src="/logo.png" alt="Zentect" width="118" height="30" style="display:block"><div><div class="eyebrow">FS商談 / AIロープレ</div><h1>ゼンAIロープレ</h1></div></div>
+  <div style="display:flex;gap:14px;align-items:center"><img src="/logo.png" alt="Zentect" width="118" height="30" style="display:block"><div><div class="eyebrow">FS商談 / AIロープレ</div><h1>ZenAIロープレ</h1></div></div>
   <span class="sp"></span>
   <button class="btn" id="logout" type="button" hidden>ログアウト</button>
 </header>
@@ -309,7 +311,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   <div class="lg-left">
     <div class="lg-card">
       <img src="/logo.png" alt="Zentect" width="157" height="40" class="lg-logo">
-      <div class="lg-title">ゼンAIロープレ</div>
+      <div class="lg-title">ZenAIロープレ</div>
       <div class="lg-sub">AIが演じる相手と、FS商談を声かチャットで練習する</div>
       <label class="lg-field"><span class="lg-ic">🔒</span><input type="password" id="pw" placeholder="共有パスワード" autocomplete="current-password"><button type="button" class="lg-eye" id="pw-eye" aria-label="パスワードを表示">👁</button></label>
       <button class="lg-btn" id="pw-ok" type="button">ログイン</button>
@@ -320,7 +322,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   <div class="lg-right">
     <h2 class="lg-h2">ゼンテクトの営業支援<br>ワンストップソリューション</h2>
     <div class="lg-prod">
-      <div class="lg-shot lg-shot-sales"><div class="ss-bar"><i></i>ゼンテクト 営業支援</div><div class="ss-steps"><span>🎯 ターゲット企業の分析・選定</span><span>📄 アプローチ文面の作成</span><span>✉ フォーム送信・初期接点の創出</span><span>📈 効果測定・改善</span></div><div class="ss-foot">データ × AIの力で、営業をもっとスマートに。</div></div>
+      <div class="lg-shot lg-shot-img"><img src="/sales.jpg" alt="ゼンテクト営業支援：ターゲット企業の分析・選定、アプローチ文面の作成、フォーム送信・初期接点の創出、効果測定・改善"></div>
       <div class="lg-ptext"><div class="lg-tag">事業内容 ／ 営業支援</div><div class="lg-pname">営業支援</div><div class="lg-pdesc">テレアポのみの営業代行でも、自社での新規採用でもない第三の選択肢。「営業戦略・戦術の構築、仮説立て、実行、改善」の全てを実行して成果を創出</div></div>
       <div class="lg-cta">
         <a class="cta light" href="https://zentect.com/contact-case" target="_blank" rel="noopener"><small>他社との違いや事例を多数ご用意</small><b>概要資料をダウンロードする ▸</b></a>

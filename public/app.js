@@ -613,7 +613,7 @@ function copyBtn(id, text, done) {
 function fallbackCopy(text, ok) { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); ok(); } catch (_) {} t.remove(); }
 function logText(r) {
   const lines = transcript.map((t, i) => String(i + 1).padStart(2, "0") + " " + (t.who === "me" ? "営業（自分）" : persona.name) + "：" + t.text);
-  return ["【ゼンAIロープレ記録】" + persona.company + " " + persona.name + "（" + (mode === "chat" ? "チャット" : "音声") + "）",
+  return ["【ZenAIロープレ記録】" + persona.company + " " + persona.name + "（" + (mode === "chat" ? "チャット" : "音声") + "）",
     "会社概要：" + persona.brief,
     "相手の役職：" + persona.role + "（決裁権：" + (persona.authority || "") + "）",
     "判定：" + picked + " " + CAT[picked] + "（" + (r.correct ? "正解" : "不正解") + "）／正解：" + r.answer + " " + r.answerLabel,
