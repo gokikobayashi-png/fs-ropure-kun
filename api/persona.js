@@ -1,6 +1,6 @@
 // POST /api/persona  { industry?, product?, size?, answer?: "A"|"B"|"C"|"D"|"", difficulty: "easy"|"normal"|"hard" }
 // → 相手企業ペルソナ（JSON）
-import { client, auth, readJson, FRAMEWORK, companyText, companyName, CAT, generate, loadKnowledge, knowledgeText } from "./_lib.js";
+import { client, auth, readJson, FRAMEWORK, companyText, companyName, CAT, generate, loadKnowledge, knowledgeText, STYLES } from "./_lib.js";
 
 const PERSONALITY = {
   easy: "協力的。聞かれれば数字も背景も素直に話す。相手の言い直しが近ければ乗ってくる。",
@@ -29,10 +29,15 @@ export default async function handler(req, res) {
     const difficulty = PERSONALITY[b.difficulty] ? b.difficulty : "normal";
     const keys = Object.keys(ROLES);
     const layer = ROLES[b.layer] || ROLES[keys[Math.floor(Math.random() * keys.length)]];
+    const skeys = Object.keys(STYLES);
+    const styleKey = STYLES[b.style] ? b.style : skeys[Math.floor(Math.random() * skeys.length)];
+    const styleHidden = !STYLES[b.style];
+    const style = STYLES[styleKey];
     const wish = [
       b.industry ? `業種：${b.industry}` : "業種：中小企業のBtoB（ソフトウェア・製造・建設・人材・物流・サービスなどから、毎回変える）",
       b.product ? `商材：${b.product}` : "商材：受講者が事前情報から想像しにくいものを1つ具体的に（単価・課金形態まで）",
       b.size ? `規模：${b.size}` : "規模：従業員10〜150名",
+      b.sales_team ? `営業体制：${b.sales_team}` : "営業体制：営業1〜5名（社長が兼務する場合もある）",
     ].join("\n");
 
     let knowledge = "";
@@ -46,6 +51,7 @@ ${knowledge ? `\n■ 過去の実商談から得た知見（この中の業種�
 ■ 条件
 ${wish}
 - 商談相手の役職は「${layer.role}」。決裁権：${layer.auth}。受講者には役職を伏せる（name に役職を入れない、brief にも書かない）。
+- 商談相手のタイプ（ソーシャルスタイル）は「${style.name}」（${style.axis}：${style.traits}）。opening_line の言い回しと、hidden_facts の「数字を取っているか」「過去にやってやめた施策」はこのタイプらしくする。brief にはタイプを書かない。
 - hidden_facts の最初の3つは必ず：①役職と経歴（前職・社歴）②決裁権の範囲と社内の承認の流れ ③今回時間を取った経緯と、この人が社内で負っているミッション（誰から何を期待されているか）。この役職の人が知っていること・知らないこと（例：経営企画なら現場の率は曖昧、ISリーダーなら単価や粗利は曖昧）を事実に反映する。
 - 本当の課題は ${answer}（${CAT[answer]}）。ただし本人はそう認識しておらず、別の言い方（「営業が弱い」「人が足りない」「もっと数を打ちたい」「いい人が採れない」など）で語る。
 - hidden_facts に、聞かれれば答える事実を12個程度、数字入りで書く（今期の売上目標と現状の着地見込み〔商材単価に見合う数字をランダムに。目標と見込みの差から必要な受注数・商談数が逆算できるように〕・誰に売っているか・何を・単価と課金形態・営業人数と経歴・使っている手法・月の行動量・アポ率・受注率・受注先に共通点があるか・数字を取っているか・過去にやってやめた施策・社長の本業の忙しさ 等）。正解に至る手がかりと、別の分類に見えるノイズを両方入れる。判定順序（戦略→手法→量→質）を踏まないと間違えるように。
@@ -66,6 +72,7 @@ JSONだけを返す（前後に文章を付けない）：
     if (!json.company || !Array.isArray(json.hidden_facts) || !CAT[json.answer]) throw new Error("ペルソナJSONが不完全");
     json.difficulty = difficulty;
     json.role = layer.role; json.authority = layer.auth;
+    json.style = styleKey; json.style_name = style.name; json.style_hidden = styleHidden;
     json.voice = json.gender === "female" ? "Aoede" : "Charon";
     res.status(200).json(json);
   } catch (e) {

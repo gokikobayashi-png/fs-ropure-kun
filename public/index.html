@@ -349,6 +349,53 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 .setbody>section[hidden]{display:none}
 .panel.blue{margin-top:16px}
 
+.tabs .ext{font-size:13px;color:var(--ink-2);text-decoration:none;padding:16px 12px 14px;border-bottom:2px solid transparent}
+.tabs .ext:hover{color:var(--navy)}
+.styles{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.stylegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.stylegrid{grid-template-columns:1fr}}
+.stylecard{font-family:var(--sans);text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;display:grid;gap:6px;color:var(--ink);font-size:12px;line-height:1.6}
+.stylecard.on{border-color:var(--teal);box-shadow:0 0 0 3px #CFEFF2}
+.stylecard .sc-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stylecard .sc-head b{font-size:15px}
+.stylecard small{font-size:11px;color:var(--ink-2)}
+.stylecard .sc-head i{width:12px;height:12px;border-radius:50%;display:inline-block}
+.stylecard.an{background:#F0FAF4}.stylecard.an i{background:#2E9E63}
+.stylecard.dr{background:#EEF7FB}.stylecard.dr i{background:#2F86B8}
+.stylecard.am{background:#FDF1F0}.stylecard.am i{background:#D9534F}
+.stylecard.ex{background:#FFF6E8}.stylecard.ex i{background:#E08A1E}
+.stylecard.random{grid-template-columns:auto 1fr;align-items:center}
+.stylecard .sc-ic{width:40px;height:40px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px}
+.stylecard .sc-body{display:grid;gap:2px}
+.stylecard .sc-body b{font-size:15px}
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:8px}
+.tpl{font-family:var(--sans);text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:6px;color:var(--ink)}
+.tpl:hover{border-color:var(--teal)}
+.tpl .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--case-soft);color:var(--navy);justify-self:start}
+.tpl b{font-size:13px;display:block}
+.tpl small{font-size:11px;color:var(--ink-2)}
+.tpl .x{grid-row:1 / span 3;align-self:start;width:28px;height:28px;padding:0;color:var(--bad)}
+.setnav .cnt{font-size:11px;background:var(--line);border-radius:999px;padding:1px 7px;margin-left:4px}
+.setnav .cnt.bad{background:var(--bad-soft);color:var(--bad)}
+.setnav .cnt:empty{display:none}
+.fbcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:10px}
+.fbcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:5px}
+.fbcard.weak{border-color:#F9A8A8}
+.fbcard .sc{font-size:11px;background:var(--case-soft);color:var(--navy);padding:2px 8px;border-radius:999px;align-self:flex-start}
+.fbcard.weak .sc{background:var(--bad-soft);color:var(--bad)}
+.fbcard .t{font-weight:700;font-size:14px}
+.fbcard .c{font-size:12px;color:var(--ink);line-height:1.6}
+.fbcard .e{font-size:12px;color:var(--teal)}
+.fbcard .m{font-size:11px;color:var(--ink-2)}
+.fbcard .row{margin-top:2px}
+.misswrap{display:grid;grid-template-columns:240px 1fr;gap:14px;margin-top:10px}
+@media (max-width:680px){.misswrap{grid-template-columns:1fr}}
+.kinds{display:grid;gap:6px;font-size:12px}
+.kinds div{display:grid;grid-template-columns:70px 1fr 40px;gap:8px;align-items:center}
+.kinds .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.kinds .bar i{display:block;height:100%;background:var(--teal)}
+.kinds div.weak span:first-child{color:var(--bad);font-weight:700}
+.kinds div.weak .bar i{background:var(--bad)}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -362,6 +409,7 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
     <button type="button" data-view="play" class="on">ロープレ</button>
     <button type="button" data-view="history">履歴</button>
     <button type="button" data-view="settings">設定</button>
+    <a href="https://claude.ai/artifact/8dihxDdxYEfwF3TWdHEyQv#e9c3d714-c83a" target="_blank" rel="noopener" class="ext">FS商談の考え方 ↗</a>
   </nav>
   <span class="sp"></span>
   <button class="btn" id="logout" type="button" hidden>ログアウト</button>
@@ -376,16 +424,49 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
   <div class="pl">STEP 1</div>
   <h2>どんな相手と練習するか</h2>
   <p class="hint">空欄なら毎回AIが変えます。相手の本当の課題（戦略・手法・量・質）はAIが決めて、最後の答え合わせまで伏せられます。</p>
-  <div class="g2">
-    <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介"></label>
-    <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
-    <label class="f">規模<input type="text" id="size" placeholder="例：従業員30名、営業2名"></label>
-    <label class="f">相手のレイヤー
-      <select id="layer"><option value="" selected>ランダム（役職は伏せて出る）</option><option value="ceo">社長</option><option value="director">取締役 営業本部長</option><option value="sales_mgr">営業部長</option><option value="section">営業課長</option><option value="marketing">マーケティング責任者</option><option value="bizdev">新規事業の事業部長</option><option value="planning">経営企画の担当</option><option value="is_lead">インサイドセールスのリーダー</option></select></label>
-    <label class="f">難易度
-      <select id="difficulty"><option value="easy">協力的</option><option value="normal" selected>普通</option><option value="hard">手強い</option></select></label>
+
+  <div class="sub" style="border-top:0;padding-top:4px">相手のタイプ（ソーシャルスタイル）<span class="hint" style="margin:0 0 0 10px;display:inline">話し方・反応・決め方が変わる。本番で当たる4タイプ全部と練習する</span></div>
+  <div class="styles" id="styles">
+    <button type="button" class="stylecard random on" data-style="">
+      <span class="sc-ic">?</span>
+      <span class="sc-body"><b>ランダム</b><small>4タイプのどれかが出る。タイプは伏せられる</small><span>本番と同じく、話し方からタイプを見抜いて合わせるのも練習。判定後の「情報」タブで答え合わせ。迷ったらこれ。</span></span>
+    </button>
+    <div class="stylegrid">
+      <button type="button" class="stylecard an" data-style="analytical"><span class="sc-head"><i></i><b>アナリティカル</b><small>意見を聞く × 感情を抑える</small></span><span>感情表現も主張も控えめ／慎重で綿密に計画／決定まで時間をかける／論理を重視。<b>数字と根拠を出さないと動かない。急かすと引く。</b></span></button>
+      <button type="button" class="stylecard dr" data-style="driver"><span class="sc-head"><i></i><b>ドライバー</b><small>意見を主張する × 感情を抑える</small></span><span>感情を表に出さない／競争心が旺盛／成果にこだわる／無駄が嫌い／指図されるのが嫌い。<b>結論から。前置きが長いと切られる。</b></span></button>
+      <button type="button" class="stylecard am" data-style="amiable"><span class="sc-head"><i></i><b>エミアブル</b><small>意見を聞く × 感情を表す</small></span><span>温和で親しみやすい／周囲に気を配る／人と競争するのが嫌い／聞き上手。<b>その場で嫌とは言わない。本音は「社内がどう思うか」。</b></span></button>
+      <button type="button" class="stylecard ex" data-style="expressive"><span class="sc-head"><i></i><b>エクスプレッシブ</b><small>意見を主張する × 感情を表す</small></span><span>表情が豊かで話し好き／熱中しやすい／明るくて楽観的／周囲から認められたがる。<b>話が脱線する。乗ってくるが数字は曖昧。</b></span></button>
+    </div>
   </div>
-  <div class="row"><button class="btn primary" id="gen" type="button">相手を生成する</button></div>
+
+  <div class="g2" style="margin-top:14px">
+    <div class="panel" style="margin-top:0">
+      <div class="sub" style="border-top:0;padding-top:0;margin-top:0">相手の会社と立場</div>
+      <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介（空欄なら毎回変える）"></label>
+      <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
+      <div class="g2">
+        <label class="f">規模（従業員数）<input type="text" id="size" placeholder="例：従業員30名、年商5億"></label>
+        <label class="f">営業人数・体制<input type="text" id="sales-team" placeholder="例：営業2名（社長も兼務）、ISなし"></label>
+      </div>
+      <label class="f">相手のレイヤー
+        <select id="layer"><option value="" selected>ランダム（役職は伏せて出る）</option><option value="ceo">社長</option><option value="director">取締役 営業本部長</option><option value="sales_mgr">営業部長</option><option value="section">営業課長</option><option value="marketing">マーケティング責任者</option><option value="bizdev">新規事業の事業部長</option><option value="planning">経営企画の担当</option><option value="is_lead">インサイドセールスのリーダー</option></select></label>
+    </div>
+    <div class="panel" style="margin-top:0">
+      <div class="sub" style="border-top:0;padding-top:0;margin-top:0">難易度・課題</div>
+      <label class="f">難易度（数字の出し方・言い直しの認め方）
+        <select id="difficulty"><option value="easy">協力的</option><option value="normal" selected>普通</option><option value="hard">手強い（過去に営業代行で失敗している）</option></select></label>
+      <label class="f">本当の課題（4分類）
+        <select id="answer"><option value="" selected>ランダム（最後まで伏せる）</option><option value="A">A 戦略</option><option value="B">B 手法</option><option value="C">C 量</option><option value="D">D 質</option></select></label>
+      <p class="hint" style="background:var(--bg);border-radius:6px;padding:8px 12px">タイプ × レイヤー × 難易度 × 課題 の組み合わせで相手を作ります。</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <div class="co-head"><div class="sub" style="border-top:0;padding-top:0;margin-top:0">保存した相手（テンプレート）</div><span class="hint" style="margin:0 0 0 10px">よく当たる相手を保存して、同じ設定で繰り返し練習</span><span class="sp"></span><button class="btn" id="tpl-save" type="button">今の設定を保存</button></div>
+    <div class="tpls" id="tpls"></div>
+  </div>
+
+  <div class="row"><button class="btn primary" id="gen" type="button">この設定で相手を生成する</button><span class="hint" style="margin:0">生成後、会社概要と冒頭のひとことだけ見えます</span></div>
   <div class="status" id="gen-status"></div>
   <details class="cheat"><summary>カンニング用：FS商談の考え方（教材の要約）</summary>
     <h4>0. 終着点</h4>
@@ -673,9 +754,10 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 <div class="setgrid">
   <nav class="setnav" id="setnav">
     <button type="button" data-set="co" class="on">自社情報</button>
-    <button type="button" data-set="fb">上司FBの観点</button>
-    <button type="button" data-set="missed">間違えた暗算</button>
+    <button type="button" data-set="fb">上司FBの観点 <span class="cnt" id="fb-cnt"></span></button>
+    <button type="button" data-set="missed">間違えた暗算 <span class="cnt bad" id="miss-cnt"></span></button>
     <button type="button" data-set="know">知見（Notion）</button>
+    <button type="button" data-set="data">録画・データ</button>
   </nav>
   <div class="setbody">
     <section class="panel" id="co">
@@ -729,15 +811,17 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
     <label class="f">FBのメモ<textarea id="fb-text" rows="5" placeholder="例：戦略の部分は件数は？とか聞いたほうがいい。何が困っているのか？って聞いたほうがいい…"></textarea></label>
     <div class="row"><button class="btn primary" id="fb-add" type="button">AIで観点にする</button></div>
     <div class="status" id="fb-status"></div>
-    <div id="fb-list"></div>
+    <div class="fbcards" id="fb-list"></div>
   </div>
 </section>
     <section class="panel" id="missed">
   <div class="co-head"><div><div class="pl" style="color:var(--teal)"><span id="miss-state"></span></div><h2>間違えた暗算チェック</h2></div></div>
     <p class="hint">商談中・商談後の暗算チェックで間違えた（または答えられなかった）問題がここに貯まります。解き直して正解すると消えます。</p>
   <div id="miss-body">
-    <ul class="miss" id="miss-list"></ul>
-    <div class="row"><button class="btn" id="miss-clear" type="button">全部消す</button></div>
+    <div class="misswrap">
+      <div class="dbox"><h3>分野別の正解率</h3><div class="kinds" id="kinds"></div></div>
+      <div><ul class="miss" id="miss-list"></ul><div class="row"><button class="btn" id="miss-clear" type="button">全部消す</button></div></div>
+    </div>
   </div>
 </section>
     <section class="panel" id="know">
@@ -753,6 +837,14 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
   <div class="status" id="know-result"></div>
   <details id="know-list-wrap" hidden><summary>最近の知見を見る</summary><ul id="know-list"></ul></details>
 </section>
+    <section class="panel" id="data" hidden>
+      <h2>録画・データ</h2>
+      <div class="g3">
+        <div><b>録画の既定</b><p class="hint" style="margin:2px 0 8px">声のロープレで最初からカメラをオンにする</p><label style="display:inline-flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="rec-default"> オン</label></div>
+        <div><b>保存場所</b><p class="hint" style="margin:2px 0 8px">録画・スコア履歴・設定はこのブラウザに保存されます</p><button class="btn" id="export-btn" type="button">設定と履歴をファイルに書き出す</button></div>
+        <div><b>履歴を消す</b><p class="hint" style="margin:2px 0 8px">スコア履歴・間違えた暗算をすべて消す</p><button class="btn" id="data-clear" type="button" style="color:var(--bad);border-color:var(--bad)">履歴を消す</button></div>
+      </div>
+    </section>
   </div>
 </div>
 </div>

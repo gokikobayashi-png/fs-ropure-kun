@@ -4,6 +4,7 @@ import { renderAvatar } from "/avatar.js";
 const $ = id => document.getElementById(id);
 const CAT = { A: "戦略", B: "手法", C: "量", D: "質" };
 let persona = null, session = null, transcript = [], picked = null;
+let history = [];
 let micCtx = null, micStream = null, micNode = null, playCtx = null, nextPlay = 0, sources = [];
 let camStream = null, recorder = null, recChunks = [], recDest = null, recUrl = "";
 let timerId = null, startedAt = 0, curIn = "", curOut = "", inEl = null, outEl = null, mode = "voice", chatBusy = false;
@@ -148,9 +149,16 @@ function view(name) {
 document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => view(b.dataset.view)));
 document.querySelectorAll("#setnav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("#setnav button").forEach(x => x.classList.toggle("on", x === b));
-  ["co", "fb", "missed", "know"].forEach(id => { $(id).hidden = id !== b.dataset.set; });
+  ["co", "fb", "missed", "know", "data"].forEach(id => { $(id).hidden = id !== b.dataset.set; });
 }));
-["fb", "missed", "know"].forEach(id => { $(id).hidden = true; });
+["fb", "missed", "know", "data"].forEach(id => { $(id).hidden = true; });
+try { $("rec-default").checked = localStorage.getItem("ropure-rec-default") === "1"; $("rec-on").checked = $("rec-default").checked; } catch (_) {}
+$("rec-default").addEventListener("change", () => { try { localStorage.setItem("ropure-rec-default", $("rec-default").checked ? "1" : "0"); } catch (_) {} $("rec-on").checked = $("rec-default").checked; });
+$("export-btn").addEventListener("click", () => {
+  const data = {}; ["ropure-company-v1", "ropure-boss-fb-v1", "ropure-missed-quiz-v1", "ropure-history-v1", "ropure-templates-v1"].forEach(k => { try { data[k] = JSON.parse(localStorage.getItem(k) || "null"); } catch (_) {} });
+  const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "zenai-ropure-" + jst() + ".json"; a.click();
+});
+$("data-clear").addEventListener("click", () => { history = []; saveHistory(); missed = []; saveMissed(); renderDash(); status("gen-status", ""); });
 function rtab(name) {
   ["q", "eval", "info"].forEach(t => { $("rt-" + t).hidden = t !== name; });
   document.querySelectorAll("#rtabs button").forEach(b => b.classList.toggle("on", b.dataset.rt === name));
@@ -163,11 +171,45 @@ function step(n) {
 }
 function status(id, text, err) { const e = $(id); e.textContent = text || ""; e.classList.toggle("err", !!err); }
 
+/* ---------- ① スタイル選択・テンプレート ---------- */
+let styleKey = "";
+const STYLE_NAME = { "": "ランダム", analytical: "アナリティカル", driver: "ドライバー", amiable: "エミアブル", expressive: "エクスプレッシブ" };
+document.querySelectorAll("#styles .stylecard").forEach(b => b.addEventListener("click", () => { styleKey = b.dataset.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", x === b)); }));
+function caseSettings() { return { industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), sales_team: $("sales-team").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, answer: $("answer").value, style: styleKey }; }
+function applyCase(c) { $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey)); }
+const TPL_KEY = "ropure-templates-v1";
+let templates = [];
+function loadTemplates() { try { templates = JSON.parse(localStorage.getItem(TPL_KEY) || "[]"); if (!Array.isArray(templates)) templates = []; } catch (_) { templates = []; } }
+function saveTemplates() { try { localStorage.setItem(TPL_KEY, JSON.stringify(templates.slice(0, 30))); } catch (_) {} renderTemplates(); }
+const LAYER_NAME = { "": "レイヤー任意", ceo: "社長", director: "営業本部長", sales_mgr: "営業部長", section: "営業課長", marketing: "マーケ責任者", bizdev: "新規事業部長", planning: "経営企画", is_lead: "ISリーダー" };
+const DIFF_NAME = { easy: "協力的", normal: "普通", hard: "手強い" };
+function renderTemplates() {
+  const box = $("tpls"); box.textContent = "";
+  if (!templates.length) { const p = document.createElement("p"); p.className = "hint"; p.style.margin = "6px 0 0"; p.textContent = "まだありません。設定を入れて「今の設定を保存」を押すと、ここに並びます。"; box.appendChild(p); return; }
+  templates.forEach(t => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "tpl";
+    const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = STYLE_NAME[t.style || ""] || "ランダム"; b.appendChild(tag);
+    const x = document.createElement("button"); x.type = "button"; x.className = "btn x"; x.textContent = "×"; x.setAttribute("aria-label", "削除"); x.addEventListener("click", e => { e.stopPropagation(); templates = templates.filter(y => y !== t); saveTemplates(); }); b.appendChild(x);
+    const nm = document.createElement("b"); nm.textContent = t.name; b.appendChild(nm);
+    const uses = history.filter(h => h.tpl === t.id); const avg = uses.length ? (uses.reduce((a, h) => a + h.total, 0) / uses.length).toFixed(1) : "—";
+    const sm = document.createElement("small"); sm.textContent = (DIFF_NAME[t.difficulty] || "普通") + " ・ " + (t.layer ? (LAYER_NAME[t.layer] || "") : "レイヤー任意") + " ・ 使用 " + uses.length + "回 ・ 平均 " + avg; b.appendChild(sm);
+    b.addEventListener("click", () => { applyCase(t); currentTpl = t.id; status("gen-status", "テンプレート「" + t.name + "」を読み込みました"); });
+    box.appendChild(b);
+  });
+}
+let currentTpl = null;
+$("tpl-save").addEventListener("click", () => {
+  const c = caseSettings();
+  const name = [c.industry, c.product, c.layer ? LAYER_NAME[c.layer] : ""].filter(Boolean).join("・") || "名前なしの相手";
+  const t = { id: Date.now().toString(36), name, ...c }; templates.unshift(t); currentTpl = t.id; saveTemplates(); status("gen-status", "保存しました：" + name);
+});
+["industry", "product", "size", "sales-team", "layer", "difficulty", "answer"].forEach(id => $(id).addEventListener("input", () => { currentTpl = null; }));
+
 /* ---------- ① → ② ペルソナ生成 ---------- */
 async function generate() {
   $("gen").disabled = true; lockStart(true); status("gen-status", "相手を用意しています（10〜20秒）…");
   try {
-    persona = await api("persona", { industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, company: coForApi() });
+    persona = await api("persona", { ...caseSettings(), company: coForApi() }); persona.tpl = currentTpl;
     $("p-company").textContent = persona.company;
     $("p-brief").textContent = persona.brief;
     $("p-name").textContent = persona.name + "（役職は商談で確認）";
@@ -374,8 +416,8 @@ function renderResInfo(graded) {
   const kv = document.createElement("div"); kv.className = "kv";
   const row = (k, v) => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = k + "："; d.appendChild(b); d.appendChild(document.createTextNode(v || "")); kv.appendChild(d); };
   row("会社", persona.company); row("会社概要", persona.brief); row("相手", persona.name); row("冒頭のひとこと", persona.opening_line);
-  if (graded) { row("役職", persona.role); row("決裁権", persona.authority); row("正解", CAT[persona.answer] + "：" + (persona.exp || "")); row("言い直しの模範例", persona.rephrase_example); }
-  else row("役職・決裁権・相手の事実", "判定後に表示");
+  if (graded) { row("役職", persona.role); row("決裁権", persona.authority); row("タイプ（ソーシャルスタイル）", (persona.style_name || "—") + (persona.style_hidden ? "（伏せていました）" : "")); row("正解", CAT[persona.answer] + "：" + (persona.exp || "")); row("言い直しの模範例", persona.rephrase_example); }
+  else row("役職・決裁権・タイプ・相手の事実", "判定後に表示");
   box.appendChild(kv);
   if (graded && (persona.hidden_facts || []).length) { const h = document.createElement("h3"); h.textContent = "相手の事実（答え合わせ用）"; h.style.cssText = "font-size:13px;margin:14px 0 4px"; box.appendChild(h); const ul = document.createElement("ul"); ul.className = "pts"; persona.hidden_facts.forEach(f => { const li = document.createElement("li"); li.textContent = f; ul.appendChild(li); }); box.appendChild(ul); }
   if (quizzes.length) { const h = document.createElement("h3"); h.textContent = "暗算チェック " + quizzes.filter(q => q.ok).length + "/" + quizzes.length; h.style.cssText = "font-size:13px;margin:14px 0 4px"; box.appendChild(h); const ul = document.createElement("ul"); ul.className = "pts"; quizzes.forEach(q => { const li = document.createElement("li"); li.textContent = q.question + " → 正解" + q.answer + q.unit + "／自分" + (q.mine === null ? "未回答" : q.mine + q.unit) + "（" + (q.ok ? "○" : "×") + "、" + q.sec.toFixed(1) + "秒）"; ul.appendChild(li); }); box.appendChild(ul); }
@@ -449,19 +491,20 @@ function loadChecks() { try { const v = JSON.parse(localStorage.getItem(FB_KEY) 
 function saveChecks() { try { localStorage.setItem(FB_KEY, JSON.stringify(checks.slice(0, 12))); } catch (_) {} renderChecks(); }
 function checksForApi() { return checks.map(c => ({ key: c.key, title: c.title, check: c.check, example: c.example })); }
 function renderChecks() {
-  $("fb-state").textContent = "観点 " + checks.length + "件";
+  $("fb-state").textContent = "観点 " + checks.length + "件"; $("fb-cnt").textContent = checks.length ? String(checks.length) : "";
   const box = $("fb-list"); box.textContent = "";
   if (!checks.length) { const p = document.createElement("p"); p.className = "hint"; p.textContent = "まだありません。"; box.appendChild(p); return; }
   checks.forEach(c => {
-    const d = document.createElement("div"); d.className = "fb-item";
-    const l = document.createElement("div");
-    const t = document.createElement("div"); t.className = "t"; t.textContent = c.title; l.appendChild(t);
-    const ck = document.createElement("div"); ck.className = "c"; ck.textContent = "採点：" + c.check; l.appendChild(ck);
-    if (c.example) { const e = document.createElement("div"); e.className = "e"; e.textContent = "例：「" + c.example + "」"; l.appendChild(e); }
-    const m = document.createElement("div"); m.className = "m"; m.textContent = (c.src || "上司FB") + (c.at ? "・" + new Date(c.at).toLocaleDateString("ja-JP") : ""); l.appendChild(m);
-    d.appendChild(l);
-    const x = document.createElement("button"); x.type = "button"; x.className = "btn x"; x.textContent = "×"; x.setAttribute("aria-label", "削除"); x.addEventListener("click", () => { checks = checks.filter(y => y !== c); saveChecks(); });
-    d.appendChild(x); box.appendChild(d);
+    const scored = history.filter(h => h.custom && h.custom[c.key]); const latest = scored.length ? scored[scored.length - 1].custom[c.key].score : null; const avg = scored.length ? scored.reduce((a, h) => a + h.custom[c.key].score, 0) / scored.length : null;
+    const weak = avg !== null && avg < 2.5;
+    const d = document.createElement("div"); d.className = "fbcard" + (weak ? " weak" : "");
+    const sc = document.createElement("span"); sc.className = "sc"; sc.textContent = scored.length ? `直近 ${latest} ／ 平均 ${avg.toFixed(1)}` + (weak ? " ・ 弱点" : "") : "未採点（次のロープレから）"; d.appendChild(sc);
+    const t = document.createElement("div"); t.className = "t"; t.textContent = c.title; d.appendChild(t);
+    const ck = document.createElement("div"); ck.className = "c"; ck.textContent = "採点：" + c.check; d.appendChild(ck);
+    if (c.example) { const e = document.createElement("div"); e.className = "e"; e.textContent = "例：「" + c.example + "」"; d.appendChild(e); }
+    const m = document.createElement("div"); m.className = "m"; m.textContent = (c.src || "上司FB") + (c.at ? "・" + new Date(c.at).toLocaleDateString("ja-JP") : ""); d.appendChild(m);
+    const row = document.createElement("div"); row.className = "row"; const x = document.createElement("button"); x.type = "button"; x.className = "btn"; x.textContent = "削除"; x.style.color = "var(--bad)"; x.addEventListener("click", () => { checks = checks.filter(y => y !== c); saveChecks(); }); row.appendChild(x); d.appendChild(row);
+    box.appendChild(d);
   });
 }
 $("fb-add").addEventListener("click", async () => {
@@ -481,7 +524,6 @@ loadChecks(); renderChecks();
 /* ---------- スコア履歴とダッシュボード（このブラウザに保存） ---------- */
 const HIST_KEY = "ropure-history-v1";
 const AXES = [["counterpart", "相手の把握"], ["widen", "広げる"], ["classify", "深掘る"], ["rephrase", "言い直し"], ["converge", "狭める"], ["roi", "検算"], ["numbers", "数字"]];
-let history = [];
 function loadHistory() { try { history = JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); if (!Array.isArray(history)) history = []; } catch (_) { history = []; } }
 function saveHistory() { try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-200))); } catch (_) {} }
 function numbersScore() {
@@ -499,7 +541,7 @@ function recordHistory(r) {
   const sc = { ...r.scores }; const ns = numbersScore(); if (ns) sc.numbers = ns;
   const keys = AXES.map(a => a[0]).filter(k => sc[k]);
   const total = keys.reduce((s, k) => s + sc[k].score, 0) / keys.length;
-  const e = { at: Date.now(), company: persona.company, role: persona.role, mode, correct: !!r.correct, answer: r.answer, picked, scores: sc, custom: r.custom || null, total: Math.round(total * 10) / 10, next: r.nextAction || "", feedback: String(r.feedback || "").slice(0, 600), sec: Math.round((Date.now() - startedAt) / 1000) };
+  const e = { at: Date.now(), company: persona.company, role: persona.role, mode, correct: !!r.correct, answer: r.answer, picked, scores: sc, custom: r.custom || null, tpl: persona.tpl || null, style: persona.style || "", quiz: quizzes.map(q => ({ kind: q.kind, ok: q.ok })), total: Math.round(total * 10) / 10, next: r.nextAction || "", feedback: String(r.feedback || "").slice(0, 600), sec: Math.round((Date.now() - startedAt) / 1000) };
   history.push(e); saveHistory(); return e;
 }
 function avgScores(list) { const out = {}; AXES.forEach(([k]) => { const v = list.map(e => e.scores[k] && e.scores[k].score).filter(x => x); out[k] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }); return out; }
@@ -566,7 +608,7 @@ function renderDash() {
   ].filter(Boolean).join("\n"));
 }
 $("dash-clear").addEventListener("click", () => { history = []; saveHistory(); renderDash(); });
-loadHistory(); renderDash();
+loadHistory(); renderDash(); loadTemplates(); renderTemplates();
 
 /* ---------- 間違えた暗算チェック（このブラウザに貯める） ---------- */
 const MISS_KEY = "ropure-missed-quiz-v1";
@@ -576,17 +618,25 @@ function saveMissed() { try { localStorage.setItem(MISS_KEY, JSON.stringify(miss
 function addMissed(q) {
   const same = missed.find(m => m.question === q.question);
   if (same) { same.miss++; same.mine = q.mine; same.at = Date.now(); }
-  else missed.push({ question: q.question, answer: q.answer, unit: q.unit, calc: q.calc || [], mental: q.mental || [], mine: q.mine, miss: 1, at: Date.now(), company: persona ? persona.company : "" });
+  else missed.push({ question: q.question, answer: q.answer, unit: q.unit, calc: q.calc || [], mental: q.mental || [], mine: q.mine, miss: 1, at: Date.now(), company: persona ? persona.company : "", kind: q.kind || "" });
   saveMissed();
 }
+const KIND_NAME = { pct: "％暗算", ratio: "率を出す", reverse: "逆算", funnel: "ファネル", revenue: "1受注の売上", roi: "投資と回収" };
+function renderKinds() {
+  const box = $("kinds"); box.textContent = "";
+  const agg = {}; history.forEach(h => (h.quiz || []).forEach(q => { const k = KIND_NAME[q.kind] ? q.kind : "other"; agg[k] = agg[k] || { n: 0, c: 0 }; agg[k].n++; if (q.ok) agg[k].c++; }));
+  const keys = Object.keys(agg); if (!keys.length) { const p = document.createElement("p"); p.className = "hint"; p.style.margin = "0"; p.textContent = "暗算チェックを解くと、分野ごとの正解率が出ます。"; box.appendChild(p); return; }
+  const rates = keys.map(k => [k, agg[k].c / agg[k].n]); const weak = rates.slice().sort((a, b) => a[1] - b[1])[0][0];
+  rates.forEach(([k, r]) => { const d = document.createElement("div"); if (k === weak && r < 0.8) d.className = "weak"; const l = document.createElement("span"); l.textContent = KIND_NAME[k] || "その他"; const bar = document.createElement("div"); bar.className = "bar"; const i = document.createElement("i"); i.style.width = Math.round(r * 100) + "%"; bar.appendChild(i); const v = document.createElement("span"); v.style.textAlign = "right"; v.textContent = Math.round(r * 100) + "%"; d.appendChild(l); d.appendChild(bar); d.appendChild(v); box.appendChild(d); });
+}
 function renderMissed() {
-  $("miss-state").textContent = "間違えた問題 " + missed.length + "件";
+  $("miss-state").textContent = "間違えた問題 " + missed.length + "件"; $("miss-cnt").textContent = missed.length ? String(missed.length) : ""; renderKinds();
   const ul = $("miss-list"); ul.textContent = "";
   if (!missed.length) { const li = document.createElement("li"); li.className = "hint"; li.textContent = "まだありません。"; ul.appendChild(li); return; }
   missed.slice().reverse().forEach(m => {
     const li = document.createElement("li");
     const q = document.createElement("div"); q.className = "mq"; q.textContent = m.question; li.appendChild(q);
-    const meta = document.createElement("div"); meta.className = "mm"; meta.textContent = new Date(m.at).toLocaleDateString("ja-JP") + (m.company ? "・" + m.company : "") + "／" + m.miss + "回間違い／前回の答え：" + (m.mine === null || m.mine === undefined ? "未回答" : m.mine + (m.unit || "")); li.appendChild(meta);
+    const meta = document.createElement("div"); meta.className = "mm"; meta.textContent = (KIND_NAME[m.kind] ? KIND_NAME[m.kind] + " ・ " : "") + new Date(m.at).toLocaleDateString("ja-JP") + (m.company ? "・" + m.company : "") + "／" + m.miss + "回間違い／前回の答え：" + (m.mine === null || m.mine === undefined ? "未回答" : m.mine + (m.unit || "")); li.appendChild(meta);
     const row = document.createElement("div"); row.className = "mi";
     const inp = document.createElement("input"); inp.type = "number"; inp.step = "any"; inp.inputMode = "decimal"; inp.placeholder = "解き直す"; row.appendChild(inp);
     const u = document.createElement("span"); u.textContent = m.unit || ""; row.appendChild(u);
