@@ -82,4 +82,31 @@ export function avatarSvg(p) {
   </svg>`;
 }
 
-export function renderAvatar(el, p) { el.innerHTML = avatarSvg(p); }
+// 用意したイラスト（public/faces）。性別と年齢が近いものから選ぶ。合うものが無ければSVGの絵を使う
+const FACES = [
+  { f: "m25_work", g: "male", age: 26 }, { f: "m25_suit", g: "male", age: 27 },
+  { f: "m30_hoodie", g: "male", age: 34 },
+  { f: "m45_ceo", g: "male", age: 48 }, { f: "m45_glasses", g: "male", age: 46 },
+  { f: "m55_cap", g: "male", age: 58 }, { f: "m55_suit", g: "male", age: 57 },
+  { f: "f30_beige", g: "female", age: 30 }, { f: "f30_bob", g: "female", age: 29 },
+  { f: "f45_glasses", g: "female", age: 47 },
+];
+export function pickFace(p) {
+  const g = p.gender === "female" ? "female" : "male";
+  const age = Number(p.age) || guessAge(p.role);
+  const list = FACES.filter(x => x.g === g);
+  if (!list.length) return null;
+  const best = Math.min(...list.map(x => Math.abs(x.age - age)));
+  const near = list.filter(x => Math.abs(x.age - age) <= best + 6);
+  const r = seeded((p.company || "") + "|" + (p.name || ""));
+  return pick(r, near).f;
+}
+
+export function renderAvatar(el, p) {
+  const f = pickFace(p);
+  if (!f) { el.innerHTML = avatarSvg(p); return; }
+  const img = new Image();
+  img.alt = (p.name || "相手") + "のイラスト"; img.src = "/faces/" + f + ".jpg";
+  img.onerror = () => { el.innerHTML = avatarSvg(p); };
+  el.textContent = ""; el.appendChild(img);
+}
