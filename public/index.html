@@ -122,6 +122,31 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .calc.ng .res{color:var(--bad)}
 .calc .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:middle}
+.quiz{margin-top:12px;padding:14px 16px;border-radius:10px;border:2px solid var(--accent);background:var(--surface)}
+.quiz .qh{display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent)}
+.quiz .qh .sp{flex:1}
+.quiz .qtimer{font-variant-numeric:tabular-nums;font-size:13px;color:var(--ink-2)}
+.quiz .qq{font-size:17px;font-weight:700;margin:6px 0 2px;line-height:1.6}
+.quiz .qquote{font-size:12px;color:var(--ink-2)}
+.quiz .qin{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.quiz .qin input{width:140px;margin-top:0;font-size:18px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.quiz .qin .unit{font-weight:700}
+.quiz .qres{margin-top:10px;padding:10px 12px;border-radius:6px;font-size:14px;white-space:pre-wrap}
+.quiz .qres.ok{background:var(--accent-soft)}
+.quiz .qres.ng{background:var(--bad-soft)}
+.quiz .qres .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;display:block;margin-bottom:2px}
+.quiz .qres.ok .lab{color:var(--accent)}
+.quiz .qres.ng .lab{color:var(--bad)}
+.quiz .mental{margin-top:8px;padding:8px 12px;border-radius:6px;background:#F4F1E6;color:#5B4A12;font-size:14px;white-space:pre-wrap}
+.quiz .mental .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;display:block;opacity:.8}
+.qscore{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.guess{margin-top:10px;padding:12px 14px;border-radius:6px;border:1px dashed var(--accent);background:var(--surface)}
+.guess .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:0 10px}
+@media (max-width:560px){.guess .g4{grid-template-columns:1fr 1fr}}
+.guess .chk{display:flex;gap:8px;align-items:center;margin-top:4px;font-size:14px}
+.guess .mark{font-weight:700}
+.guess .mark.ok{color:var(--accent)}
+.guess .mark.ng{color:var(--bad)}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -318,6 +343,19 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
     <button class="btn primary" id="chat-send" type="button">送る</button>
   </div>
   <div class="status" id="chat-status"></div>
+  <div class="quiz" id="quiz" hidden>
+    <div class="qh"><span>暗算チェック</span><span class="qscore" id="quiz-score"></span><span class="sp"></span><span class="qtimer" id="quiz-timer">0.0秒</span></div>
+    <div class="qq" id="quiz-q"></div>
+    <div class="qquote" id="quiz-quote"></div>
+    <div class="qin">
+      <input type="number" id="quiz-in" step="any" inputmode="decimal" placeholder="暗算で"><span class="unit" id="quiz-unit"></span>
+      <button class="btn primary" id="quiz-ok" type="button">答える</button>
+      <button class="btn" id="quiz-skip" type="button">分からない</button>
+    </div>
+    <div class="qres" id="quiz-res" hidden></div>
+    <div class="mental" id="quiz-mental" hidden></div>
+    <div class="row" id="quiz-next-row" hidden><button class="btn primary" id="quiz-next" type="button">次へ</button></div>
+  </div>
   <p class="hint" id="voice-hint">相手が話し終えてから話す。かぶせると相手は止まる（本物と同じ）。文字起こしは参考程度。</p>
   <p class="hint" id="chat-hint" hidden>本番と同じく、1回に聞くのは1つずつ。長文でまとめて聞くと相手は一部しか答えない。</p>
 </section>
@@ -351,7 +389,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   <div class="q">
     <div class="qn">問3 ／ 狭める</div>
     <h3>検算は成立か不成立か。「こういうやり方なら」を1つ出したか</h3>
-    <p class="hint">相手が3〜6ヶ月でうちに払う額を、その期間の受注で回収できるか。相手の実績を聞けた変数はその数字、聞けていなければ基準値のまま。</p>
+    <p class="hint">相手が3〜6ヶ月でうちに払う額を、その期間の受注で回収できるか。相手の実績を聞けた変数はその数字、聞けていなければ基準値のまま。<b>商談中と同じく、まず頭の中で計算してから答え合わせ。</b></p>
     <div class="g3">
       <label class="f">月費用（プラン）<select id="c-plan"></select></label>
       <label class="f">期間（月）<input type="number" id="c-months" min="1" step="1"></label>
@@ -362,9 +400,20 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
     </div>
     <label class="f">1受注の売上（万円）── 買い切りなら単価×導入数、SaaS/月額ならARR（月額×12×アカウント数）
       <input type="number" id="c-revenue" min="0" step="0.1" placeholder="例：4.4万×4台 → 17.6"></label>
-    <div class="calc" id="calc">
+    <div class="guess" id="guess">
+      <div class="qh" style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent)">まず暗算で</div>
+      <div class="g4">
+        <label class="f">投資額（万円）<input type="number" id="g-invest" step="any" inputmode="decimal"></label>
+        <label class="f">期間内の受注数（件）<input type="number" id="g-wins" step="any" inputmode="decimal"></label>
+        <label class="f">回収額（万円）<input type="number" id="g-recover" step="any" inputmode="decimal"></label>
+        <label class="f">判定<select id="g-judge"><option value="">—</option><option value="成立">成立</option><option value="不成立">不成立</option></select></label>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn primary" id="g-check" type="button">答え合わせ</button><span class="hint" style="margin:0">式：投資額＝期間×月費用＋準備費／受注数＝稼働量×アポ率×受注率×期間／回収額＝受注数×1受注の売上</span></div>
+    </div>
+    <div class="calc" id="calc" hidden>
       <div class="formula">投資額 ＝ 期間 × 月費用 ＋ 準備費　／　回収額 ＝ 期間内の受注数 × 1受注の売上（受注数 ＝ 稼働量 × アポ率 × 受注率 × 期間）</div>
-      <div id="calc-body">1受注の売上を入れると計算します。</div>
+      <div id="calc-body"></div>
+      <div class="mental" id="calc-mental" style="margin-top:8px;padding:8px 12px;border-radius:6px;background:#F4F1E6;color:#5B4A12;font-size:14px;white-space:pre-wrap" hidden></div>
     </div>
     <label class="f">「こういうやり方なら」を1つ（成立ならフルで、不成立なら絞る／1受注を大きくする／座組みを変える）
       <textarea id="proposal" rows="3" placeholder="例：セグメントをゼネコンのDX推進部1つに絞って、まず1ヶ月で検証しませんか"></textarea></label>

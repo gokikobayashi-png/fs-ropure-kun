@@ -226,7 +226,7 @@ function startTimer() {
 function lockStart(on) { $("call").disabled = on; $("chat-start").disabled = on; $("regen").disabled = on; }
 
 async function startCall() {
-  lockStart(true); setMode("voice"); status("call-status", "マイクの許可 → 接続中…");
+  lockStart(true); setMode("voice"); resetQuiz(); status("call-status", "マイクの許可 → 接続中…");
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     const { token, model, config } = await api("token", { persona, company: coForApi() });
@@ -290,20 +290,75 @@ function endCall(note) {
   picked = null; document.querySelectorAll("#opts .opt").forEach(b => { b.setAttribute("aria-pressed", "false"); b.classList.remove("correct", "wrong"); b.disabled = false; });
   $("rephrase").value = ""; $("overview").value = ""; $("proposal").value = ""; resetCalc(); $("verdict").hidden = true; $("feedback").hidden = true; $("again").hidden = true; $("grade").disabled = false; status("grade-status", "");
   $("step3").hidden = false; step(4); $("step3").hidden = false;
+  if (mode === "voice" && transcript.length) voiceQuiz();
+}
+async function voiceQuiz() {
+  status("chat-status", "この商談で出た数字を暗算チェックにしています…");
+  try {
+    const { quizzes: qs } = await api("quiz", { persona, transcript });
+    status("chat-status", "");
+    if (!qs || !qs.length) return;
+    addMsg("sys", "商談で出た数字の暗算チェック（" + qs.length + "問）。相手が言った数字で、その場で出すべきだった計算です");
+    quizQueue = qs.slice(); await runQuizQueue();
+    addMsg("sys", "暗算チェック終了：" + quizzes.filter(q => q.ok).length + "/" + quizzes.length + " 正解");
+  } catch (e) { status("chat-status", "暗算チェックを作れませんでした：" + e.message, true); }
 }
 $("call").addEventListener("click", startCall);
+
+/* ---------- 暗算チェック（商談中に出た数字で即答） ---------- */
+let quizzes = [];          // この回の結果 [{question, answer, unit, mine, ok, sec, kind}]
+let quizQueue = [];        // 出題待ち（音声のあとはまとめて）
+let quizCur = null, quizT0 = 0, quizTimer = null, quizResolve = null;
+function quizActive() { return !!quizCur; }
+function quizStart(q) {
+  return new Promise(res => {
+    quizResolve = res; quizCur = q; quizT0 = performance.now();
+    $("quiz-q").textContent = q.question; $("quiz-quote").textContent = q.quote ? "相手の発言：「" + q.quote + "」" : "";
+    $("quiz-unit").textContent = q.unit || ""; $("quiz-in").value = ""; $("quiz-in").disabled = false; $("quiz-ok").disabled = false; $("quiz-skip").disabled = false;
+    $("quiz-res").hidden = true; $("quiz-mental").hidden = true; $("quiz-next-row").hidden = true;
+    const done = quizzes.filter(x => x.ok).length;
+    $("quiz-score").textContent = quizzes.length ? `${done}/${quizzes.length} 正解` : "";
+    $("quiz").hidden = false; $("quiz").scrollIntoView({ block: "nearest" });
+    clearInterval(quizTimer); quizTimer = setInterval(() => { $("quiz-timer").textContent = ((performance.now() - quizT0) / 1000).toFixed(1) + "秒"; }, 100);
+    $("quiz-in").focus();
+  });
+}
+function quizAnswer(skip) {
+  if (!quizCur) return;
+  clearInterval(quizTimer);
+  const sec = (performance.now() - quizT0) / 1000;
+  const raw = $("quiz-in").value.trim();
+  const mine = skip || raw === "" ? null : Number(raw);
+  const ans = quizCur.answer;
+  const ok = mine !== null && isFinite(mine) && Math.abs(mine - ans) <= Math.max(Math.abs(ans) * 0.02, 0.05);
+  quizzes.push({ question: quizCur.question, answer: ans, unit: quizCur.unit, mine, ok, sec, kind: quizCur.kind });
+  $("quiz-in").disabled = true; $("quiz-ok").disabled = true; $("quiz-skip").disabled = true;
+  const r = $("quiz-res"); r.hidden = false; r.className = "qres " + (ok ? "ok" : "ng"); r.textContent = "";
+  const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = (ok ? "正解" : mine === null ? "未回答" : "不正解") + " ／ " + sec.toFixed(1) + "秒" + (sec <= 10 ? "（即答ライン）" : "（目標10秒以内）"); r.appendChild(lab);
+    r.appendChild(document.createTextNode("答え：" + ans + (quizCur.unit || "") + (quizCur.calc && quizCur.calc.length ? "\n" + quizCur.calc.join("\n") : "")));
+  if (quizCur.mental && quizCur.mental.length) { const m = $("quiz-mental"); m.hidden = false; m.textContent = ""; const l = document.createElement("span"); l.className = "lab"; l.textContent = "暗算のコツ"; m.appendChild(l); m.appendChild(document.createTextNode(quizCur.mental.join("\n"))); }
+  $("quiz-next-row").hidden = false; $("quiz-next").focus();
+}
+$("quiz-ok").addEventListener("click", () => quizAnswer(false));
+$("quiz-skip").addEventListener("click", () => quizAnswer(true));
+$("quiz-in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); quizAnswer(false); } });
+$("quiz-next").addEventListener("click", () => { $("quiz").hidden = true; const f = quizResolve; quizCur = null; quizResolve = null; if (f) f(); });
+async function runQuizQueue() { while (quizQueue.length) { await quizStart(quizQueue.shift()); } }
+function resetQuiz() { quizzes = []; quizQueue = []; quizCur = null; quizResolve = null; clearInterval(quizTimer); $("quiz").hidden = true; }
+function askedList() { return quizzes.map(q => q.question); }
 
 /* ---------- ③ チャットロープレ ---------- */
 async function askPersona() {
   chatBusy = true; $("chat-send").disabled = true;
   const typing = addMsg("sys", persona.name + "が入力中…");
   try {
-    const { reply } = await api("chat", { persona, history: transcript, company: coForApi() });
+    const { reply, quiz } = await api("chat", { persona, history: transcript, company: coForApi(), asked: askedList() });
     typing.remove();
     if (!timerId) return; // 待っている間に商談を終えた
     transcript.push({ who: "them", text: reply }); addMsg("them", reply);
     talking(true, Math.min(5000, 600 + reply.length * 70));
     status("chat-status", "");
+    if (quiz && timerId) { $("chat-send").disabled = true; await quizStart(quiz); }
   } catch (e) {
     typing.remove(); status("chat-status", e.message + "（もう一度「送る」で再送できます）", true);
   } finally {
@@ -311,7 +366,7 @@ async function askPersona() {
   }
 }
 async function startChat() {
-  lockStart(true); setMode("chat");
+  lockStart(true); setMode("chat"); resetQuiz();
   transcript = []; $("transcript").textContent = ""; curIn = curOut = ""; inEl = outEl = null;
   addMsg("sys", persona.company + " " + persona.name + "との商談（チャット）。ゴール：課題を言い直して合意を取る");
   step(3); $("dot").classList.add("live"); $("hangup").disabled = false; status("call-status", "");
@@ -321,7 +376,7 @@ async function startChat() {
   $("chat-send").disabled = false; $("chat-input").focus();
 }
 async function sendChat() {
-  if (chatBusy || !timerId) return;
+  if (chatBusy || !timerId || quizActive()) return;
   const text = $("chat-input").value.trim();
   const last = transcript[transcript.length - 1];
   if (text) { transcript.push({ who: "me", text }); addMsg("me", text); $("chat-input").value = ""; }
@@ -354,12 +409,14 @@ function logText(r) {
     "問1 相手の営業の説明：" + ($("overview").value.trim() || "（なし）"),
     "問2 自分の言い直し：" + ($("rephrase").value.trim() || "（なし）"),
     "問3 検算：" + calcLine() + "／こういうやり方なら：" + ($("proposal").value.trim() || "（なし）"),
-    "", "■ 会話ログ", ...lines, "", "■ コーチ（AI）の振り返り", r.feedback, r.overviewReview ? "【問1 全体像】" + r.overviewReview : "", r.calcReview ? "【問3 検算】" + r.calcReview : "",
+    "", "■ 会話ログ", ...lines, "", "■ 暗算チェック", ...(quizzes.length ? quizzes.map((q, i) => (i + 1) + ". " + q.question + " → 正解" + q.answer + q.unit + "／自分" + (q.mine === null ? "未回答" : q.mine + q.unit) + "（" + (q.ok ? "○" : "×") + "、" + q.sec.toFixed(1) + "秒）") : ["（なし）"]),
+    "", "■ コーチ（AI）の振り返り", r.feedback, r.overviewReview ? "【問1 全体像】" + r.overviewReview : "", r.calcReview ? "【問3 検算】" + r.calcReview : "", r.numbersReview ? "【数字】" + r.numbersReview : "",
     "", "田村さん、ズレていたと思う行番号とアドバイスをお願いします。"].join("\n");
 }
 function calcLine() {
-  const k = calc(); if (!k) return "（1受注の売上が未入力）";
-  return k.plan + " 月" + k.monthly + "万×" + k.months + "ヶ月＋準備費" + k.prep + "万＝投資" + k.invest + "万／" + k.calls + "コール×アポ率" + k.apo_rate + "%×受注率" + k.win_rate + "%→受注" + k.wins + "件×" + k.revenue + "万＝回収" + k.recover + "万 → " + (k.ok ? "成立" : "不成立");
+  const k = calc(false); if (!k) return "（1受注の売上が未入力）";
+  const g = guess ? "／暗算：投資" + (guess.invest ?? "—") + "・受注" + (guess.wins ?? "—") + "・回収" + (guess.recover ?? "—") + "・判定" + (guess.judge || "未選択") + (guess.ok ? "○" : "×") : "／暗算せず";
+  return g + "／" + k.plan + " 月" + k.monthly + "万×" + k.months + "ヶ月＋準備費" + k.prep + "万＝投資" + k.invest + "万／" + k.calls + "コール×アポ率" + k.apo_rate + "%×受注率" + k.win_rate + "%→受注" + k.wins + "件×" + k.revenue + "万＝回収" + k.recover + "万 → " + (k.ok ? "成立" : "不成立");
 }
 function showRecord(r) {
   $("record").hidden = false;
@@ -381,19 +438,55 @@ function resetCalc() {
   (c.plans || []).forEach((pl, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = pl.name + "（月" + pl.monthly + "万）"; sel.appendChild(o); });
   $("c-months").value = c.months ?? 6; $("c-prep").value = c.prep ?? 0;
   $("c-calls").value = c.calls ?? ""; $("c-apo").value = c.apo_rate ?? ""; $("c-win").value = c.win_rate ?? "";
-  $("c-revenue").value = ""; calc();
+  $("c-revenue").value = ""; guess = null;
+  ["g-invest", "g-wins", "g-recover"].forEach(id => { $(id).value = ""; }); $("g-judge").value = "";
+  $("guess").hidden = false; $("calc").hidden = true; $("calc-mental").hidden = true; $("g-check").disabled = false;
+  calc();
 }
+let guess = null; // 答え合わせ前の暗算 {invest, wins, recover, judge, ok}
+function mentalTips(k) {
+  const L = [];
+  const m = k.months, pl = k.monthly, calls = k.calls, apo = k.apo_rate, win = k.win_rate, rev = k.revenue;
+  L.push(`投資：${pl}万×${m}ヶ月は「${pl}×${m}」。${pl}×${m}＝${fmt(pl * m)}、＋準備費${k.prep}万＝${fmt(k.invest)}万`);
+  const apos = m * calls * apo / 100;
+  if (apo > 0 && calls > 0) L.push(`アポ：${calls}コールの${apo}%は${apo === 1 ? "二桁ずらして" : apo === 10 ? "一桁ずらして" : apo === 5 ? "10%＝" + fmt(calls / 10) + "の半分で" : apo + "%＝1%（" + fmt(calls / 100) + "）×" + apo + "で"}${fmt(calls * apo / 100)}件／月 → ${m}ヶ月で${fmt(apos)}件`);
+  if (win > 0) L.push(`受注：${fmt(apos)}件の${win}%は${win === 10 ? "一桁ずらして" : win === 5 ? "10%＝" + fmt(apos / 10) + "の半分で" : win === 20 ? "10%の2倍で" : win + "%で"}${fmt(k.wins)}件`);
+  if (rev > 0) { const need = Math.ceil(k.invest / rev); L.push(`回収：${fmt(k.wins)}件×${rev}万＝${fmt(k.recover)}万。逆に「${fmt(k.invest)}万の中に${rev}万がいくつ？」＝必要${need}件、と先に出す方が速い`); }
+  return L;
+}
+function checkGuess() {
+  const k = calc();
+  if (!k) { status("grade-status", "問3の変数（1受注の売上まで）を先に入れてください", true); return; }
+  const gi = numOr($("g-invest").value, NaN), gw = numOr($("g-wins").value, NaN), gr = numOr($("g-recover").value, NaN), gj = $("g-judge").value;
+  const near = (a, b) => isFinite(a) && Math.abs(a - b) <= Math.max(Math.abs(b) * 0.05, 0.5);
+  guess = { invest: isFinite(gi) ? gi : null, wins: isFinite(gw) ? gw : null, recover: isFinite(gr) ? gr : null, judge: gj, ok: gj === (k.ok ? "成立" : "不成立"), okInvest: near(gi, k.invest), okWins: near(gw, k.wins), okRecover: near(gr, k.recover) };
+  $("g-check").disabled = true; $("calc").hidden = false; status("grade-status", "");
+  const body = $("calc-body");
+  const wrap = document.createElement("div"); wrap.style.marginBottom = "8px";
+  const mark = (ok, label, mine, truth) => { const d = document.createElement("div"); d.className = "chk"; const s = document.createElement("span"); s.className = "mark " + (ok ? "ok" : "ng"); s.textContent = ok ? "○" : "×"; d.appendChild(s); d.appendChild(document.createTextNode(`${label}：あなた ${mine} ／ 正しくは ${truth}`)); wrap.appendChild(d); };
+  mark(guess.okInvest, "投資額", guess.invest === null ? "—" : fmt(guess.invest) + "万", fmt(k.invest) + "万");
+  mark(guess.okWins, "受注数", guess.wins === null ? "—" : fmt(guess.wins) + "件", fmt(k.wins) + "件");
+  mark(guess.okRecover, "回収額", guess.recover === null ? "—" : fmt(guess.recover) + "万", fmt(k.recover) + "万");
+  mark(guess.ok, "判定", gj || "未選択", k.ok ? "成立" : "不成立");
+  body.insertBefore(wrap, body.firstChild);
+  const mt = $("calc-mental"); mt.hidden = false; mt.textContent = ""; const l = document.createElement("span"); l.className = "lab"; l.textContent = "暗算のコツ"; mt.appendChild(l); mt.appendChild(document.createTextNode(mentalTips(k).join("\n")));
+  $("calc").scrollIntoView({ block: "nearest" });
+}
+$("g-check").addEventListener("click", checkGuess);
+function calcForGrade() { const k = calc(false); if (!k) return null; k.mine = guess; return k; }
 const fmt = n => (Math.round(n * 10) / 10).toLocaleString("ja-JP");
-function calc() {
+function calc(render = true) {
   const c = co(); const pl = (c.plans || [])[Number($("c-plan").value)] || { name: "", monthly: 0 };
   const m = numOr($("c-months").value, 0), prep = numOr($("c-prep").value, 0), calls = numOr($("c-calls").value, 0);
   const apo = numOr($("c-apo").value, 0), win = numOr($("c-win").value, 0), rev = numOr($("c-revenue").value, NaN);
   const invest = m * pl.monthly + prep;
   const apos = m * calls * apo / 100, wins = apos * win / 100;
   const box = $("calc"), body = $("calc-body");
-  if (isNaN(rev) || $("c-revenue").value === "") { box.className = "calc"; body.textContent = "投資額 " + fmt(invest) + "万円（" + m + "ヶ月×" + pl.monthly + "万＋" + prep + "万）。1受注の売上を入れると回収額を計算します。"; return null; }
+  if (isNaN(rev) || $("c-revenue").value === "") { if (render) { box.className = "calc"; body.textContent = "投資額 " + fmt(invest) + "万円（" + m + "ヶ月×" + pl.monthly + "万＋" + prep + "万）。1受注の売上を入れると回収額を計算します。"; } return null; }
   const recover = wins * rev, ok = recover >= invest;
   const need = rev > 0 ? Math.ceil(invest / rev) : Infinity;
+  const out = { plan: pl.name, monthly: pl.monthly, months: m, prep, calls, apo_rate: apo, win_rate: win, revenue: rev, invest: Math.round(invest * 10) / 10, wins: Math.round(wins * 10) / 10, recover: Math.round(recover * 10) / 10, ok };
+  if (!render) return out;
   box.className = "calc " + (ok ? "ok" : "ng");
   body.innerHTML = "";
   const line = (t) => { const d = document.createElement("div"); d.textContent = t; body.appendChild(d); };
@@ -403,9 +496,9 @@ function calc() {
   const r = document.createElement("div"); r.className = "res";
   r.textContent = ok ? "回収額 ≧ 投資額 → 成立 → フルで提案" : "回収額 ＜ 投資額 → 不成立 → 絞る、または座組みを変える";
   body.appendChild(r);
-  return { plan: pl.name, monthly: pl.monthly, months: m, prep, calls, apo_rate: apo, win_rate: win, revenue: rev, invest: Math.round(invest * 10) / 10, wins: Math.round(wins * 10) / 10, recover: Math.round(recover * 10) / 10, ok };
+  return out;
 }
-["c-plan", "c-months", "c-prep", "c-calls", "c-apo", "c-win", "c-revenue"].forEach(id => $(id).addEventListener("input", calc));
+["c-plan", "c-months", "c-prep", "c-calls", "c-apo", "c-win", "c-revenue"].forEach(id => $(id).addEventListener("input", () => { if (guess) { guess = null; $("calc").hidden = true; $("calc-mental").hidden = true; $("g-check").disabled = false; } calc(); }));
 $("c-plan").addEventListener("change", calc);
 resetCalc();
 
@@ -418,7 +511,7 @@ $("grade").addEventListener("click", async () => {
   if (!picked) { status("grade-status", "A〜Dを選んでから", true); return; }
   $("grade").disabled = true; status("grade-status", "コーチが会話を振り返っています…");
   try {
-    const r = await api("grade", { persona, transcript, picked, rephrase: $("rephrase").value.trim(), mode, overview: $("overview").value.trim(), calc: calc(), proposal: $("proposal").value.trim(), company: coForApi() });
+    const r = await api("grade", { persona, transcript, picked, rephrase: $("rephrase").value.trim(), mode, overview: $("overview").value.trim(), calc: calcForGrade(), proposal: $("proposal").value.trim(), company: coForApi(), quizzes });
     document.querySelectorAll("#opts .opt").forEach(b => { b.disabled = true; if (b.dataset.k === r.answer) b.classList.add("correct"); else if (b.dataset.k === picked) b.classList.add("wrong"); });
     const v = $("verdict"); v.hidden = false; v.className = "verdict" + (r.correct ? "" : " ng"); v.textContent = "";
     const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = (r.correct ? "正解" : "不正解") + " ／ 答え：" + r.answer + " " + r.answerLabel; v.appendChild(lab);
@@ -427,6 +520,7 @@ $("grade").addEventListener("click", async () => {
     const f = $("feedback"); f.hidden = false; f.textContent = ""; const l2 = document.createElement("span"); l2.className = "lab"; l2.textContent = "COACH"; f.appendChild(l2); f.appendChild(document.createTextNode(r.feedback));
     if (r.overviewReview) f.appendChild(document.createTextNode("\n\n【問1 全体像】" + r.overviewReview));
     if (r.calcReview) f.appendChild(document.createTextNode("\n\n【問3 検算】" + r.calcReview));
+    if (r.numbersReview) f.appendChild(document.createTextNode("\n\n【数字】" + r.numbersReview));
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();
     showRecord(r);
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }

@@ -114,6 +114,18 @@ export const ZENTECT = `ゼンテクト（株式会社ゼンテクト）の商�
 - 実例の相手の言葉：「何社か話した中で一番納得感がある」（アクティブ・ブレインズ）。`;
 
 /* =========================================================
+   暗算チェック（商談中に出た数字で、その場で計算させる）
+   ========================================================= */
+export const QUIZ_RULES = `■ 暗算チェックの作り方
+- 受講者（営業担当）は数字が苦手。商談で相手が言った数字を使って「頭の中で計算すべきこと」を1問にする。
+- 必ず相手が実際に口にした数字だけを使う（キリのいい数字に丸めない。相手が「だいたい月80件くらい」と言ったら80で計算）。相手が言っていない数字は使わない。
+- 商談で意味のある計算に限る：月の受注数（商談数×受注率）／アポ率・受注率（件数÷件数）／逆算（目標受注から必要な商談数・コール数）／1受注の売上（単価×導入数、月額×12×アカウント）／目標と見込みの差／半年の投資額（月費用×6＋準備費）と回収に必要な受注数、など。
+- 1問は1〜2ステップで、10秒以内に暗算できる大きさ。答えは数値1つ（単位つき）。
+- question は口語の短い問い（例：「月80商談で受注率15%。月の受注は？」）。answer は数値（number）、unit は「件」「%」「万円」など。calc は式を2〜3行、mental は暗算のコツを2〜3行（例：「80の10%＝8、5%＝4、合わせて12」）。
+- その発言に新しい数字が無い、または計算が成り立たない（必要な数字が揃っていない）ときは quiz を null にする。同じ計算を2回出さない。`;
+export const QUIZ_SHAPE = `{"question":"…","answer":12,"unit":"件","calc":["80 × 15%","＝ 12件"],"mental":["80の10%＝8","5%はその半分＝4","→ 12件"],"kind":"pct|ratio|reverse|funnel|revenue|roi"}`;
+
+/* =========================================================
    自社情報（画面で設定）。無ければ上の ZENTECT を使う
    company = { company, product, value, proof, pricing, objections:[], plans:[{name,monthly}], prep, months, trial_months, calls, apo_rate, win_rate }
    ========================================================= */
@@ -230,7 +242,7 @@ async function findRecordsParent() {
   if (!r.ok) throw new Error("ロープレ記録ページを作れません: " + r.status + " " + (await r.text()).slice(0, 200));
   return (recordsParent = (await r.json()).id);
 }
-export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", overviewReview = "", calcReview = "" }) {
+export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", overviewReview = "", calcReview = "", numbersReview = "", quizText = "" }) {
   if (!knowledgeEnabled()) return null;
   const parent = await findRecordsParent();
   const title = `${jstNow()} ${persona.company}（${mode === "chat" ? "チャット" : "音声"}／判定:${CAT[picked]}${correct ? "○" : "×"}）`;
@@ -246,6 +258,7 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
     bullet("問2 受講者の言い直し：" + (rephrase || "（なし）")),
     bullet("問3 検算：" + (calcText || "（なし）")),
     bullet("問3 こういうやり方なら：" + (proposal || "（なし）")),
+    bullet("暗算チェック：" + (quizText || "（なし）")),
     bullet("正解の理由：" + (persona.exp || "")),
     bullet("言い直しの模範例：" + (persona.rephrase_example || "")),
     h2("会話ログ"),
@@ -257,6 +270,7 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
   blocks.push(h2("コーチ（AI）の振り返り"), para(feedback || ""));
   if (overviewReview) blocks.push(para("問1 全体像：" + overviewReview));
   if (calcReview) blocks.push(para("問3 検算：" + calcReview));
+  if (numbersReview) blocks.push(para("数字：" + numbersReview));
   blocks.push({ object: "block", type: "toggle", toggle: { rich_text: [{ type: "text", text: { content: "相手の事実（答え合わせ用）" } }], children: (persona.hidden_facts || []).slice(0, 90).map(bullet) } });
   const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
     parent: { page_id: parent }, properties: { title: { title: [{ type: "text", text: { content: title.slice(0, 1900) } }] } }, children: blocks.slice(0, 100),
