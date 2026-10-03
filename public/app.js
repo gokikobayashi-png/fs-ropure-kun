@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "https://esm.sh/@google/genai";
+import { renderAvatar } from "/avatar.js";
 
 const $ = id => document.getElementById(id);
 const CAT = { A: "戦略", B: "手法", C: "量", D: "質" };
@@ -65,6 +66,8 @@ async function generate() {
     $("p-brief").textContent = persona.brief;
     $("p-name").textContent = persona.name + "（役職は商談で確認）";
     $("p-opening").textContent = persona.opening_line;
+    renderAvatar($("p-avatar"), persona); renderAvatar($("call-avatar"), persona);
+    $("call-name").textContent = persona.name; $("call-company").textContent = persona.company;
     status("gen-status", ""); status("call-status", "");
     step(2);
   } catch (e) { status("gen-status", e.message, true); }
@@ -94,9 +97,14 @@ function play(b64) {
   const buf = playCtx.createBuffer(1, pcm.length, 24000); buf.getChannelData(0).set(pcm);
   const src = playCtx.createBufferSource(); src.buffer = buf; src.connect(playCtx.destination);
   const t = Math.max(playCtx.currentTime + 0.02, nextPlay); src.start(t); nextPlay = t + buf.duration;
-  sources.push(src); src.onended = () => { sources = sources.filter(s => s !== src); };
+  sources.push(src); talking(true); src.onended = () => { sources = sources.filter(s => s !== src); if (!sources.length) talking(false); };
 }
-function stopPlayback() { sources.forEach(s => { try { s.stop(); } catch (_) {} }); sources = []; nextPlay = 0; }
+function stopPlayback() { sources.forEach(s => { try { s.stop(); } catch (_) {} }); sources = []; nextPlay = 0; talking(false); }
+let talkTimer = null;
+function talking(on, ms) {
+  clearTimeout(talkTimer); $("call-avatar").classList.toggle("talking", on);
+  if (on && ms) talkTimer = setTimeout(() => $("call-avatar").classList.remove("talking"), ms);
+}
 
 function onMessage(m) {
   const sc = m.serverContent; if (!sc) return;
@@ -206,6 +214,7 @@ async function askPersona() {
     typing.remove();
     if (!timerId) return; // 待っている間に商談を終えた
     transcript.push({ who: "them", text: reply }); addMsg("them", reply);
+    talking(true, Math.min(5000, 600 + reply.length * 70));
     status("chat-status", "");
   } catch (e) {
     typing.remove(); status("chat-status", e.message + "（もう一度「送る」で再送できます）", true);

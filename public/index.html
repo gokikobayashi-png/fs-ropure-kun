@@ -83,6 +83,21 @@ details.cheat li{margin:2px 0}
 .chatbox .btn{flex:none}
 .record{margin-top:12px;padding:12px 14px;border-radius:6px;border:1px solid var(--case);background:var(--case-soft);font-size:14px}
 .record .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--case);display:block;margin-bottom:4px}
+.who-row{display:flex;gap:16px;align-items:center}
+.who-row .who-text{flex:1;min-width:0}
+.av{flex:none;width:112px;height:112px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 3px var(--surface),0 0 0 4px var(--line)}
+.av.sm{width:72px;height:72px}
+.av svg{display:block;width:100%;height:100%}
+.av .m-open{display:none;transform-box:fill-box;transform-origin:center}
+.av.talking .m-closed{display:none}
+.av.talking .m-open{display:inline;animation:talk .22s ease-in-out infinite alternate}
+.av.talking{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--accent)}
+@keyframes talk{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){.av.talking .m-open{animation:none}}
+.speaker{display:flex;gap:12px;align-items:center;margin-top:12px}
+.speaker .nm{font-weight:700}
+.speaker .co{font-size:12px;color:var(--ink-2)}
+@media (max-width:420px){.av{width:84px;height:84px}}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -196,8 +211,13 @@ details.cheat li{margin:2px 0}
 <section class="panel case" id="step2" hidden>
   <div class="pl">STEP 2 ／ 相手企業</div>
   <h2 id="p-company"></h2>
-  <div class="brief" id="p-brief"></div>
-  <p class="opening"><b id="p-name"></b>「<span id="p-opening"></span>」</p>
+  <div class="who-row">
+    <div class="av" id="p-avatar"></div>
+    <div class="who-text">
+      <div class="brief" id="p-brief"></div>
+      <p class="opening"><b id="p-name"></b>「<span id="p-opening"></span>」</p>
+    </div>
+  </div>
   <p class="hint">事前に分かるのはここまで。あとは声かチャットで聞く。相手の営業を「誰に・何を・どう売って・月に何件商談し・何%決まるか」まで自分の言葉で説明できるまで広げる。</p>
   <div class="row">
     <button class="btn primary" id="call" type="button">🎙 声で始める</button>
@@ -216,6 +236,7 @@ details.cheat li{margin:2px 0}
     <span class="sp" style="flex:1"></span>
     <button class="btn stop" id="hangup" type="button" disabled>商談を終える</button>
   </div>
+  <div class="speaker"><div class="av sm" id="call-avatar"></div><div><div class="nm" id="call-name"></div><div class="co" id="call-company"></div></div></div>
   <div class="transcript" id="transcript"></div>
   <div class="chatbox" id="chatbox" hidden>
     <textarea id="chat-input" rows="2" placeholder="相手への質問や言い直しを入力（Enterで送信／Shift+Enterで改行）"></textarea>
