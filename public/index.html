@@ -256,52 +256,16 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .lg-copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:12px;color:#E0F5EF}
 .lg-right{background:#F7F9FC;padding:40px 32px;display:grid;gap:18px;align-content:start;justify-items:center}
 .lg-h2{font-size:22px;color:#1A3A5C;text-align:center;margin:0 0 6px;line-height:1.5}
-.lg-prod{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto auto;gap:0 16px;width:100%;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;text-decoration:none;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.05)}
-.lg-prod:hover{border-color:var(--accent)}
-@media (max-width:560px){.lg-prod{grid-template-columns:1fr}}
-.lg-shot{grid-row:1;margin:14px 0 14px 14px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:9px;line-height:1.5;overflow:hidden;min-height:110px}
-@media (max-width:560px){.lg-shot{margin:14px 14px 0}}
-.ss-bar{background:#F7F9FC;border-bottom:1px solid var(--line);padding:4px 8px;font-weight:700;color:#1A3A5C;display:flex;gap:5px;align-items:center}
-.ss-bar i{width:10px;height:10px;border-radius:2px;background:#1A3A5C;display:inline-block}
-.ss-body{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 8px}
-.ss-col{display:grid;gap:2px;border:1px solid var(--line);border-radius:4px;padding:4px 6px;color:var(--ink-2)}
-.ss-col b{color:var(--ink)}
-.ss-col em{font-style:normal;background:#E0F5EF;color:#1A3A5C;border-radius:3px;padding:0 4px;justify-self:start}
-.ss-col em.ok{background:#E0F5EF}
-.ss-steps{display:grid;gap:3px;padding:6px 8px;color:var(--ink)}
-.ss-steps span{background:#F7F9FC;border-radius:4px;padding:2px 6px}
-.ss-foot{padding:0 8px 6px;color:#1A3A5C;font-style:italic}
-.lg-ptext{grid-row:1;padding:16px 16px 10px 0;display:grid;gap:4px;align-content:center}
-@media (max-width:560px){.lg-ptext{padding:12px 14px 6px}}
-.lg-tag{display:inline-block;justify-self:start;background:#1A3A5C;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px}
-.lg-pname{font-size:18px;font-weight:700;letter-spacing:.04em}
-.lg-pdesc{font-size:12px;color:var(--ink-2);line-height:1.6}
-.lg-plinks{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
-.lg-plinks span{text-align:center;padding:9px;font-size:13px;color:#1A3A5C;font-weight:700}
-.lg-plinks span+span{border-left:1px solid var(--line)}
-.lg-cta{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 14px 14px}
-@media (max-width:560px){.lg-cta{grid-template-columns:1fr}}
-.cta{display:grid;justify-items:center;gap:2px;padding:12px 10px;text-decoration:none;border-radius:2px;text-align:center}
-.cta small{font-size:11px}
-.cta b{font-size:15px;letter-spacing:.04em}
-.cta.light{background:#fff;color:#1A3A5C;border:1px solid #1A3A5C}
-.cta.dark{background:#1F2937;color:#fff;border:1px solid #1F2937}
-.cta:hover{opacity:.85}
-.lg-hero{display:block;width:100%;max-width:640px;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05)}
-.lg-hero img{display:block;width:100%;height:auto}
-.lg-hero:hover{border-color:var(--teal)}
-.lg-shot-img{border:0;background:transparent;min-height:0;display:flex;align-items:center}
-.lg-shot-img img{display:block;width:100%;height:auto;border-radius:6px}
-.lg-hero-sales{container-type:inline-size;aspect-ratio:1400/519;display:grid;grid-template-columns:1.08fr 1fr;gap:2.5cqw;align-items:center;padding:3cqw 3.5cqw;background:linear-gradient(110deg,#E0F5EF 0 46%,#F7F9FC 46%);color:var(--ink);overflow:hidden}
-.hs-text{display:grid;gap:1.3cqw;align-content:center}
-.hs-tag{display:inline-block;justify-self:start;background:#1A3A5C;color:#fff;font-size:1.2cqw;font-weight:700;line-height:1;padding:.95cqw 1.5cqw;border-radius:.3cqw;letter-spacing:.04em}
-.hs-head{font-size:3.5cqw;font-weight:900;line-height:1.2;margin:0;color:#1A3A5C;letter-spacing:.02em}
-.hs-lead{font-size:1.4cqw;line-height:1.75;margin:0;color:var(--ink)}
-.hs-cta{display:flex;gap:1.2cqw;margin-top:.6cqw}
-.hs-cta .cta{flex:1 1 0;min-width:0;height:3.9cqw;display:grid;align-content:center;padding:0 .6cqw;gap:.1cqw;white-space:nowrap;border-radius:.3cqw}
-.hs-cta .cta small{font-size:.95cqw;letter-spacing:0;line-height:1.3}
-.hs-cta .cta b{font-size:1.35cqw;letter-spacing:.02em;line-height:1.3}
-.hs-img{display:block;width:100%;height:auto}
+.pcard{width:100%;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.pc-top{display:grid;grid-template-columns:170px 1fr;gap:18px;align-items:center;padding:18px 20px}
+@media (max-width:480px){.pc-top{grid-template-columns:120px 1fr;gap:12px;padding:14px}}
+.pc-img{display:block;width:100%;aspect-ratio:937/538;object-fit:cover;border-radius:4px;background:#fff}
+.pc-name{font-size:24px;font-weight:700;color:#1A3A5C;letter-spacing:.08em;line-height:1.3}
+.pc-sub{font-size:13px;color:var(--ink);margin-top:6px;line-height:1.6}
+.pc-links{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+.pc-links a{text-align:center;padding:10px;font-size:13px;font-weight:700;color:#1A3A5C;text-decoration:none}
+.pc-links a+a{border-left:1px solid var(--line)}
+.pc-links a:hover{background:#E0F5EF}
 .lg-note{font-size:11px;color:var(--ink-2);text-align:center}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
@@ -331,19 +295,20 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   </div>
   <div class="lg-right">
     <h2 class="lg-h2">ゼンテクトの営業支援<br>ワンストップソリューション</h2>
-    <div class="lg-hero lg-hero-sales">
-      <div class="hs-text">
-        <span class="hs-tag">事業内容　営業支援</span>
-        <p class="hs-head">テレアポのみを実施する<br>営業代行でも、自社での<br>新規採用でもない<br>第三の選択肢。</p>
-        <p class="hs-lead">新規拡大を創るうえで必要となる「営業戦略・戦術の構築、仮説立て、実行、改善」の全てを実行して、成果を創出します。</p>
-        <div class="hs-cta">
-          <a class="cta light" href="https://zentect.com/contact-case" target="_blank" rel="noopener"><small>他社との違いや事例を多数ご用意</small><b>概要資料をダウンロードする ▸</b></a>
-          <a class="cta dark" href="https://zentect.com/contact-onlineconsulting" target="_blank" rel="noopener"><small>お悩みに合わせたご提案をいたします</small><b>無料オンライン相談をする ▸</b></a>
-        </div>
+    <div class="pcard">
+      <div class="pc-top">
+        <img class="pc-img" src="/sales.jpg" alt="">
+        <div class="pc-text"><div class="pc-name">営業支援</div><div class="pc-sub">テレアポのみの営業代行でも、自社での新規採用でもない第三の選択肢</div></div>
       </div>
-      <img class="hs-img" src="/sales.jpg" alt="ターゲット企業の分析・選定、アプローチ文面の作成、フォーム送信・初期接点の創出、効果測定・改善。データ×AIの力で、営業をもっとスマートに。">
+      <div class="pc-links"><a href="https://zentect.com/contact-case" target="_blank" rel="noopener">資料ダウンロード</a><a href="https://zentect.com/contact-onlineconsulting" target="_blank" rel="noopener">無料オンライン相談</a></div>
     </div>
-    <a class="lg-hero" href="https://lp.zenformsend.com/" target="_blank" rel="noopener"><img src="/zenform.jpg" alt="ゼンフォーム：ターゲット企業を分析し、アポのきっかけになる初期接点を自動で創出。無料トライアルを始める／仕組みを見る"></a>
+    <div class="pcard">
+      <div class="pc-top">
+        <img class="pc-img" src="/zenform_pc.jpg" alt="">
+        <div class="pc-text"><div class="pc-name">ゼンフォーム</div><div class="pc-sub">業種・業界特化 × フォーム自動送信</div></div>
+      </div>
+      <div class="pc-links"><a href="https://lp.zenformsend.com/" target="_blank" rel="noopener">無料トライアル</a><a href="https://lp.zenformsend.com/" target="_blank" rel="noopener">仕組みを見る</a></div>
+    </div>
     <div class="lg-note">社内練習用アプリ。相手役の会社・人物はAIが作る架空のものです。</div>
   </div>
 </section>
