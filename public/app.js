@@ -155,6 +155,7 @@ async function generate() {
     $("p-opening").textContent = persona.opening_line;
     renderAvatar($("p-avatar"), persona); renderAvatar($("call-avatar"), persona);
     $("call-name").textContent = persona.name; $("call-company").textContent = persona.company;
+    $("call-brief").textContent = persona.brief; $("call-opening").textContent = "冒頭のひとこと「" + persona.opening_line + "」";
     status("gen-status", ""); status("call-status", "");
     $("co-body").hidden = true; $("co-toggle").textContent = "編集する"; $("co").hidden = true; $("missed").hidden = true;
     step(2);
