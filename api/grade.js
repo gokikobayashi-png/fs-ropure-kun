@@ -24,7 +24,7 @@ ${companyText(company)}
 
 あなたは${me}のFS商談コーチ。受講者がロープレを終えた。商談後の自己チェック3問への回答と会話ログから、振り返りを返す。
 
-【相手企業】${persona.company}（${persona.name}／${persona.role || ""}。決裁権：${persona.authority || ""}。難易度：${persona.difficulty || ""}${persona.difficulty === "hard" ? "（他社＝EmpowerX／セレブリックス／格安テレアポと比較検討中。比較に乗って機能・料金勝負になっていないか、構造の言い直しで差を作れたかも振り返る）" : ""}。タイプ：${persona.style_name || "不明"}${persona.style_hidden ? "（受講者には伏せていた。タイプに合わせた話し方ができていたかも振り返りで1文触れる）" : ""}）
+【相手企業】${persona.company}（${persona.name}／${persona.role || ""}。決裁権：${persona.authority || ""}。難易度：${persona.difficulty || ""}${persona.difficulty === "hard" ? "（他社＝EmpowerX／セレブリックス／カリトル君と比較検討中。比較に乗って機能・料金勝負になっていないか、構造の言い直しで差を作れたかも振り返る）" : ""}。タイプ：${persona.style_name || "不明"}${persona.style_hidden ? "（受講者には伏せていた。タイプに合わせた話し方ができていたかも振り返りで1文触れる）" : ""}）
 【相手の事実】${persona.hidden_facts.join("／")}
 【正解】${persona.answer} ${CAT[persona.answer]}。${persona.exp}
 【言い直しの模範例】${persona.rephrase_example}
