@@ -52,6 +52,8 @@ JSONだけを返す：
 {"feedback":"受講者への振り返り。日本語、合計350字以内、箇条書きなし、見出し記号なし。1)正誤を1行、正解の分類になる理由を判定順序に沿って2文 2)「広げる」で聞けていた事・聞けていなかった事を各1つ、会話ログの実際の発言を引いて${cks.length ? "（上司のFBの観点でできていなかったことがあれば、それを最優先で、上司の言葉を引いて指摘）" : ""}（売上目標と着地見込みを聞けていなければ、それを最優先で指摘。相手の役職・決裁権・今回来た経緯を聞けていなければ、それも指摘） 3)言い直しの出来（相手が『そう、それ』と言えるか）を1文、無ければ『言い直しを声に出して』 4)次回、最初の3分で聞くべき質問を1つ。口調は短く具体的に、ダラダラ褒めない",
  "overview_review":"問1の評価。相手の事実と照らして、説明できていた要素と抜けた要素（誰に／何を／どう売って／月の商談数／受注率）を挙げる。抜けがあれば『まだ広げる余地あり』とし、会話で聞けばよかった質問を1つ。150字以内",
  "calc_review":"問3の評価。①相手の事実の数字で正しく検算するとどうなるか（1受注の売上・投資額・必要受注数・成立/不成立を数字で）②受講者の入力値とズレた変数と、その数字を会話で聞けていたか（聞かずに基準値や推測で埋めていたら指摘）③『こういうやり方なら』が検算結果に合っているか（不成立ならフル提案ではなく、投資を落とす／1受注を大きくする／座組みを変える、のどれか）。250字以内",
+ "good":["良かった点を1〜3個。会話ログの実際の発言（時刻や言葉）を引いて、各60字以内"],
+ "improve":["改善点を2〜4個。最も効いたズレから順に。上司FBの観点でできていなかったものは先頭に『上司FB：』を付ける。各80字以内"],
  "scores":{"counterpart":{"score":1〜5の整数,"why":"根拠。会話ログの発言を引いて40字以内"},"widen":{"score":1〜5,"why":"…"},"classify":{"score":1〜5,"why":"…"},"rephrase":{"score":1〜5,"why":"…"},"converge":{"score":1〜5,"why":"…"},"roi":{"score":1〜5,"why":"…"}},
  "custom":{${cks.map(c => `"${c.key}":{"score":1〜5,"why":"根拠。会話ログの発言を引いて40字以内"}`).join(",")}},
  "next_action":"次回のロープレで最初に直すこと1つ。最も低い軸について、商談のどの場面で何を言う／聞くかを具体的に。60字以内",
@@ -61,8 +63,8 @@ JSONだけを返す：
     const ai = client();
     const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0.4 } });
     const t = r.text || "";
-    let feedback = t, learnings = [], overviewReview = "", calcReview = "", numbersReview = "", scores = null, nextAction = "", custom = null;
-    try { const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)); feedback = j.feedback || t; learnings = Array.isArray(j.learnings) ? j.learnings.map(String) : []; overviewReview = String(j.overview_review || ""); calcReview = String(j.calc_review || ""); numbersReview = String(j.numbers_review || ""); nextAction = String(j.next_action || "");
+    let feedback = t, learnings = [], overviewReview = "", calcReview = "", numbersReview = "", scores = null, nextAction = "", custom = null, good = [], improve = [];
+    try { const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)); feedback = j.feedback || t; learnings = Array.isArray(j.learnings) ? j.learnings.map(String) : []; overviewReview = String(j.overview_review || ""); calcReview = String(j.calc_review || ""); numbersReview = String(j.numbers_review || ""); nextAction = String(j.next_action || ""); good = Array.isArray(j.good) ? j.good.map(String) : []; improve = Array.isArray(j.improve) ? j.improve.map(String) : [];
       if (j.scores && typeof j.scores === "object") { scores = {}; for (const k of ["counterpart", "widen", "classify", "rephrase", "converge", "roi"]) { const v = j.scores[k] || {}; const n = Math.round(Number(v.score)); scores[k] = { score: isFinite(n) ? Math.min(5, Math.max(1, n)) : 1, why: String(v.why || "") }; } }
       if (cks.length && j.custom && typeof j.custom === "object") { custom = {}; for (const c of cks) { const v = j.custom[c.key] || {}; const n = Math.round(Number(v.score)); custom[c.key] = { score: isFinite(n) ? Math.min(5, Math.max(1, n)) : 1, why: String(v.why || ""), title: c.title }; } } } catch (_) {}
     let saved = false;
@@ -71,7 +73,7 @@ JSONだけを返す：
     }
     let recordUrl = null, recordError = "";
     try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview, calcText, proposal, overviewReview, calcReview, numbersReview, quizText, scores, nextAction, custom }); } catch (e) { console.error(e); recordError = String(e.message || e); }
-    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, learnings, saved });
+    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, learnings, saved });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }

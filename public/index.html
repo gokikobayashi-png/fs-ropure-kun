@@ -267,104 +267,111 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .pc-links a+a{border-left:1px solid var(--line)}
 .pc-links a:hover{background:#E0F5EF}
 .lg-note{font-size:11px;color:var(--ink-2);text-align:center}
+
+/* ===== 新レイアウト ===== */
+body{padding:0 0 40px}
+header.top{display:flex;align-items:center;gap:18px;height:56px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+header.top .brand{display:flex;align-items:center;gap:10px}
+header.top .brand img{display:block}
+.badge-app{background:var(--teal);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px}
+.tabs{display:flex;gap:2px;margin-left:8px}
+.tabs button{font-family:var(--sans);font-size:14px;background:none;border:0;border-bottom:2px solid transparent;padding:16px 14px 14px;color:var(--ink-2);cursor:pointer;font-weight:500}
+.tabs button.on{color:var(--navy);font-weight:700;border-bottom-color:var(--teal)}
+.tabs button:hover{color:var(--navy)}
+main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.view{padding-top:4px}
+/* 通話画面 */
+.callwrap{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-top:16px}
+.callmain{flex:999 1 560px;min-width:0}
+.callside{flex:1 1 280px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.sidecard .brief{font-size:13px}
+.stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:180px minmax(0,1fr);gap:16px}
+@media (max-width:560px){.stage{grid-template-columns:1fr}}
+.peer{display:flex;flex-direction:column;gap:10px}
+.peer .av{width:112px;height:112px;margin:0 auto}
+.peer-name{background:var(--case-soft);border-radius:8px;padding:6px 10px;text-align:center}
+.peer-name .nm{font-weight:700;font-size:14px;color:var(--navy)}
+.peer-name .co{font-size:11px;color:var(--ink-2)}
+.livebar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+.selfbox{position:relative;background:#1F2937;border-radius:10px;min-height:340px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.selfbox .selfcam{position:absolute;inset:0;width:100%%;max-width:none;aspect-ratio:auto;border-radius:0}
+.selfbox .selfcam video{transform:scaleX(-1)}
+.nocam{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#9CA3AF;font-size:14px;text-align:center;padding:16px}
+.nocam small{font-size:12px}
+.selfbox .chatbox{position:relative;margin:0;padding:10px;background:rgba(255,255,255,.95);z-index:2}
+.selfbox.chatmode{background:var(--bg);border:1px solid var(--line)}
+.selfbox.chatmode .nocam{display:none}
+.selfbox.chatmode #transcript{position:relative;margin:0;padding:12px;flex:1;max-height:420px;min-height:260px}
+.selfbox.chatmode .chatbox{border-top:1px solid var(--line)}
+.ctrlbar{grid-column:1 / -1;display:flex;justify-content:center;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;box-shadow:0 6px 20px rgba(26,58,92,.12);width:fit-content;margin:0 auto}
+.ctl{width:48px;height:48px;border-radius:50%%;border:0;background:#F1F5F9;font-family:var(--sans);font-weight:700;font-size:12px;color:var(--ink);cursor:pointer}
+.ctl[aria-pressed="true"]{background:var(--teal);color:#fff}
+.ctrlbar .btn.stop{height:48px;border-radius:999px;padding:0 20px}
+#transcript{max-height:40vh;margin-top:12px}
+/* 判定後 */
+.reshead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.reshead .chip{font-size:12px;background:var(--case-soft);color:var(--navy);padding:2px 10px;border-radius:999px}
+.resgrid{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;margin-top:12px}
+.rescol{flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.rescol .panel{margin-top:0}
+.transcript.res{max-height:60vh}
+.transcript.res .msg{max-width:100%%}
+.transcript .t{font-family:var(--mono);font-size:10px;color:var(--ink-2);margin-right:6px}
+.rtabs{display:flex;gap:4px;background:var(--line);border-radius:8px;padding:4px;width:fit-content}
+.rtabs button{font-family:var(--sans);font-size:13px;border:0;border-radius:6px;padding:6px 16px;background:transparent;color:var(--ink-2);cursor:pointer}
+.rtabs button.on{background:var(--surface);color:var(--navy);font-weight:700}
+.rt{display:flex;flex-direction:column;gap:14px}
+.evalgrid{display:grid;grid-template-columns:72px minmax(0,1fr);gap:16px;align-items:stretch}
+.gradebox{background:var(--navy);color:#fff;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:96px}
+.gradebox .gl{font-size:40px;font-weight:700;line-height:1}
+.gradebox .gs{font-size:12px;opacity:.85}
+.panel.good .gh{font-weight:700;font-size:14px;margin-bottom:6px}
+.gh.ok{color:#059669}.gh.ng{color:var(--bad)}
+.pts{margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--ink)}
+.pts li{margin:2px 0}
+.radarrow{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:16px;align-items:center}
+@media (max-width:560px){.radarrow{grid-template-columns:1fr}}
+.axlist{display:flex;flex-direction:column;font-size:13px}
+.axlist div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 0}
+.axlist div.weak{background:var(--bad-soft);border-radius:4px;padding:4px 6px;margin:0 -6px}
+.axlist b{font-variant-numeric:tabular-nums}
+.axlist .avg{color:var(--ink-2)}
+#res-info .kv{display:grid;gap:6px;font-size:13px}
+#res-info .kv b{color:var(--navy)}
+/* 設定 */
+.setgrid{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;margin-top:16px}
+.setnav{flex:1 1 180px;max-width:220px;display:flex;flex-direction:column;gap:4px}
+@media (max-width:680px){.setnav{flex-direction:row;flex-wrap:wrap;max-width:none}}
+.setnav button{font-family:var(--sans);font-size:14px;text-align:left;border:0;background:none;padding:10px 14px;border-radius:8px;color:var(--ink);cursor:pointer}
+.setnav button.on{background:var(--case-soft);color:var(--navy);font-weight:700}
+.setbody{flex:999 1 520px;min-width:0}
+.setbody>section{margin-top:0}
+.setbody>section[hidden]{display:none}
+.panel.blue{margin-top:16px}
+
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
 </head>
 <body>
-<div class="wrap">
-<header>
-  <div style="display:flex;gap:14px;align-items:center"><img src="/logo.png" alt="Zentect" width="118" height="30" style="display:block"><div><div class="eyebrow">FS商談 / AIロープレ</div><h1>ZenAIロープレ</h1></div></div>
+<div id="app">
+<header class="top">
+  <div class="brand"><img src="/logo.png" alt="Zentect" width="98" height="25"><span class="badge-app">ZenAIロープレ</span></div>
+  <nav class="tabs" id="tabs">
+    <button type="button" data-view="dash">ダッシュボード</button>
+    <button type="button" data-view="play" class="on">ロープレ</button>
+    <button type="button" data-view="history">履歴</button>
+    <button type="button" data-view="settings">設定</button>
+  </nav>
   <span class="sp"></span>
   <button class="btn" id="logout" type="button" hidden>ログアウト</button>
 </header>
-<div class="steps"><span id="s1" class="on">① ケース設定</span><span id="s2">② 相手を生成</span><span id="s3">③ ロープレ</span><span id="s4">④ 振り返り3問</span></div>
 
-<!-- ログイン -->
-<section id="login" hidden aria-label="ログイン">
-  <div class="lg-left">
-    <div class="lg-card">
-      <img src="/logo.png" alt="Zentect" width="157" height="40" class="lg-logo">
-      <div class="lg-title">ZenAIロープレ</div>
-      <div class="lg-sub">AIが演じる相手と、FS商談を声かチャットで練習する</div>
-      <label class="lg-field"><span class="lg-ic">🔒</span><input type="password" id="pw" placeholder="共有パスワード" autocomplete="current-password"><button type="button" class="lg-eye" id="pw-eye" aria-label="パスワードを表示">👁</button></label>
-      <button class="lg-btn" id="pw-ok" type="button">ログイン</button>
-      <div class="status err" id="pw-status" style="text-align:center"></div>
-    </div>
-    <div class="lg-copy">© Zentect Inc.</div>
-  </div>
-  <div class="lg-right">
-    <h2 class="lg-h2">ゼンテクトの営業支援<br>ワンストップソリューション</h2>
-    <div class="pcard">
-      <div class="pc-top">
-        <img class="pc-img" src="/sales.jpg" alt="">
-        <div class="pc-text"><div class="pc-name">営業支援</div><div class="pc-sub">テレアポのみの営業代行でも、自社での新規採用でもない第三の選択肢</div></div>
-      </div>
-      <div class="pc-links"><a href="https://zentect.com/contact-case" target="_blank" rel="noopener">資料ダウンロード</a><a href="https://zentect.com/contact-onlineconsulting" target="_blank" rel="noopener">無料オンライン相談</a></div>
-    </div>
-    <div class="pcard">
-      <div class="pc-top">
-        <img class="pc-img" src="/zenform_pc.jpg" alt="">
-        <div class="pc-text"><div class="pc-name">ゼンフォーム</div><div class="pc-sub">業種・業界特化 × フォーム自動送信</div></div>
-      </div>
-      <div class="pc-links"><a href="https://lp.zenformsend.com/" target="_blank" rel="noopener">無料トライアル</a><a href="https://lp.zenformsend.com/" target="_blank" rel="noopener">仕組みを見る</a></div>
-    </div>
-    <div class="lg-note">社内練習用アプリ。相手役の会社・人物はAIが作る架空のものです。</div>
-  </div>
-</section>
+<main class="wrap">
 
-<!-- 自社情報 -->
-<section class="panel" id="co">
-  <div class="co-head">
-    <div><div class="pl" style="color:var(--accent)">自社情報 ／ <span id="co-state">既定（ゼンテクト）</span></div>
-    <h2>自社の商材と料金</h2></div>
-    <span class="sp"></span>
-    <button class="btn" id="co-toggle" type="button" aria-expanded="false">編集する</button>
-  </div>
-  <p class="hint">相手役が知っている「営業代行の料金」と、商談後の検算（問3）の月費用・準備費・基準値はここから取ります。保存はこのブラウザに残ります。</p>
-  <div id="co-body" hidden>
-    <div class="sub">資料から取り込む</div>
-    <label class="f">テキストを貼り付け<textarea id="co-src" rows="5" placeholder="会社紹介・製品資料の文章を貼り付け…"></textarea></label>
-    <label class="f">PDF をアップロード（複数可・合計3MBまで）<input type="file" id="co-pdf" accept="application/pdf" multiple style="display:block;margin-top:6px"></label>
-    <div class="row"><button class="btn primary" id="co-read" type="button">AIで読み取る</button><span class="hint" style="margin:0">読み取った内容は下に入るだけで、保存するまで反映されません</span></div>
-    <div class="status" id="co-read-status"></div>
-
-    <div class="sub">内容を確認・編集</div>
-    <div class="g2">
-      <label class="f">会社名 *<input type="text" id="co-company"></label>
-      <label class="f">プロダクト/サービス *<input type="text" id="co-product"></label>
-    </div>
-    <label class="f">提供価値（バリュープロップ）<textarea id="co-value" rows="3"></textarea></label>
-    <label class="f">実績・根拠（プルーフポイント）<textarea id="co-proof" rows="3"></textarea></label>
-    <label class="f">価格・料金体系<textarea id="co-pricing" rows="3"></textarea></label>
-
-    <div class="sub">検算の基準（問3で使う）</div>
-    <p class="hint">月額の固定プラン。商談後の検算で「月費用」として選べます（単位：万円）。</p>
-    <div id="co-plans"></div>
-    <div class="row" style="margin-top:8px"><button class="btn" id="co-plan-add" type="button">＋ プランを追加</button></div>
-    <div class="g3">
-      <label class="f">準備費（万円）<input type="number" id="co-prep" min="0" step="1"></label>
-      <label class="f">標準の期間（月）<input type="number" id="co-months" min="1" step="1"></label>
-      <label class="f">「まず試す」の期間（月）<input type="number" id="co-trial" min="1" step="1"></label>
-      <label class="f">月の稼働量（コール数）<input type="number" id="co-calls" min="0" step="10"></label>
-      <label class="f">基準のアポ率（%）<input type="number" id="co-apo" min="0" step="0.1"></label>
-      <label class="f">基準の受注率（%）<input type="number" id="co-win" min="0" step="0.1"></label>
-    </div>
-
-    <div class="sub co-head" style="margin-top:18px"><span>よくある反論・懸念（<span id="co-obj-n">0</span>件）</span><span class="sp"></span></div>
-    <p class="hint">相手役が話の流れで1〜2個ずつ口にします。</p>
-    <div id="co-objs"></div>
-    <div class="row" style="margin-top:8px"><button class="btn" id="co-obj-add" type="button">＋ 追加</button></div>
-
-    <div class="row">
-      <button class="btn primary" id="co-save" type="button">保存する</button>
-      <button class="btn" id="co-reset" type="button">既定（ゼンテクト）に戻す</button>
-    </div>
-    <div class="status" id="co-status"></div>
-  </div>
-</section>
-
-<!-- ① 設定 -->
+<!-- ロープレ -->
+<div class="view" id="view-play">
+<div class="steps"><span id="s1" class="on">① ケース設定</span><span id="s2">② 相手を生成</span><span id="s3">③ ロープレ</span><span id="s4">④ 振り返り</span></div>
 <section class="panel" id="step1">
   <div class="pl">STEP 1</div>
   <h2>どんな相手と練習するか</h2>
@@ -435,83 +442,6 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
     </ul>
   </details>
 </section>
-
-
-<!-- ダッシュボード -->
-<section class="panel blue" id="dash">
-  <div class="bhead">
-    <div><div class="pl">分析ダッシュボード ／ <span id="dash-state">まだロープレがありません</span></div>
-    <h2>商談の考え方が、できているか</h2></div>
-    <span class="sp" style="flex:1"></span>
-    <button class="btn" id="dash-toggle" type="button" aria-expanded="false">見る</button>
-  </div>
-  <div class="bbody" id="dash-body" hidden>
-    <nav class="side">
-      <a href="#d-coach" class="on">コーチの所見</a><a href="#d-kpi">総合</a><a href="#d-donut">軸ごと</a><a href="#d-fb">上司FBの観点</a><a href="#d-trend">推移</a><a href="#d-table">根拠</a>
-    </nav>
-    <div class="main">
-      <div class="bcard" id="d-coach"><div class="coach"><div id="coach-art"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div class="bubble" id="coach-say"><span class="nm">Mr. KOHEI</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div></div></div>
-      <div class="bk" id="kpis"></div><span id="d-kpi"></span>
-      <div class="bcard" id="d-donut"><h3>軸ごとのスコア（直近の回）</h3><div class="donuts" id="donuts"></div></div>
-      <div class="bcard" id="d-fb"><h3>上司FBの観点（直近の回）</h3><div class="donuts" id="donuts-fb"></div><p class="hint" id="fb-none" style="text-align:center">上司のFBを登録すると、観点ごとに毎回採点されます。</p></div>
-      <div class="bgrid">
-        <div class="bcard"><h3>直近の回（濃）と平均（薄）</h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg></div>
-        <div class="bcard" id="d-trend"><h3>総合スコアの推移（直近20回）</h3><svg class="radar" id="trend" viewBox="0 0 320 180" role="img" aria-label="推移"></svg><div class="hist" id="hist"></div></div>
-      </div>
-      <div class="bcard" id="d-table"><h3>軸ごとの根拠（直近の回／平均）</h3><table class="axes" id="axes"></table></div>
-      <div class="row"><button class="btn" id="dash-clear" type="button">履歴を消す</button></div>
-    </div>
-  </div>
-</section>
-
-<!-- 上司からのFB -->
-<section class="panel" id="fb">
-  <div class="co-head">
-    <div><div class="pl" style="color:var(--case)">上司FB ／ <span id="fb-state">観点 0件</span></div>
-    <h2>録画を見てもらったFBを、次回からの採点に入れる</h2></div>
-    <span class="sp"></span>
-    <button class="btn" id="fb-toggle" type="button" aria-expanded="false">見る</button>
-  </div>
-  <p class="hint">上司のFBをそのまま貼ると、AIが「毎回できたか採点できる観点」に変換します。以後のロープレでコーチがその観点も採点し、振り返りと次の一手に反映します。</p>
-  <div id="fb-body" hidden>
-    <label class="f">FBのメモ<textarea id="fb-text" rows="5" placeholder="例：戦略の部分は件数は？とか聞いたほうがいい。何が困っているのか？って聞いたほうがいい…"></textarea></label>
-    <div class="row"><button class="btn primary" id="fb-add" type="button">AIで観点にする</button></div>
-    <div class="status" id="fb-status"></div>
-    <div id="fb-list"></div>
-  </div>
-</section>
-
-<!-- 間違えた暗算チェック -->
-<section class="panel" id="missed">
-  <div class="co-head">
-    <div><div class="pl" style="color:var(--bad)">暗算 ／ <span id="miss-state">間違えた問題 0件</span></div>
-    <h2>間違えた暗算チェック</h2></div>
-    <span class="sp"></span>
-    <button class="btn" id="miss-toggle" type="button" aria-expanded="false">見る</button>
-  </div>
-  <p class="hint">商談中・商談後の暗算チェックで間違えた（または答えられなかった）問題がここに貯まります。解き直して正解すると消えます。</p>
-  <div id="miss-body" hidden>
-    <ul class="miss" id="miss-list"></ul>
-    <div class="row"><button class="btn" id="miss-clear" type="button">全部消す</button></div>
-  </div>
-</section>
-
-<!-- 知見（Notion） -->
-<section class="panel" id="know">
-  <div class="pl" style="color:var(--accent)">知見 ／ <span id="know-status">読み込み中…</span></div>
-  <h2>実商談の議事録で、ロープレを賢くする</h2>
-  <p class="hint">議事録やメモを貼ると、AIが「相手役の反応・反論・数字感」として使える形に要約してNotionの「ロープレ知見」に追記します。次に相手を生成するときから反映。ロープレの判定時にも、その回の気づきが自動で追記されます。</p>
-  <label class="f">タイトル（任意）<input type="text" id="know-title" placeholder="例：〇〇社 初回商談 9/29"></label>
-  <label class="f">議事録・メモ<textarea id="know-text" rows="6" placeholder="議事録の本文を貼る（社名・個人名はAIが業種＋規模に置き換えます）"></textarea></label>
-  <div class="row">
-    <button class="btn primary" id="know-add" type="button">知見として追記する</button>
-    <a class="btn" id="know-open" href="#" target="_blank" rel="noopener" hidden>Notionで開く</a>
-  </div>
-  <div class="status" id="know-result"></div>
-  <details id="know-list-wrap" hidden><summary>最近の知見を見る</summary><ul id="know-list"></ul></details>
-</section>
-
-<!-- ② ペルソナ -->
 <section class="panel case" id="step2" hidden>
   <div class="pl">STEP 2 ／ 相手企業</div>
   <h2 id="p-company"></h2>
@@ -532,45 +462,92 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   <div class="status" id="call-status"></div>
 </section>
 
-<!-- ③ 通話 -->
-<section class="panel" id="step3" hidden>
-  <div class="pl" style="color:var(--accent)">STEP 3 ／ <span id="mode-label">音声ロープレ</span></div>
-  <div class="callbar">
-    <span class="dot" id="dot"></span><span class="timer" id="timer">00:00</span>
-    <span class="meter"><i id="meter"></i></span>
-    <span class="sp" style="flex:1"></span>
-    <button class="btn stop" id="hangup" type="button" disabled>商談を終える</button>
-  </div>
-  <div class="speaker"><div class="av sm" id="call-avatar"></div><div class="selfcam" id="selfcam" hidden><video id="selfvid" autoplay muted playsinline></video><span class="rec-dot">● REC</span></div><div class="who-text"><div class="nm" id="call-name"></div><div class="co" id="call-company"></div><div class="brief" id="call-brief" style="margin-top:6px;font-size:13px"></div><div class="co" id="call-opening" style="margin-top:4px"></div></div></div>
-  <div class="transcript" id="transcript"></div>
-  <div class="chatbox" id="chatbox" hidden>
-    <textarea id="chat-input" rows="2" placeholder="相手への質問や言い直しを入力（Enterで送信／Shift+Enterで改行）"></textarea>
-    <button class="btn primary" id="chat-send" type="button">送る</button>
-  </div>
-  <div class="status" id="chat-status"></div>
-  <div class="quiz" id="quiz" hidden>
-    <div class="qh"><span>暗算チェック</span><span class="qscore" id="quiz-score"></span><span class="sp"></span><span class="qtimer" id="quiz-timer">0.0秒</span></div>
-    <div class="qq" id="quiz-q"></div>
-    <div class="qquote" id="quiz-quote"></div>
-    <div class="qin">
-      <input type="number" id="quiz-in" step="any" inputmode="decimal" placeholder="暗算で"><span class="unit" id="quiz-unit"></span>
-      <button class="btn primary" id="quiz-ok" type="button">答える</button>
-      <button class="btn" id="quiz-skip" type="button">分からない</button>
+<!-- ③ 通話画面 -->
+<section id="step3" hidden>
+  <div class="callwrap">
+    <div class="callmain">
+      <div class="stage">
+        <div class="peer">
+          <div class="av" id="call-avatar"></div>
+          <div class="peer-name"><div class="nm" id="call-name"></div><div class="co" id="call-role">役職は商談で確認</div></div>
+          <div class="livebar"><span class="dot" id="dot"></span><span class="timer" id="timer">00:00</span><span class="meter"><i id="meter"></i></span></div>
+        </div>
+        <div class="selfbox" id="selfbox">
+          <div class="selfcam" id="selfcam" hidden><video id="selfvid" autoplay muted playsinline></video><span class="rec-dot">● REC</span></div>
+          <div class="nocam" id="nocam"><span id="mode-label">音声ロープレ</span><small id="nocam-hint">カメラをオンにすると、ここに自分の映像が出ます</small></div>
+          <div class="chatbox" id="chatbox" hidden>
+            <textarea id="chat-input" rows="2" placeholder="相手への質問や言い直しを入力（Enterで送信／Shift+Enterで改行）"></textarea>
+            <button class="btn primary" id="chat-send" type="button">送る</button>
+          </div>
+        </div>
+        <div class="ctrlbar">
+          <button class="ctl" id="cc-btn" type="button" aria-pressed="false" title="文字起こしを表示">CC</button>
+          <button class="btn stop" id="hangup" type="button" disabled>商談を終える</button>
+        </div>
+      </div>
+      <div class="status" id="call-status2"></div>
+      <div class="status" id="chat-status"></div>
+      <p class="hint" id="voice-hint">会話は録音・文字起こしして記録しています（画面には出しません。CCで表示）。相手が話し終えてから話す。かぶせると相手は止まる。</p>
+      <p class="hint" id="chat-hint" hidden>本番と同じく、1回に聞くのは1つずつ。長文でまとめて聞くと相手は一部しか答えない。</p>
+      <div class="transcript" id="transcript" hidden></div>
     </div>
-    <div class="qres" id="quiz-res" hidden></div>
-    <div class="mental" id="quiz-mental" hidden></div>
-    <div class="row" id="quiz-next-row" hidden><button class="btn primary" id="quiz-next" type="button">次へ</button></div>
+    <aside class="callside">
+      <div class="panel sidecard">
+        <div class="pl" style="color:var(--teal)">相手の情報</div>
+        <div class="nm" id="call-company" style="font-weight:700;margin-top:4px"></div>
+        <div class="brief" id="call-brief" style="margin-top:8px;font-size:13px"></div>
+        <div class="co" id="call-opening" style="margin-top:8px;font-size:12px;color:var(--ink-2)"></div>
+      </div>
+      <div class="quiz" id="quiz" hidden>
+        <div class="qh"><span>暗算チェック</span><span class="qscore" id="quiz-score"></span><span class="sp"></span><span class="qtimer" id="quiz-timer">0.0秒</span></div>
+        <div class="qq" id="quiz-q"></div>
+        <div class="qquote" id="quiz-quote"></div>
+        <div class="qin">
+          <input type="number" id="quiz-in" step="any" inputmode="decimal" placeholder="暗算で"><span class="unit" id="quiz-unit"></span>
+          <button class="btn primary" id="quiz-ok" type="button">答える</button>
+          <button class="btn" id="quiz-skip" type="button">分からない</button>
+        </div>
+        <div class="qres" id="quiz-res" hidden></div>
+        <div class="mental" id="quiz-mental" hidden></div>
+        <div class="row" id="quiz-next-row" hidden><button class="btn primary" id="quiz-next" type="button">次へ</button></div>
+      </div>
+    </aside>
   </div>
-  <p class="hint" id="voice-hint">相手が話し終えてから話す。かぶせると相手は止まる（本物と同じ）。文字起こしは参考程度。</p>
-  <p class="hint" id="chat-hint" hidden>本番と同じく、1回に聞くのは1つずつ。長文でまとめて聞くと相手は一部しか答えない。</p>
 </section>
 
-<!-- ④ 振り返り3問 -->
-<section class="panel" id="step4" hidden>
-  <div class="pl">STEP 4 ／ 商談中の自己チェック（3問）</div>
-  <h2>商談を振り返る。詰まったら、この3問に戻る。</h2>
+<!-- ④ 振り返り（判定後） -->
+<section id="step4" hidden>
+  <div class="reshead">
+    <span class="co" id="res-date"></span>
+    <b id="res-company"></b>
+    <span class="chip" id="res-mode"></span>
+    <span class="sp"></span>
+    <button class="btn primary" id="again" type="button" hidden>もう1社やる</button>
+  </div>
+  <div class="resgrid">
+    <div class="rescol">
+      <div class="playback" id="playback" hidden>
+    <span class="lab" style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--case)">録画</span>
+    <div class="row" style="margin-top:4px"><a class="btn primary" id="rec-dl" href="#" download>録画を保存</a><span class="hint" id="rec-info" style="margin:0"></span></div>
+    <video id="rec-play" controls playsinline hidden></video>
+  </div>
+  
+      <div class="panel">
+        <div class="co-head"><h2 style="margin:0;font-size:15px">会話履歴</h2><span class="hint" style="margin:0 0 0 10px" id="res-tr-hint">時刻つき。録画と一緒に見返す</span></div>
+        <div class="transcript res" id="res-transcript"></div>
+      </div>
+    </div>
+    <div class="rescol">
+      <div class="rtabs" id="rtabs">
+        <button type="button" data-rt="q" class="on">3問の回答</button>
+        <button type="button" data-rt="eval">評価・分析</button>
+        <button type="button" data-rt="info">情報</button>
+      </div>
 
-  <div class="q">
+      <div class="rt" id="rt-q">
+        <div class="panel">
+          <p class="hint" style="margin:0 0 6px">商談を振り返る。詰まったら、この3問に戻る。答えてから「判定してもらう」。</p>
+          <div class="q">
     <div class="qn">問1 ／ 広げる</div>
     <h3>相手の営業を、順を追って自分の言葉で説明できるか</h3>
     <label class="f">誰に・何を・どう売って・月に何件商談し・何%決まるか
@@ -578,7 +555,8 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
     <p class="hint">書けなければ、まだ広げる余地があったということ。</p>
   </div>
 
-  <div class="q">
+  
+          <div class="q">
     <div class="qn">問2 ／ 深掘る</div>
     <h3>課題を4分類のどれかに置けたか。相手より一段深い言葉で言い直せたか</h3>
     <div class="opts" id="opts">
@@ -591,7 +569,8 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
       <textarea id="rephrase" rows="3" placeholder="例：4.4万の買い切りを1社4台で積んでいる限り、月100万の代行費を回収できる構造にならないですよね"></textarea></label>
   </div>
 
-  <div class="q">
+  
+          <div class="q">
     <div class="qn">問3 ／ 狭める</div>
     <h3>検算は成立か不成立か。「こういうやり方なら」を1つ出したか</h3>
     <p class="hint">相手が3〜6ヶ月でうちに払う額を、その期間の受注で回収できるか。相手の実績を聞けた変数はその数字、聞けていなければ基準値のまま。<b>商談中と同じく、まず頭の中で計算してから答え合わせ。</b></p>
@@ -624,26 +603,193 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
       <textarea id="proposal" rows="3" placeholder="例：セグメントをゼネコンのDX推進部1つに絞って、まず1ヶ月で検証しませんか"></textarea></label>
   </div>
 
-  <div class="row">
-    <button class="btn primary" id="grade" type="button">判定してもらう</button>
-    <button class="btn" id="again" type="button" hidden>もう1社やる</button>
-  </div>
-  <div class="status" id="grade-status"></div>
-  <div class="verdict" id="verdict" hidden></div>
-  <div class="score-strip" id="score-strip" hidden></div>
-  <div class="verdict" id="feedback" hidden style="background:var(--surface);border:1px solid var(--line)"></div>
-  <div class="playback" id="playback" hidden>
-    <span class="lab" style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--case)">録画</span>
-    <div class="row" style="margin-top:4px"><a class="btn primary" id="rec-dl" href="#" download>録画を保存</a><span class="hint" id="rec-info" style="margin:0"></span></div>
-    <video id="rec-play" controls playsinline hidden></video>
-  </div>
-  <div class="record" id="record" hidden>
+
+          <div class="row"><button class="btn primary" id="grade" type="button">判定してもらう</button></div>
+          <div class="status" id="grade-status"></div>
+        </div>
+      </div>
+
+      <div class="rt" id="rt-eval" hidden>
+        <div class="panel">
+          <h2 style="margin:0 0 10px;font-size:15px">総合評価</h2>
+          <div class="evalgrid">
+            <div class="gradebox"><span class="gl" id="res-grade">–</span><span class="gs" id="res-total"></span></div>
+            <div class="coach"><div id="coach-art-res"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div class="bubble" id="res-coach"><span class="nm">Mr. KOHEI</span></div></div>
+          </div>
+          <div class="verdict" id="verdict" hidden></div>
+        </div>
+        <div class="panel good"><div class="gh ok">良かった点</div><ul class="pts" id="res-good"></ul></div>
+        <div class="panel good"><div class="gh ng">改善点</div><ul class="pts" id="res-improve"></ul></div>
+        <div class="panel">
+          <h2 style="margin:0 0 10px;font-size:15px">スコアサマリー</h2>
+          <div class="radarrow">
+            <svg class="radar" id="res-radar" viewBox="0 0 340 320" role="img" aria-label="レーダーチャート"></svg>
+            <div class="axlist" id="res-axes"></div>
+          </div>
+          <div class="score-strip" id="score-strip" hidden></div>
+        </div>
+        <div class="verdict" id="feedback" hidden style="background:var(--surface);border:1px solid var(--line)"></div>
+        <div class="record" id="record" hidden>
     <span class="lab">RECORD</span>
     <span id="record-msg"></span>
     <div class="row"><a class="btn primary" id="record-link" href="#" target="_blank" rel="noopener" hidden>記録を開く</a><button class="btn" id="record-copy" type="button" hidden>リンクをコピー</button><button class="btn" id="log-copy" type="button">会話ログをコピー</button></div>
   </div>
+
+      </div>
+
+      <div class="rt" id="rt-info" hidden>
+        <div class="panel" id="res-info"></div>
+      </div>
+    </div>
+  </div>
 </section>
 </div>
+
+<!-- ダッシュボード -->
+<div class="view" id="view-dash" hidden>
+<section class="panel blue" id="dash"><div class="bbody" id="dash-body"><div class="main">
+      <div class="bcard" id="d-coach"><div class="coach"><div id="coach-art"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div class="bubble" id="coach-say"><span class="nm">Mr. KOHEI</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div></div></div>
+      <div class="bk" id="kpis"></div><span id="d-kpi"></span>
+      <div class="bcard" id="d-donut"><h3>軸ごとのスコア（直近の回）</h3><div class="donuts" id="donuts"></div></div>
+      <div class="bcard" id="d-fb"><h3>上司FBの観点（直近の回）</h3><div class="donuts" id="donuts-fb"></div><p class="hint" id="fb-none" style="text-align:center">上司のFBを登録すると、観点ごとに毎回採点されます。</p></div>
+      <div class="bgrid">
+        <div class="bcard"><h3>直近の回（濃）と平均（薄）</h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg></div>
+        <div class="bcard" id="d-trend"><h3>総合スコアの推移（直近20回）</h3><svg class="radar" id="trend" viewBox="0 0 320 180" role="img" aria-label="推移"></svg><div class="hist" id="hist"></div></div>
+      </div>
+      <div class="bcard" id="d-table"><h3>軸ごとの根拠（直近の回／平均）</h3><table class="axes" id="axes"></table></div>
+    </div></div></section>
+</div>
+
+<!-- 履歴 -->
+<div class="view" id="view-history" hidden>
+<section class="panel">
+  <div class="co-head"><h2 style="margin:0">ロープレ履歴</h2><span class="sp"></span><button class="btn" id="dash-clear" type="button">履歴を消す</button></div>
+  <table class="axes" id="hist-table"></table>
+</section>
+</div>
+
+<!-- 設定 -->
+<div class="view" id="view-settings" hidden>
+<div class="setgrid">
+  <nav class="setnav" id="setnav">
+    <button type="button" data-set="co" class="on">自社情報</button>
+    <button type="button" data-set="fb">上司FBの観点</button>
+    <button type="button" data-set="missed">間違えた暗算</button>
+    <button type="button" data-set="know">知見（Notion）</button>
+  </nav>
+  <div class="setbody">
+    <section class="panel" id="co">
+  <div class="co-head"><div><div class="pl" style="color:var(--teal)"><span id="co-state"></span></div><h2>自社の商材と料金</h2></div></div>
+    <p class="hint">相手役が知っている「営業代行の料金」と、商談後の検算（問3）の月費用・準備費・基準値はここから取ります。保存はこのブラウザに残ります。</p>
+  <div id="co-body">
+    <div class="sub">資料から取り込む</div>
+    <label class="f">テキストを貼り付け<textarea id="co-src" rows="5" placeholder="会社紹介・製品資料の文章を貼り付け…"></textarea></label>
+    <label class="f">PDF をアップロード（複数可・合計3MBまで）<input type="file" id="co-pdf" accept="application/pdf" multiple style="display:block;margin-top:6px"></label>
+    <div class="row"><button class="btn primary" id="co-read" type="button">AIで読み取る</button><span class="hint" style="margin:0">読み取った内容は下に入るだけで、保存するまで反映されません</span></div>
+    <div class="status" id="co-read-status"></div>
+
+    <div class="sub">内容を確認・編集</div>
+    <div class="g2">
+      <label class="f">会社名 *<input type="text" id="co-company"></label>
+      <label class="f">プロダクト/サービス *<input type="text" id="co-product"></label>
+    </div>
+    <label class="f">提供価値（バリュープロップ）<textarea id="co-value" rows="3"></textarea></label>
+    <label class="f">実績・根拠（プルーフポイント）<textarea id="co-proof" rows="3"></textarea></label>
+    <label class="f">価格・料金体系<textarea id="co-pricing" rows="3"></textarea></label>
+
+    <div class="sub">検算の基準（問3で使う）</div>
+    <p class="hint">月額の固定プラン。商談後の検算で「月費用」として選べます（単位：万円）。</p>
+    <div id="co-plans"></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="co-plan-add" type="button">＋ プランを追加</button></div>
+    <div class="g3">
+      <label class="f">準備費（万円）<input type="number" id="co-prep" min="0" step="1"></label>
+      <label class="f">標準の期間（月）<input type="number" id="co-months" min="1" step="1"></label>
+      <label class="f">「まず試す」の期間（月）<input type="number" id="co-trial" min="1" step="1"></label>
+      <label class="f">月の稼働量（コール数）<input type="number" id="co-calls" min="0" step="10"></label>
+      <label class="f">基準のアポ率（%）<input type="number" id="co-apo" min="0" step="0.1"></label>
+      <label class="f">基準の受注率（%）<input type="number" id="co-win" min="0" step="0.1"></label>
+    </div>
+
+    <div class="sub co-head" style="margin-top:18px"><span>よくある反論・懸念（<span id="co-obj-n">0</span>件）</span><span class="sp"></span></div>
+    <p class="hint">相手役が話の流れで1〜2個ずつ口にします。</p>
+    <div id="co-objs"></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="co-obj-add" type="button">＋ 追加</button></div>
+
+    <div class="row">
+      <button class="btn primary" id="co-save" type="button">保存する</button>
+      <button class="btn" id="co-reset" type="button">既定（ゼンテクト）に戻す</button>
+    </div>
+    <div class="status" id="co-status"></div>
+  </div>
+</section>
+    <section class="panel" id="fb">
+  <div class="co-head"><div><div class="pl" style="color:var(--teal)"><span id="fb-state"></span></div><h2>録画を見てもらったFBを、次回からの採点に入れる</h2></div></div>
+    <p class="hint">上司のFBをそのまま貼ると、AIが「毎回できたか採点できる観点」に変換します。以後のロープレでコーチがその観点も採点し、振り返りと次の一手に反映します。</p>
+  <div id="fb-body">
+    <label class="f">FBのメモ<textarea id="fb-text" rows="5" placeholder="例：戦略の部分は件数は？とか聞いたほうがいい。何が困っているのか？って聞いたほうがいい…"></textarea></label>
+    <div class="row"><button class="btn primary" id="fb-add" type="button">AIで観点にする</button></div>
+    <div class="status" id="fb-status"></div>
+    <div id="fb-list"></div>
+  </div>
+</section>
+    <section class="panel" id="missed">
+  <div class="co-head"><div><div class="pl" style="color:var(--teal)"><span id="miss-state"></span></div><h2>間違えた暗算チェック</h2></div></div>
+    <p class="hint">商談中・商談後の暗算チェックで間違えた（または答えられなかった）問題がここに貯まります。解き直して正解すると消えます。</p>
+  <div id="miss-body">
+    <ul class="miss" id="miss-list"></ul>
+    <div class="row"><button class="btn" id="miss-clear" type="button">全部消す</button></div>
+  </div>
+</section>
+    <section class="panel" id="know">
+  <div class="pl" style="color:var(--accent)">知見 ／ <span id="know-status">読み込み中…</span></div>
+  <h2>実商談の議事録で、ロープレを賢くする</h2>
+  <p class="hint">議事録やメモを貼ると、AIが「相手役の反応・反論・数字感」として使える形に要約してNotionの「ロープレ知見」に追記します。次に相手を生成するときから反映。ロープレの判定時にも、その回の気づきが自動で追記されます。</p>
+  <label class="f">タイトル（任意）<input type="text" id="know-title" placeholder="例：〇〇社 初回商談 9/29"></label>
+  <label class="f">議事録・メモ<textarea id="know-text" rows="6" placeholder="議事録の本文を貼る（社名・個人名はAIが業種＋規模に置き換えます）"></textarea></label>
+  <div class="row">
+    <button class="btn primary" id="know-add" type="button">知見として追記する</button>
+    <a class="btn" id="know-open" href="#" target="_blank" rel="noopener" hidden>Notionで開く</a>
+  </div>
+  <div class="status" id="know-result"></div>
+  <details id="know-list-wrap" hidden><summary>最近の知見を見る</summary><ul id="know-list"></ul></details>
+</section>
+  </div>
+</div>
+</div>
+
+</main>
+</div>
+<section id="login" hidden aria-label="ログイン">
+  <div class="lg-left">
+    <div class="lg-card">
+      <img src="/logo.png" alt="Zentect" width="157" height="40" class="lg-logo">
+      <div class="lg-title">ZenAIロープレ</div>
+      <div class="lg-sub">AIが演じる相手と、FS商談を声かチャットで練習する</div>
+      <label class="lg-field"><span class="lg-ic">🔒</span><input type="password" id="pw" placeholder="共有パスワード" autocomplete="current-password"><button type="button" class="lg-eye" id="pw-eye" aria-label="パスワードを表示">👁</button></label>
+      <button class="lg-btn" id="pw-ok" type="button">ログイン</button>
+      <div class="status err" id="pw-status" style="text-align:center"></div>
+    </div>
+    <div class="lg-copy">© Zentect Inc.</div>
+  </div>
+  <div class="lg-right">
+    <h2 class="lg-h2">ゼンテクトの営業支援<br>ワンストップソリューション</h2>
+    <div class="pcard">
+      <div class="pc-top">
+        <img class="pc-img" src="/sales.jpg" alt="">
+        <div class="pc-text"><div class="pc-name">営業支援</div><div class="pc-sub">テレアポのみの営業代行でも、自社での新規採用でもない第三の選択肢</div></div>
+      </div>
+      <div class="pc-links"><a href="https://zentect.com/contact-case" target="_blank" rel="noopener">資料ダウンロード</a><a href="https://zentect.com/contact-onlineconsulting" target="_blank" rel="noopener">無料オンライン相談</a></div>
+    </div>
+    <div class="pcard">
+      <div class="pc-top">
+        <img class="pc-img" src="/zenform_pc.jpg" alt="">
+        <div class="pc-text"><div class="pc-name">ゼンフォーム</div><div class="pc-sub">業種・業界特化 × フォーム自動送信</div></div>
+      </div>
+      <div class="pc-links"><a href="https://lp.zenformsend.com/" target="_blank" rel="noopener">無料トライアル</a><a href="https://lp.zenformsend.com/" target="_blank" rel="noopener">仕組みを見る</a></div>
+    </div>
+    <div class="lg-note">社内練習用アプリ。相手役の会社・人物はAIが作る架空のものです。</div>
+  </div>
+</section>
 <script type="module" src="/app.js"></script>
 </body>
 </html>

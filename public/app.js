@@ -17,8 +17,8 @@ async function api(path, body) {
   if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
   return j;
 }
-function showLogin() { $("login").hidden = false; document.body.style.overflow = "hidden"; setTimeout(() => $("pw").focus(), 50); }
-function hideLogin() { $("login").hidden = true; document.body.style.overflow = ""; }
+function showLogin() { $("login").hidden = false; $("app").hidden = true; document.body.style.overflow = "hidden"; setTimeout(() => $("pw").focus(), 50); }
+function hideLogin() { $("login").hidden = true; $("app").hidden = false; document.body.style.overflow = ""; }
 $("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} if (!$("pw").value.trim()) { status("pw-status", "パスワードを入れてください", true); return; } hideLogin(); $("logout").hidden = false; status("pw-status", ""); loadKnow(); });
 $("pw").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); $("pw-ok").click(); } });
 $("pw-eye").addEventListener("click", () => { const i = $("pw"); i.type = i.type === "password" ? "text" : "password"; });
@@ -77,12 +77,7 @@ function readCompanyForm() {
     objections: [...$("co-objs").querySelectorAll("input")].map(i => i.value.trim()).filter(Boolean),
   };
 }
-function showCoState() { $("co-state").textContent = company ? "保存済み：" + company.company + "／" + company.product : "既定（ゼンテクト）"; }
-$("co-toggle").addEventListener("click", () => {
-  const open = $("co-body").hidden; $("co-body").hidden = !open;
-  $("co-toggle").textContent = open ? "閉じる" : "編集する"; $("co-toggle").setAttribute("aria-expanded", String(open));
-  if (open) fillCompany(co());
-});
+function showCoState() { $("co-state").textContent = company ? "保存済み：" + company.company + "／" + company.product : "既定（ゼンテクト）"; fillCompany(co()); }
 $("co-plan-add").addEventListener("click", () => listRow($("co-plans"), { name: "", monthly: "" }, "plan").focus());
 $("co-obj-add").addEventListener("click", () => { listRow($("co-objs"), "", "obj").focus(); countObjs(); });
 $("co-save").addEventListener("click", () => {
@@ -142,10 +137,29 @@ $("know-add").addEventListener("click", async () => {
 loadKnow();
 
 /* ---------- 画面遷移 ---------- */
+function view(name) {
+  ["play", "dash", "history", "settings"].forEach(v => { $("view-" + v).hidden = v !== name; });
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.view === name));
+  if (name === "dash") renderDash();
+  if (name === "history") renderHistory();
+  if (name === "settings") { renderChecks(); renderMissed(); }
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => view(b.dataset.view)));
+document.querySelectorAll("#setnav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#setnav button").forEach(x => x.classList.toggle("on", x === b));
+  ["co", "fb", "missed", "know"].forEach(id => { $(id).hidden = id !== b.dataset.set; });
+}));
+["fb", "missed", "know"].forEach(id => { $(id).hidden = true; });
+function rtab(name) {
+  ["q", "eval", "info"].forEach(t => { $("rt-" + t).hidden = t !== name; });
+  document.querySelectorAll("#rtabs button").forEach(b => b.classList.toggle("on", b.dataset.rt === name));
+}
+document.querySelectorAll("#rtabs button").forEach(b => b.addEventListener("click", () => rtab(b.dataset.rt)));
 function step(n) {
+  view("play");
   [1, 2, 3, 4].forEach(i => { $("s" + i).classList.toggle("on", i === n); });
-  $("step1").hidden = n !== 1; $("step2").hidden = n < 2 || n > 3; $("step3").hidden = n !== 3; $("step4").hidden = n !== 4;
-  if (n === 3) $("step2").hidden = true;
+  $("step1").hidden = n !== 1; $("step2").hidden = n !== 2; $("step3").hidden = n !== 3; $("step4").hidden = n !== 4;
 }
 function status(id, text, err) { const e = $(id); e.textContent = text || ""; e.classList.toggle("err", !!err); }
 
@@ -160,9 +174,8 @@ async function generate() {
     $("p-opening").textContent = persona.opening_line;
     renderAvatar($("p-avatar"), persona); renderAvatar($("call-avatar"), persona);
     $("call-name").textContent = persona.name; $("call-company").textContent = persona.company;
-    $("call-brief").textContent = persona.brief; $("call-opening").textContent = "冒頭のひとこと「" + persona.opening_line + "」";
+    $("call-brief").textContent = persona.brief; $("call-opening").textContent = "冒頭のひとこと「" + persona.opening_line + "」"; $("call-role").textContent = "役職は商談で確認";
     status("gen-status", ""); status("call-status", "");
-    $("co-body").hidden = true; $("co-toggle").textContent = "編集する"; $("co").hidden = true; $("missed").hidden = true; $("dash").hidden = true; $("fb").hidden = true;
     step(2);
   } catch (e) { status("gen-status", e.message, true); }
   finally { $("gen").disabled = false; lockStart(false); }
@@ -173,7 +186,7 @@ $("regen").addEventListener("click", generate);
 /* ---------- ③ 音声ロープレ ---------- */
 function addMsg(who, text) {
   const d = document.createElement("div"); d.className = "msg " + who;
-  if (who !== "sys") { const w = document.createElement("span"); w.className = "who"; w.textContent = who === "me" ? "あなた" : persona.name; d.appendChild(w); }
+  if (who !== "sys") { const w = document.createElement("span"); w.className = "who"; const t = document.createElement("span"); t.className = "t"; t.textContent = $("timer").textContent; w.appendChild(t); w.appendChild(document.createTextNode(who === "me" ? "あなた" : persona.name)); d.appendChild(w); }
   d.appendChild(document.createTextNode(text)); $("transcript").appendChild(d); $("transcript").scrollTop = 1e9; return d;
 }
 function setMsg(d, text) { const w = d.querySelector(".who"); d.textContent = ""; if (w) d.appendChild(w); d.appendChild(document.createTextNode(text)); $("transcript").scrollTop = 1e9; }
@@ -221,10 +234,16 @@ function setMode(m) {
   mode = m;
   const chat = m === "chat";
   $("mode-label").textContent = chat ? "チャットロープレ" : "音声ロープレ";
+  $("nocam-hint").textContent = chat ? "相手の返事は下の会話に出ます" : "カメラをオンにすると、ここに自分の映像が出ます";
   $("chatbox").hidden = !chat; $("chat-hint").hidden = !chat; $("voice-hint").hidden = chat;
   $("meter").parentElement.hidden = chat;
-  status("chat-status", "");
+  $("cc-btn").hidden = chat; $("cc-btn").setAttribute("aria-pressed", "false");
+  $("transcript").hidden = !chat;
+  $("selfbox").classList.toggle("chatmode", chat);
+  if (chat) $("selfbox").insertBefore($("transcript"), $("chatbox")); else $("step3").querySelector(".callmain").appendChild($("transcript"));
+  status("chat-status", ""); status("call-status2", "");
 }
+$("cc-btn").addEventListener("click", () => { const on = $("cc-btn").getAttribute("aria-pressed") !== "true"; $("cc-btn").setAttribute("aria-pressed", String(on)); $("transcript").hidden = !on; });
 function startTimer() {
   startedAt = Date.now(); $("timer").textContent = "00:00";
   timerId = setInterval(() => { const s = Math.floor((Date.now() - startedAt) / 1000); $("timer").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }, 500);
@@ -292,8 +311,8 @@ async function startRecording() {
     recorder = new MediaRecorder(new MediaStream(tracks), mime ? { mimeType: mime } : undefined);
     recorder.ondataavailable = e => { if (e.data && e.data.size) recChunks.push(e.data); };
     recorder.start(1000);
-    if (!camStream) status("call-status", "カメラが使えないので、声だけ録画します");
-  } catch (e) { console.error(e); status("call-status", "録画を開始できませんでした：" + (e.message || e), true); }
+    if (!camStream) status("call-status2", "カメラが使えないので、声だけ録画します");
+  } catch (e) { console.error(e); status("call-status2", "録画を開始できませんでした：" + (e.message || e), true); }
 }
 function stopRecording() {
   const r = recorder; recorder = null;
@@ -331,8 +350,35 @@ function endCall(note) {
   if (note) addMsg("sys", note);
   picked = null; document.querySelectorAll("#opts .opt").forEach(b => { b.setAttribute("aria-pressed", "false"); b.classList.remove("correct", "wrong"); b.disabled = false; });
   $("rephrase").value = ""; $("overview").value = ""; $("proposal").value = ""; resetCalc(); $("verdict").hidden = true; $("feedback").hidden = true; $("again").hidden = true; $("grade").disabled = false; status("grade-status", "");
-  $("step3").hidden = false; step(4); $("step3").hidden = false;
-  if (mode === "voice" && transcript.length) voiceQuiz();
+  resetResult();
+  if (mode === "voice" && transcript.length) voiceQuiz().then(() => showResult()); else showResult();
+}
+function resetResult() {
+  $("res-date").textContent = new Date().toLocaleString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  $("res-company").textContent = persona.company + " ／ " + persona.name + "（役職は判定後に表示）";
+  $("res-mode").textContent = (mode === "chat" ? "チャット" : "音声") + " ・ " + $("timer").textContent;
+  $("res-good").textContent = ""; $("res-improve").textContent = ""; $("res-radar").innerHTML = ""; $("res-axes").textContent = "";
+  $("res-grade").textContent = "–"; $("res-total").textContent = ""; coachSayRes("判定すると、ここに所見が出ます。");
+  renderResInfo(false);
+  rtab("q");
+}
+function showResult() {
+  const box = $("res-transcript"); box.textContent = "";
+  transcript.forEach(t => { const d = document.createElement("div"); d.className = "msg " + t.who; const w = document.createElement("span"); w.className = "who"; w.textContent = (t.who === "me" ? "あなた" : persona.name); d.appendChild(w); d.appendChild(document.createTextNode(t.text)); box.appendChild(d); });
+  if (!transcript.length) { const d = document.createElement("div"); d.className = "msg sys"; d.textContent = "（会話なし）"; box.appendChild(d); }
+  step(4);
+}
+function coachSayRes(text) { const b = $("res-coach"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. KOHEI"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
+function renderResInfo(graded) {
+  const box = $("res-info"); box.textContent = "";
+  const kv = document.createElement("div"); kv.className = "kv";
+  const row = (k, v) => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = k + "："; d.appendChild(b); d.appendChild(document.createTextNode(v || "")); kv.appendChild(d); };
+  row("会社", persona.company); row("会社概要", persona.brief); row("相手", persona.name); row("冒頭のひとこと", persona.opening_line);
+  if (graded) { row("役職", persona.role); row("決裁権", persona.authority); row("正解", CAT[persona.answer] + "：" + (persona.exp || "")); row("言い直しの模範例", persona.rephrase_example); }
+  else row("役職・決裁権・相手の事実", "判定後に表示");
+  box.appendChild(kv);
+  if (graded && (persona.hidden_facts || []).length) { const h = document.createElement("h3"); h.textContent = "相手の事実（答え合わせ用）"; h.style.cssText = "font-size:13px;margin:14px 0 4px"; box.appendChild(h); const ul = document.createElement("ul"); ul.className = "pts"; persona.hidden_facts.forEach(f => { const li = document.createElement("li"); li.textContent = f; ul.appendChild(li); }); box.appendChild(ul); }
+  if (quizzes.length) { const h = document.createElement("h3"); h.textContent = "暗算チェック " + quizzes.filter(q => q.ok).length + "/" + quizzes.length; h.style.cssText = "font-size:13px;margin:14px 0 4px"; box.appendChild(h); const ul = document.createElement("ul"); ul.className = "pts"; quizzes.forEach(q => { const li = document.createElement("li"); li.textContent = q.question + " → 正解" + q.answer + q.unit + "／自分" + (q.mine === null ? "未回答" : q.mine + q.unit) + "（" + (q.ok ? "○" : "×") + "、" + q.sec.toFixed(1) + "秒）"; ul.appendChild(li); }); box.appendChild(ul); }
 }
 async function voiceQuiz() {
   status("chat-status", "この商談で出た数字を暗算チェックにしています…");
@@ -418,7 +464,6 @@ function renderChecks() {
     d.appendChild(x); box.appendChild(d);
   });
 }
-$("fb-toggle").addEventListener("click", () => { const open = $("fb-body").hidden; $("fb-body").hidden = !open; $("fb-toggle").textContent = open ? "閉じる" : "見る"; $("fb-toggle").setAttribute("aria-expanded", String(open)); if (open) renderChecks(); });
 $("fb-add").addEventListener("click", async () => {
   const text = $("fb-text").value.trim(); if (text.length < 5) { status("fb-status", "FBの本文を入れてください", true); return; }
   if (checks.length >= 12) { status("fb-status", "観点は12件までです。古いものを消してください", true); return; }
@@ -459,8 +504,14 @@ function recordHistory(r) {
 }
 function avgScores(list) { const out = {}; AXES.forEach(([k]) => { const v = list.map(e => e.scores[k] && e.scores[k].score).filter(x => x); out[k] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }); return out; }
 function polar(cx, cy, r, i, n) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
-function drawRadar(latest, avg) {
-  const svg = $("radar"); const n = AXES.length, cx = 160, cy = 150, R = 100; let h = "";
+function drawRadar(latest, avg) { drawRadarInto($("radar"), latest, avg); }
+function renderAxList(ent) {
+  const avg = avgScores(history); const box = $("res-axes"); box.textContent = "";
+  const weakK = AXES.map(([k]) => k).filter(k => avg[k] !== null).sort((a, b) => avg[a] - avg[b])[0];
+  AXES.forEach(([k, label]) => { const s = ent.scores[k]; const d = document.createElement("div"); if (k === weakK) d.className = "weak"; const l = document.createElement("span"); l.textContent = label + (k === weakK ? "（弱点）" : ""); const v = document.createElement("span"); const b = document.createElement("b"); b.textContent = s ? s.score : "—"; b.style.color = s && s.score <= 2 ? "var(--bad)" : s && s.score >= 5 ? "#059669" : ""; v.appendChild(b); const a = document.createElement("span"); a.className = "avg"; a.textContent = " / " + (avg[k] !== null ? avg[k].toFixed(1) : "—"); v.appendChild(a); d.appendChild(l); d.appendChild(v); d.title = s ? s.why : ""; box.appendChild(d); });
+}
+function drawRadarInto(svg, latest, avg) {
+  const n = AXES.length, cx = 160, cy = 150, R = 100; let h = "";
   for (let g = 1; g <= 5; g++) { const pts = AXES.map((_, i) => polar(cx, cy, R * g / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); h += `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="${g === 5 ? 1.2 : .6}"/>`; }
   AXES.forEach(([k, label], i) => { const [x, y] = polar(cx, cy, R, i, n); const [lx, ly] = polar(cx, cy, R + 22, i, n); h += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="11" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">${label}</text>`; });
   const poly = (sc, fill, stroke, op) => { const pts = AXES.map(([k], i) => polar(cx, cy, R * ((sc[k] && (sc[k].score ?? sc[k])) || 0) / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); return `<polygon points="${pts}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="1.5"/>`; };
@@ -483,9 +534,12 @@ function donut(label, score, why, weak) {
   return `<div class="donut${weak ? " weak" : ""}" title="${(why || "").replace(/"/g, "&quot;")}"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="${r}" fill="none" stroke="#E2E8F0" stroke-width="10"/><circle cx="42" cy="42" r="${r}" fill="none" stroke="${weak ? "#EF4444" : "#05AABA"}" stroke-width="10" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" class="dv">${score ? score : "—"}</text></svg><span class="dl">${label}</span>${why ? `<span class="dw">${why}</span>` : ""}</div>`;
 }
 function coachSay(text) { const b = $("coach-say"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. KOHEI"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
+function renderHistory() {
+  const t = $("hist-table"); t.innerHTML = `<tr><th>日時</th><th>相手</th><th>方式</th><th>4分類</th><th>総合</th><th>次の一手</th></tr>` + (history.length ? history.slice().reverse().map(e => `<tr><td class="n">${new Date(e.at).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td><td>${e.company}<span class="why">（${e.role || ""}）</span></td><td>${e.mode === "chat" ? "チャット" : "音声"}</td><td class="n">${e.correct ? "○" : "×"}</td><td class="n"><b>${e.total.toFixed(1)}</b></td><td class="why">${e.next || ""}</td></tr>`).join("") : `<tr><td colspan="6" class="why">まだありません。</td></tr>`);
+}
 function renderDash() {
   const n = history.length;
-  $("dash-state").textContent = n ? `${n}回分の記録` : "まだロープレがありません";
+  if ($("dash-state")) $("dash-state").textContent = n ? `${n}回分の記録` : "まだロープレがありません";
   if (!n) { $("kpis").innerHTML = ""; $("axes").innerHTML = ""; $("donuts").innerHTML = ""; $("donuts-fb").innerHTML = ""; $("fb-none").hidden = false; drawRadar(null, null); drawTrend([]); $("hist").textContent = ""; coachSay("まだロープレの記録がありません。1回やると、ここで所見を話します。"); return; }
   const latest = history[n - 1], avg = avgScores(history), prev = history.slice(0, -1);
   const avgTotal = history.reduce((s, e) => s + e.total, 0) / n;
@@ -511,7 +565,6 @@ function renderDash() {
     latest.next ? `次の一手：${latest.next}` : "",
   ].filter(Boolean).join("\n"));
 }
-$("dash-toggle").addEventListener("click", () => { const open = $("dash-body").hidden; $("dash-body").hidden = !open; $("dash-toggle").textContent = open ? "閉じる" : "見る"; $("dash-toggle").setAttribute("aria-expanded", String(open)); if (open) renderDash(); });
 $("dash-clear").addEventListener("click", () => { history = []; saveHistory(); renderDash(); });
 loadHistory(); renderDash();
 
@@ -554,7 +607,6 @@ function renderMissed() {
     ul.appendChild(li);
   });
 }
-$("miss-toggle").addEventListener("click", () => { const open = $("miss-body").hidden; $("miss-body").hidden = !open; $("miss-toggle").textContent = open ? "閉じる" : "見る"; $("miss-toggle").setAttribute("aria-expanded", String(open)); if (open) renderMissed(); });
 $("miss-clear").addEventListener("click", () => { missed = []; saveMissed(); });
 loadMissed(); renderMissed();
 
@@ -728,14 +780,21 @@ $("grade").addEventListener("click", async () => {
     const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = (r.correct ? "正解" : "不正解") + " ／ 答え：" + r.answer + " " + r.answerLabel; v.appendChild(lab);
     v.appendChild(document.createTextNode("相手：" + persona.name + "（" + persona.role + "）決裁権：" + (persona.authority || "") + "\n\n"));
     v.appendChild(document.createTextNode(r.exp + "\n\n言い直しの模範例：" + r.rephrase_example));
-    const f = $("feedback"); f.hidden = false; f.textContent = ""; const l2 = document.createElement("span"); l2.className = "lab"; l2.textContent = "COACH"; f.appendChild(l2); f.appendChild(document.createTextNode(r.feedback));
+    const f = $("feedback"); f.hidden = false; f.textContent = ""; const l2 = document.createElement("span"); l2.className = "lab"; l2.textContent = "COACH（全文）"; f.appendChild(l2); f.appendChild(document.createTextNode(r.feedback));
+    const fillPts = (id, arr, fallback) => { const ul = $(id); ul.textContent = ""; (arr && arr.length ? arr : [fallback]).forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }); };
+    fillPts("res-good", r.good, "（コーチの全文を参照）"); fillPts("res-improve", r.improve, "（コーチの全文を参照）");
+    coachSayRes(String(r.feedback || "").slice(0, 240) + (r.nextAction ? "\n次の一手：" + r.nextAction : ""));
+    $("res-company").textContent = persona.company + " ／ " + persona.name + "（" + persona.role + "）";
+    renderResInfo(true);
     if (r.overviewReview) f.appendChild(document.createTextNode("\n\n【問1 全体像】" + r.overviewReview));
     if (r.calcReview) f.appendChild(document.createTextNode("\n\n【問3 検算】" + r.calcReview));
     if (r.numbersReview) f.appendChild(document.createTextNode("\n\n【数字】" + r.numbersReview));
     const ent = recordHistory(r);
-    const strip = $("score-strip"); strip.hidden = !ent; if (ent) { strip.innerHTML = AXES.map(([k, label]) => ent.scores[k] ? `<span title="${ent.scores[k].why.replace(/"/g, "&quot;")}">${label} <b>${ent.scores[k].score}</b></span>` : "").join("") + `<span style="background:var(--accent-soft);border-color:var(--accent)">総合 <b>${ent.total.toFixed(1)}</b>/5</span>` + (ent.custom ? Object.values(ent.custom).map(c => `<span style="background:#E0F5EF;border-color:#B5E3E8" title="${c.why.replace(/"/g, "&quot;")}">上司FB：${c.title} <b>${c.score}</b></span>`).join("") : ""); if (ent.next) f.appendChild(document.createTextNode("\n\n【次の一手】" + ent.next)); }
+    if (ent) { const L = ent.total >= 4.5 ? "S" : ent.total >= 4 ? "A" : ent.total >= 3.5 ? "B" : ent.total >= 3 ? "C" : ent.total >= 2.5 ? "D" : "E"; $("res-grade").textContent = L; $("res-total").textContent = ent.total.toFixed(1) + " / 5"; drawRadarInto($("res-radar"), ent, history.length > 1 ? avgScores(history.slice(0, -1)) : null); renderAxList(ent); }
+    rtab("eval"); window.scrollTo(0, 0);
+    const strip = $("score-strip"); strip.hidden = !ent; if (ent) { strip.innerHTML = (ent.custom && Object.keys(ent.custom).length ? `<span style="border:0;background:none;padding-left:0;color:var(--ink-2)">上司FBの観点：</span>` + Object.values(ent.custom).map(c => `<span style="background:#E0F5EF;border-color:#B5E3E8" title="${c.why.replace(/"/g, "&quot;")}">${c.title} <b>${c.score}</b></span>`).join("") : ""); strip.hidden = !strip.innerHTML; if (ent.next) f.appendChild(document.createTextNode("\n\n【次の一手】" + ent.next)); }
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();
     showRecord(r);
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
-$("again").addEventListener("click", () => { $("record").hidden = true; $("co").hidden = false; $("missed").hidden = false; $("dash").hidden = false; $("fb").hidden = false; renderMissed(); renderDash(); $("playback").hidden = true; $("score-strip").hidden = true; step(1); lockStart(false); window.scrollTo(0, 0); });
+$("again").addEventListener("click", () => { $("record").hidden = true; $("playback").hidden = true; $("score-strip").hidden = true; step(1); lockStart(false); window.scrollTo(0, 0); });
