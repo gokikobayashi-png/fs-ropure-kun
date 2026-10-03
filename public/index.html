@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FS商談ロープレ君</title>
+<title>ゼンAIロープレ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
-  --bg:#F3F5F4; --surface:#FFFFFF; --ink:#1B2430; --ink-2:#55636F; --line:#D6DDD9;
-  --accent:#0F6E56; --accent-soft:#E1EFE8; --bad:#B23A2E; --bad-soft:#F8E6E3;
-  --case:#1F4E79; --case-soft:#E8F0F8; --me:#DDEBE4; --live:#C9372C;
+  /* Zentectマスターデザイン v1.0 のパレット */
+  --bg:#F7F9FC; --surface:#FFFFFF; --ink:#1F2937; --ink-2:#6B7280; --line:#E2E8F0;
+  --accent:#1A3A5C; --accent-soft:#E8EEF5; --bad:#EF4444; --bad-soft:#FDECEC;
+  --case:#05AABA; --case-soft:#E0F5EF; --me:#E0F5EF; --live:#EF4444; --teal:#05AABA; --navy:#1A3A5C; --navy-dark:#1E2761;
   --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
   --sans:'Zen Kaku Gothic New','Hiragino Kaku Gothic ProN','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;
 }
@@ -139,7 +140,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .quiz .qres .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;display:block;margin-bottom:2px}
 .quiz .qres.ok .lab{color:var(--accent)}
 .quiz .qres.ng .lab{color:var(--bad)}
-.quiz .mental{margin-top:8px;padding:8px 12px;border-radius:6px;background:#F4F1E6;color:#5B4A12;font-size:14px;white-space:pre-wrap}
+.quiz .mental{margin-top:8px;padding:8px 12px;border-radius:6px;background:#FFF7E6;color:#7A5A00;font-size:14px;white-space:pre-wrap}
 .quiz .mental .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;display:block;opacity:.8}
 .qscore{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
 .guess{margin-top:10px;padding:12px 14px;border-radius:6px;border:1px dashed var(--accent);background:var(--surface)}
@@ -190,46 +191,47 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .score-strip span{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
 .score-strip span b{font-variant-numeric:tabular-nums}
 /* 分析ダッシュボード（青基調） */
-.panel.blue{padding:0;overflow:hidden;border-color:#BFD3F2}
-.blue .bhead{background:linear-gradient(135deg,#1457D6,#2F7BF0);color:#fff;padding:16px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.panel.blue{padding:0;overflow:hidden;border-color:#B5E3E8}
+.blue .bhead{background:linear-gradient(135deg,#1E2761,#05AABA);color:#fff;padding:16px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .blue .bhead h2{margin:0;font-size:17px;color:#fff}
-.blue .bhead .pl{color:#CFE0FF}
+.blue .bhead .pl{color:#CFEFF2}
 .blue .bhead .btn{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.4)}
-.blue .bbody{display:grid;grid-template-columns:150px 1fr;background:#F3F7FD}
+.blue .bbody{display:grid;grid-template-columns:150px 1fr;background:#F7F9FC}
 @media (max-width:680px){.blue .bbody{grid-template-columns:1fr}}
-.blue .side{background:#1A4FBF;color:#fff;padding:14px 10px;display:flex;flex-direction:column;gap:4px}
+.blue .side{background:#1A3A5C;color:#fff;padding:14px 10px;display:flex;flex-direction:column;gap:4px}
 @media (max-width:680px){.blue .side{flex-direction:row;flex-wrap:wrap}}
-.blue .side a{color:#DCE8FF;text-decoration:none;font-size:13px;padding:8px 10px;border-radius:6px;display:block}
+.blue .side a{color:#CFEFF2;text-decoration:none;font-size:13px;padding:8px 10px;border-radius:6px;display:block}
 .blue .side a.on,.blue .side a:hover{background:rgba(255,255,255,.18);color:#fff}
 .blue .main{padding:16px;display:grid;gap:14px;min-width:0}
 .bk{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 @media (max-width:560px){.bk{grid-template-columns:1fr 1fr}}
-.bk .kpi{background:linear-gradient(135deg,#2563EB,#3B82F6);color:#fff;border:0;border-radius:10px;padding:10px 14px}
-.bk .kpi .k{color:#DCE8FF}
-.bk .kpi .v small{color:#DCE8FF}
-.bcard{background:#fff;border:1px solid #D9E4F5;border-radius:10px;padding:12px 14px}
-.bcard h3{font-size:13px;margin:0 0 8px;color:#1A4FBF;font-weight:700;text-align:center;letter-spacing:.04em}
+.bk .kpi{background:linear-gradient(135deg,#1A3A5C,#05AABA);color:#fff;border:0;border-radius:10px;padding:10px 14px}
+.bk .kpi .k{color:#CFEFF2}
+.bk .kpi .v small{color:#CFEFF2}
+.bcard{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px}
+.bcard h3{font-size:13px;margin:0 0 8px;color:#1A3A5C;font-weight:700;text-align:center;letter-spacing:.04em}
 .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:680px){.bgrid{grid-template-columns:1fr}}
 .donuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
-.donut{display:grid;justify-items:center;gap:2px;font-size:12px;color:#334155;text-align:center}
+.donut{display:grid;justify-items:center;gap:2px;font-size:12px;color:#374151;text-align:center}
 .donut svg{width:84px;height:84px}
-.donut .dv{font-size:18px;font-weight:700;fill:#1E3A8A}
+.donut .dv{font-size:18px;font-weight:700;fill:#1A3A5C}
 .donut .dl{font-weight:700}
-.donut .dw{font-size:11px;color:#64748B;line-height:1.4}
-.donut.weak .dl{color:#C23B2A}
-.blue .radar text{fill:#334155}
+.donut .dw{font-size:11px;color:#6B7280;line-height:1.4}
+.donut.weak .dl{color:#EF4444}
+.blue .radar text{fill:#374151}
 .coach{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:start}
 @media (max-width:480px){.coach{grid-template-columns:80px 1fr}}
 .coach svg{width:100%;height:auto;display:block}
-.bubble{position:relative;background:#EAF2FF;border:1px solid #BFD3F2;border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-wrap;line-height:1.75}
-.bubble:before{content:"";position:absolute;left:-9px;top:22px;border:8px solid transparent;border-right-color:#BFD3F2;border-left:0}
-.bubble:after{content:"";position:absolute;left:-7px;top:23px;border:7px solid transparent;border-right-color:#EAF2FF;border-left:0}
-.bubble .nm{font-weight:700;color:#1A4FBF;font-size:12px;display:block;margin-bottom:4px}
-.blue .axes th{color:#1A4FBF}
-.blue .axes tr.weak td{background:#FFF1EE}
-.blue .axes .bar i{background:#2F7BF0}
-.blue .hist{color:#64748B}
+.coach-img{width:100%;height:auto;display:block;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.bubble{position:relative;background:#E0F5EF;border:1px solid #B5E3E8;border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-wrap;line-height:1.75}
+.bubble:before{content:"";position:absolute;left:-9px;top:22px;border:8px solid transparent;border-right-color:#B5E3E8;border-left:0}
+.bubble:after{content:"";position:absolute;left:-7px;top:23px;border:7px solid transparent;border-right-color:#E0F5EF;border-left:0}
+.bubble .nm{font-weight:700;color:#1A3A5C;font-size:12px;display:block;margin-bottom:4px}
+.blue .axes th{color:#1A3A5C}
+.blue .axes tr.weak td{background:#FDECEC}
+.blue .axes .bar i{background:#05AABA}
+.blue .hist{color:#6B7280}
 /* 上司FB */
 .fb-item{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
 .fb-item .t{font-weight:700}
@@ -239,44 +241,52 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 /* ログイン画面 */
 #login{position:fixed;inset:0;z-index:50;display:grid;grid-template-columns:1fr 1fr;overflow:auto}
 @media (max-width:820px){#login{grid-template-columns:1fr}}
-.lg-left{background:linear-gradient(160deg,#0B5A47 0%,#0F6E56 45%,#3BAE8E 100%);display:grid;place-items:center;padding:40px 24px;position:relative;color:#fff}
+.lg-left{background:linear-gradient(160deg,#1E2761 0%,#1A3A5C 45%,#05AABA 100%);display:grid;place-items:center;padding:40px 24px;position:relative;color:#fff}
 .lg-card{background:#fff;color:var(--ink);border-radius:14px;padding:40px 36px 28px;width:100%;max-width:400px;display:grid;gap:14px;justify-items:center;box-shadow:0 12px 40px rgba(0,0,0,.18)}
 .lg-logo{display:block;margin-bottom:4px}
 .lg-title{font-size:20px;font-weight:700}
 .lg-sub{font-size:12px;color:var(--ink-2);text-align:center;margin-top:-8px}
-.lg-field{display:flex;align-items:center;gap:8px;width:100%;background:#EEF2F0;border:1px solid var(--line);border-radius:8px;padding:0 10px;margin-top:10px}
+.lg-field{display:flex;align-items:center;gap:8px;width:100%;background:#F1F5F9;border:1px solid var(--line);border-radius:8px;padding:0 10px;margin-top:10px}
 .lg-field input{flex:1;background:transparent;border:0;margin:0;padding:12px 4px;font-size:15px}
 .lg-field input:focus{outline:none}
 .lg-ic{font-size:14px;opacity:.6}
 .lg-eye{background:none;border:0;cursor:pointer;font-size:15px;opacity:.6;padding:4px}
 .lg-btn{width:70%;margin-top:6px;background:var(--accent);color:#fff;border:0;border-radius:999px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans)}
-.lg-btn:hover{background:#0B5A47}
-.lg-copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:12px;color:#DDEBE4}
-.lg-right{background:#F3F5F4;padding:40px 32px;display:grid;gap:18px;align-content:start;justify-items:center}
-.lg-h2{font-size:22px;color:#0F6E56;text-align:center;margin:0 0 6px;line-height:1.5}
+.lg-btn:hover{background:#1E2761}
+.lg-copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:12px;color:#E0F5EF}
+.lg-right{background:#F7F9FC;padding:40px 32px;display:grid;gap:18px;align-content:start;justify-items:center}
+.lg-h2{font-size:22px;color:#1A3A5C;text-align:center;margin:0 0 6px;line-height:1.5}
 .lg-prod{display:grid;grid-template-columns:200px 1fr;grid-template-rows:auto auto;gap:0 16px;width:100%;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;text-decoration:none;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.05)}
 .lg-prod:hover{border-color:var(--accent)}
 @media (max-width:560px){.lg-prod{grid-template-columns:1fr}}
 .lg-shot{grid-row:1;margin:14px 0 14px 14px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:9px;line-height:1.5;overflow:hidden;min-height:110px}
 @media (max-width:560px){.lg-shot{margin:14px 14px 0}}
-.ss-bar{background:#F3F5F4;border-bottom:1px solid var(--line);padding:4px 8px;font-weight:700;color:#0F6E56;display:flex;gap:5px;align-items:center}
-.ss-bar i{width:10px;height:10px;border-radius:2px;background:#0F6E56;display:inline-block}
+.ss-bar{background:#F7F9FC;border-bottom:1px solid var(--line);padding:4px 8px;font-weight:700;color:#1A3A5C;display:flex;gap:5px;align-items:center}
+.ss-bar i{width:10px;height:10px;border-radius:2px;background:#1A3A5C;display:inline-block}
 .ss-body{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 8px}
 .ss-col{display:grid;gap:2px;border:1px solid var(--line);border-radius:4px;padding:4px 6px;color:var(--ink-2)}
 .ss-col b{color:var(--ink)}
-.ss-col em{font-style:normal;background:#DDEBE4;color:#0F6E56;border-radius:3px;padding:0 4px;justify-self:start}
-.ss-col em.ok{background:#E1EFE8}
+.ss-col em{font-style:normal;background:#E0F5EF;color:#1A3A5C;border-radius:3px;padding:0 4px;justify-self:start}
+.ss-col em.ok{background:#E0F5EF}
 .ss-steps{display:grid;gap:3px;padding:6px 8px;color:var(--ink)}
-.ss-steps span{background:#F3F5F4;border-radius:4px;padding:2px 6px}
-.ss-foot{padding:0 8px 6px;color:#0F6E56;font-style:italic}
+.ss-steps span{background:#F7F9FC;border-radius:4px;padding:2px 6px}
+.ss-foot{padding:0 8px 6px;color:#1A3A5C;font-style:italic}
 .lg-ptext{grid-row:1;padding:16px 16px 10px 0;display:grid;gap:4px;align-content:center}
 @media (max-width:560px){.lg-ptext{padding:12px 14px 6px}}
-.lg-tag{display:inline-block;justify-self:start;background:#0F6E56;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px}
+.lg-tag{display:inline-block;justify-self:start;background:#1A3A5C;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px}
 .lg-pname{font-size:18px;font-weight:700;letter-spacing:.04em}
 .lg-pdesc{font-size:12px;color:var(--ink-2);line-height:1.6}
 .lg-plinks{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
-.lg-plinks span{text-align:center;padding:9px;font-size:13px;color:#0F6E56;font-weight:700}
+.lg-plinks span{text-align:center;padding:9px;font-size:13px;color:#1A3A5C;font-weight:700}
 .lg-plinks span+span{border-left:1px solid var(--line)}
+.lg-cta{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 14px 14px}
+@media (max-width:560px){.lg-cta{grid-template-columns:1fr}}
+.cta{display:grid;justify-items:center;gap:2px;padding:12px 10px;text-decoration:none;border-radius:2px;text-align:center}
+.cta small{font-size:11px}
+.cta b{font-size:15px;letter-spacing:.04em}
+.cta.light{background:#fff;color:#1A3A5C;border:1px solid #1A3A5C}
+.cta.dark{background:#1F2937;color:#fff;border:1px solid #1F2937}
+.cta:hover{opacity:.85}
 .lg-note{font-size:11px;color:var(--ink-2);text-align:center}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
@@ -285,7 +295,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 <body>
 <div class="wrap">
 <header>
-  <div style="display:flex;gap:14px;align-items:center"><img src="/logo.png" alt="Zentect" width="118" height="30" style="display:block"><div><div class="eyebrow">FS商談 / ロープレ</div><h1>FS商談ロープレ君</h1></div></div>
+  <div style="display:flex;gap:14px;align-items:center"><img src="/logo.png" alt="Zentect" width="118" height="30" style="display:block"><div><div class="eyebrow">FS商談 / AIロープレ</div><h1>ゼンAIロープレ</h1></div></div>
   <span class="sp"></span>
   <button class="btn" id="logout" type="button" hidden>ログアウト</button>
 </header>
@@ -296,7 +306,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   <div class="lg-left">
     <div class="lg-card">
       <img src="/logo.png" alt="Zentect" width="157" height="40" class="lg-logo">
-      <div class="lg-title">FS商談ロープレ君</div>
+      <div class="lg-title">ゼンAIロープレ</div>
       <div class="lg-sub">AIが演じる相手と、FS商談を声かチャットで練習する</div>
       <label class="lg-field"><span class="lg-ic">🔒</span><input type="password" id="pw" placeholder="共有パスワード" autocomplete="current-password"><button type="button" class="lg-eye" id="pw-eye" aria-label="パスワードを表示">👁</button></label>
       <button class="lg-btn" id="pw-ok" type="button">ログイン</button>
@@ -306,14 +316,17 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   </div>
   <div class="lg-right">
     <h2 class="lg-h2">ゼンテクトの営業支援<br>ワンストップソリューション</h2>
-    <a class="lg-prod" href="https://zentect.com/service" target="_blank" rel="noopener">
-      <div class="lg-shot lg-shot-form"><div class="ss-bar"><i></i>ゼンフォーム</div><div class="ss-body"><div class="ss-col"><b>企業分析</b><span>デモ製造株式会社</span><em>解析完了</em><span>産業機器の設計・製造・保守</span><span>提案の切り口：保全情報を一元化</span></div><div class="ss-col"><b>企業別メッセージ</b><span>件名：設備保全情報の共有</span><span>本文：突然のご連絡失礼…</span><em class="ok">✓ 生成済み</em></div></div></div>
-      <div class="lg-ptext"><div class="lg-tag">業種・業界特化 × フォーム自動送信</div><div class="lg-pname">ゼンフォーム</div><div class="lg-pdesc">ターゲット企業を分析し、アポのきっかけになる初期接点を自動で創出。AIが1社1社に沿った文面を作成し、フォームへ自動送信</div></div>
-      <div class="lg-plinks"><span>無料トライアルを始める</span><span>仕組みを見る</span></div>
-    </a>
-    <a class="lg-prod" href="https://zentect.com/service" target="_blank" rel="noopener">
+    <div class="lg-prod">
       <div class="lg-shot lg-shot-sales"><div class="ss-bar"><i></i>ゼンテクト 営業支援</div><div class="ss-steps"><span>🎯 ターゲット企業の分析・選定</span><span>📄 アプローチ文面の作成</span><span>✉ フォーム送信・初期接点の創出</span><span>📈 効果測定・改善</span></div><div class="ss-foot">データ × AIの力で、営業をもっとスマートに。</div></div>
       <div class="lg-ptext"><div class="lg-tag">事業内容 ／ 営業支援</div><div class="lg-pname">営業支援</div><div class="lg-pdesc">テレアポのみの営業代行でも、自社での新規採用でもない第三の選択肢。「営業戦略・戦術の構築、仮説立て、実行、改善」の全てを実行して成果を創出</div></div>
+      <div class="lg-cta">
+        <a class="cta light" href="https://zentect.com/contact-case" target="_blank" rel="noopener"><small>他社との違いや事例を多数ご用意</small><b>概要資料をダウンロードする ▸</b></a>
+        <a class="cta dark" href="https://zentect.com/contact-onlineconsulting" target="_blank" rel="noopener"><small>お悩みに合わせたご提案をいたします</small><b>無料オンライン相談をする ▸</b></a>
+      </div>
+    </div>
+    <a class="lg-prod" href="https://lp.zenformsend.com/" target="_blank" rel="noopener">
+      <div class="lg-shot lg-shot-form"><div class="ss-bar"><i></i>ゼンフォーム</div><div class="ss-body"><div class="ss-col"><b>企業分析</b><span>デモ製造株式会社</span><em>解析完了</em><span>産業機器の設計・製造・保守</span><span>提案の切り口：保全情報を一元化</span></div><div class="ss-col"><b>企業別メッセージ</b><span>件名：設備保全情報の共有</span><span>本文：突然のご連絡失礼…</span><em class="ok">✓ 生成済み</em></div></div></div>
+      <div class="lg-ptext"><div class="lg-tag">業種・業界特化 × フォーム自動送信</div><div class="lg-pname">ゼンフォーム</div><div class="lg-pdesc">ターゲット企業を分析し、アポのきっかけになる初期接点を自動で創出。AIが1社1社に沿った文面を作成し、フォームへ自動送信</div></div>
       <div class="lg-plinks"><span>無料トライアルを始める</span><span>仕組みを見る</span></div>
     </a>
     <div class="lg-note">社内練習用アプリ。相手役の会社・人物はAIが作る架空のものです。</div>
@@ -457,7 +470,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
       <a href="#d-coach" class="on">コーチの所見</a><a href="#d-kpi">総合</a><a href="#d-donut">軸ごと</a><a href="#d-fb">上司FBの観点</a><a href="#d-trend">推移</a><a href="#d-table">根拠</a>
     </nav>
     <div class="main">
-      <div class="bcard" id="d-coach"><div class="coach"><div id="coach-art"></div><div class="bubble" id="coach-say"><span class="nm">コーチ・レン</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div></div></div>
+      <div class="bcard" id="d-coach"><div class="coach"><div id="coach-art"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div class="bubble" id="coach-say"><span class="nm">Mr. KOHEI</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div></div></div>
       <div class="bk" id="kpis"></div><span id="d-kpi"></span>
       <div class="bcard" id="d-donut"><h3>軸ごとのスコア（直近の回）</h3><div class="donuts" id="donuts"></div></div>
       <div class="bcard" id="d-fb"><h3>上司FBの観点（直近の回）</h3><div class="donuts" id="donuts-fb"></div><p class="hint" id="fb-none" style="text-align:center">上司のFBを登録すると、観点ごとに毎回採点されます。</p></div>
@@ -625,7 +638,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
     <div class="calc" id="calc" hidden>
       <div class="formula">投資額 ＝ 期間 × 月費用 ＋ 準備費　／　回収額 ＝ 期間内の受注数 × 1受注の売上（受注数 ＝ 稼働量 × アポ率 × 受注率 × 期間）</div>
       <div id="calc-body"></div>
-      <div class="mental" id="calc-mental" style="margin-top:8px;padding:8px 12px;border-radius:6px;background:#F4F1E6;color:#5B4A12;font-size:14px;white-space:pre-wrap" hidden></div>
+      <div class="mental" id="calc-mental" style="margin-top:8px;padding:8px 12px;border-radius:6px;background:#FFF7E6;color:#7A5A00;font-size:14px;white-space:pre-wrap" hidden></div>
     </div>
     <label class="f">「こういうやり方なら」を1つ（成立ならフルで、不成立なら絞る／1受注を大きくする／座組みを変える）
       <textarea id="proposal" rows="3" placeholder="例：セグメントをゼネコンのDX推進部1つに絞って、まず1ヶ月で検証しませんか"></textarea></label>

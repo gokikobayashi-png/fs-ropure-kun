@@ -461,46 +461,29 @@ function avgScores(list) { const out = {}; AXES.forEach(([k]) => { const v = lis
 function polar(cx, cy, r, i, n) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
 function drawRadar(latest, avg) {
   const svg = $("radar"); const n = AXES.length, cx = 160, cy = 150, R = 100; let h = "";
-  for (let g = 1; g <= 5; g++) { const pts = AXES.map((_, i) => polar(cx, cy, R * g / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); h += `<polygon points="${pts}" fill="none" stroke="#D6DDD9" stroke-width="${g === 5 ? 1.2 : .6}"/>`; }
-  AXES.forEach(([k, label], i) => { const [x, y] = polar(cx, cy, R, i, n); const [lx, ly] = polar(cx, cy, R + 22, i, n); h += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#D6DDD9" stroke-width=".6"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="11" fill="#55636F" text-anchor="middle" dominant-baseline="middle">${label}</text>`; });
+  for (let g = 1; g <= 5; g++) { const pts = AXES.map((_, i) => polar(cx, cy, R * g / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); h += `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="${g === 5 ? 1.2 : .6}"/>`; }
+  AXES.forEach(([k, label], i) => { const [x, y] = polar(cx, cy, R, i, n); const [lx, ly] = polar(cx, cy, R + 22, i, n); h += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="11" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">${label}</text>`; });
   const poly = (sc, fill, stroke, op) => { const pts = AXES.map(([k], i) => polar(cx, cy, R * ((sc[k] && (sc[k].score ?? sc[k])) || 0) / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); return `<polygon points="${pts}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="1.5"/>`; };
-  if (avg) h += poly(avg, "#55636F", "#55636F", .12);
-  if (latest) h += poly(latest.scores, "#0F6E56", "#0F6E56", .3) + AXES.map(([k], i) => { const s = latest.scores[k] ? latest.scores[k].score : 0; const [x, y] = polar(cx, cy, R * s / 5, i, n); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#0F6E56"/>`; }).join("");
+  if (avg) h += poly(avg, "#6B7280", "#6B7280", .12);
+  if (latest) h += poly(latest.scores, "#05AABA", "#05AABA", .3) + AXES.map(([k], i) => { const s = latest.scores[k] ? latest.scores[k].score : 0; const [x, y] = polar(cx, cy, R * s / 5, i, n); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#05AABA"/>`; }).join("");
   svg.innerHTML = h;
 }
 function drawTrend(list) {
   const svg = $("trend"); const L = list.slice(-20); const W = 320, H = 180, px = 28, py = 14; let h = "";
-  for (let g = 1; g <= 5; g++) { const y = py + (H - 2 * py) * (1 - (g - 1) / 4); h += `<line x1="${px}" y1="${y.toFixed(1)}" x2="${W - 8}" y2="${y.toFixed(1)}" stroke="#D6DDD9" stroke-width=".6"/><text x="${px - 6}" y="${y.toFixed(1)}" font-size="10" fill="#55636F" text-anchor="end" dominant-baseline="middle">${g}</text>`; }
+  for (let g = 1; g <= 5; g++) { const y = py + (H - 2 * py) * (1 - (g - 1) / 4); h += `<line x1="${px}" y1="${y.toFixed(1)}" x2="${W - 8}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${px - 6}" y="${y.toFixed(1)}" font-size="10" fill="#6B7280" text-anchor="end" dominant-baseline="middle">${g}</text>`; }
   if (!L.length) { svg.innerHTML = h; return; }
   const xs = i => L.length === 1 ? (px + W - 8) / 2 : px + (W - 8 - px) * i / (L.length - 1);
   const ys = v => py + (H - 2 * py) * (1 - (v - 1) / 4);
-  h += `<polyline points="${L.map((e, i) => xs(i).toFixed(1) + "," + ys(e.total).toFixed(1)).join(" ")}" fill="none" stroke="#0F6E56" stroke-width="2"/>`;
-  L.forEach((e, i) => { h += `<circle cx="${xs(i).toFixed(1)}" cy="${ys(e.total).toFixed(1)}" r="3.5" fill="${e.correct ? "#0F6E56" : "#B23A2E"}"><title>${new Date(e.at).toLocaleDateString("ja-JP")} ${e.company} 総合${e.total}（判定${e.correct ? "○" : "×"}）</title></circle>`; });
+  h += `<polyline points="${L.map((e, i) => xs(i).toFixed(1) + "," + ys(e.total).toFixed(1)).join(" ")}" fill="none" stroke="#05AABA" stroke-width="2"/>`;
+  L.forEach((e, i) => { h += `<circle cx="${xs(i).toFixed(1)}" cy="${ys(e.total).toFixed(1)}" r="3.5" fill="${e.correct ? "#05AABA" : "#EF4444"}"><title>${new Date(e.at).toLocaleDateString("ja-JP")} ${e.company} 総合${e.total}（判定${e.correct ? "○" : "×"}）</title></circle>`; });
   svg.innerHTML = h;
 }
-const COACH_SVG = `<svg viewBox="0 0 120 130" role="img" aria-label="コーチ・レン"><defs><linearGradient id="cg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#2F7BF0"/><stop offset="1" stop-color="#1457D6"/></linearGradient></defs>
-<circle cx="60" cy="66" r="56" fill="#EAF2FF"/>
-<path d="M22 130c0-22 17-34 38-34s38 12 38 34z" fill="url(#cg)"/>
-<path d="M48 98l12 8 12-8v8l-12 10-12-10z" fill="#fff"/>
-<rect x="56" y="104" width="8" height="14" fill="#1A4FBF"/>
-<circle cx="60" cy="58" r="30" fill="#FFE1C9"/>
-<path d="M30 54c0-20 14-32 30-32s30 12 30 32c-6-10-14-14-30-14s-24 4-30 14z" fill="#2B2B33"/>
-<path d="M30 54c-3 8-2 14 2 18l2-16z M90 54c3 8 2 14-2 18l-2-16z" fill="#2B2B33"/>
-<circle cx="48" cy="62" r="9" fill="none" stroke="#1A4FBF" stroke-width="2.5"/><circle cx="72" cy="62" r="9" fill="none" stroke="#1A4FBF" stroke-width="2.5"/><path d="M57 62h6" stroke="#1A4FBF" stroke-width="2.5"/>
-<circle cx="48" cy="63" r="3.2" fill="#2B2B33"/><circle cx="72" cy="63" r="3.2" fill="#2B2B33"/>
-<circle cx="49.5" cy="61.5" r="1" fill="#fff"/><circle cx="73.5" cy="61.5" r="1" fill="#fff"/>
-<path d="M52 76q8 6 16 0" fill="none" stroke="#C2553C" stroke-width="2.5" stroke-linecap="round"/>
-<circle cx="40" cy="72" r="4" fill="#FFB8A0" opacity=".6"/><circle cx="80" cy="72" r="4" fill="#FFB8A0" opacity=".6"/>
-<rect x="84" y="88" width="26" height="34" rx="3" fill="#fff" stroke="#1A4FBF" stroke-width="2"/><rect x="91" y="84" width="12" height="7" rx="2" fill="#1A4FBF"/>
-<path d="M89 100h16M89 106h16M89 112h10" stroke="#BFD3F2" stroke-width="2"/>
-<path d="M90 101l3 3 5-6" fill="none" stroke="#0F6E56" stroke-width="2"/></svg>`;
 function donut(label, score, why, weak) {
   const r = 34, c = 2 * Math.PI * r, p = score ? score / 5 : 0;
-  return `<div class="donut${weak ? " weak" : ""}" title="${(why || "").replace(/"/g, "&quot;")}"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="${r}" fill="none" stroke="#E2EAF7" stroke-width="10"/><circle cx="42" cy="42" r="${r}" fill="none" stroke="${weak ? "#E8603C" : "#2F7BF0"}" stroke-width="10" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" class="dv">${score ? score : "—"}</text></svg><span class="dl">${label}</span>${why ? `<span class="dw">${why}</span>` : ""}</div>`;
+  return `<div class="donut${weak ? " weak" : ""}" title="${(why || "").replace(/"/g, "&quot;")}"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="${r}" fill="none" stroke="#E2E8F0" stroke-width="10"/><circle cx="42" cy="42" r="${r}" fill="none" stroke="${weak ? "#EF4444" : "#05AABA"}" stroke-width="10" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" class="dv">${score ? score : "—"}</text></svg><span class="dl">${label}</span>${why ? `<span class="dw">${why}</span>` : ""}</div>`;
 }
-function coachSay(text) { const b = $("coach-say"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "コーチ・レン"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
+function coachSay(text) { const b = $("coach-say"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. KOHEI"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
 function renderDash() {
-  $("coach-art").innerHTML = COACH_SVG;
   const n = history.length;
   $("dash-state").textContent = n ? `${n}回分の記録` : "まだロープレがありません";
   if (!n) { $("kpis").innerHTML = ""; $("axes").innerHTML = ""; $("donuts").innerHTML = ""; $("donuts-fb").innerHTML = ""; $("fb-none").hidden = false; drawRadar(null, null); drawTrend([]); $("hist").textContent = ""; coachSay("まだロープレの記録がありません。1回やると、ここで所見を話します。"); return; }
@@ -630,7 +613,7 @@ function copyBtn(id, text, done) {
 function fallbackCopy(text, ok) { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); ok(); } catch (_) {} t.remove(); }
 function logText(r) {
   const lines = transcript.map((t, i) => String(i + 1).padStart(2, "0") + " " + (t.who === "me" ? "営業（自分）" : persona.name) + "：" + t.text);
-  return ["【FS商談ロープレ記録】" + persona.company + " " + persona.name + "（" + (mode === "chat" ? "チャット" : "音声") + "）",
+  return ["【ゼンAIロープレ記録】" + persona.company + " " + persona.name + "（" + (mode === "chat" ? "チャット" : "音声") + "）",
     "会社概要：" + persona.brief,
     "相手の役職：" + persona.role + "（決裁権：" + (persona.authority || "") + "）",
     "判定：" + picked + " " + CAT[picked] + "（" + (r.correct ? "正解" : "不正解") + "）／正解：" + r.answer + " " + r.answerLabel,
@@ -750,7 +733,7 @@ $("grade").addEventListener("click", async () => {
     if (r.calcReview) f.appendChild(document.createTextNode("\n\n【問3 検算】" + r.calcReview));
     if (r.numbersReview) f.appendChild(document.createTextNode("\n\n【数字】" + r.numbersReview));
     const ent = recordHistory(r);
-    const strip = $("score-strip"); strip.hidden = !ent; if (ent) { strip.innerHTML = AXES.map(([k, label]) => ent.scores[k] ? `<span title="${ent.scores[k].why.replace(/"/g, "&quot;")}">${label} <b>${ent.scores[k].score}</b></span>` : "").join("") + `<span style="background:var(--accent-soft);border-color:var(--accent)">総合 <b>${ent.total.toFixed(1)}</b>/5</span>` + (ent.custom ? Object.values(ent.custom).map(c => `<span style="background:#EAF2FF;border-color:#BFD3F2" title="${c.why.replace(/"/g, "&quot;")}">上司FB：${c.title} <b>${c.score}</b></span>`).join("") : ""); if (ent.next) f.appendChild(document.createTextNode("\n\n【次の一手】" + ent.next)); }
+    const strip = $("score-strip"); strip.hidden = !ent; if (ent) { strip.innerHTML = AXES.map(([k, label]) => ent.scores[k] ? `<span title="${ent.scores[k].why.replace(/"/g, "&quot;")}">${label} <b>${ent.scores[k].score}</b></span>` : "").join("") + `<span style="background:var(--accent-soft);border-color:var(--accent)">総合 <b>${ent.total.toFixed(1)}</b>/5</span>` + (ent.custom ? Object.values(ent.custom).map(c => `<span style="background:#E0F5EF;border-color:#B5E3E8" title="${c.why.replace(/"/g, "&quot;")}">上司FB：${c.title} <b>${c.score}</b></span>`).join("") : ""); if (ent.next) f.appendChild(document.createTextNode("\n\n【次の一手】" + ent.next)); }
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();
     showRecord(r);
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
