@@ -410,6 +410,23 @@ function showResult() {
   if (!transcript.length) { const d = document.createElement("div"); d.className = "msg sys"; d.textContent = "（会話なし）"; box.appendChild(d); }
   step(4);
 }
+/* ---------- 読み上げ（ブラウザの音声合成。無料・端末の声） ---------- */
+function pickVoice() {
+  const vs = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
+  return vs.find(v => /male|男|Ichiro|Keita|Otoya|Hattori/i.test(v.name)) || vs.find(v => /Google|Microsoft/i.test(v.name)) || vs[0] || null;
+}
+function speak(text, btn, stopBtn) {
+  if (!("speechSynthesis" in window)) { alert("このブラウザは読み上げに対応していません"); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(String(text || "").replace(/\n+/g, "。")); u.lang = "ja-JP"; u.rate = 1.05; u.pitch = 0.9;
+  const v = pickVoice(); if (v) u.voice = v;
+  if (stopBtn) { stopBtn.hidden = false; u.onend = u.onerror = () => { stopBtn.hidden = true; }; }
+  speechSynthesis.speak(u);
+}
+if ("speechSynthesis" in window) speechSynthesis.getVoices();
+$("res-speak").addEventListener("click", () => speak($("res-coach").textContent.replace(/^Mr\. KOHEI/, ""), $("res-speak"), $("res-speak-stop")));
+$("res-speak-stop").addEventListener("click", () => { speechSynthesis.cancel(); $("res-speak-stop").hidden = true; });
+$("dash-speak").addEventListener("click", () => speak($("coach-say").textContent.replace(/^Mr\. KOHEI/, "")));
 function coachSayRes(text) { const b = $("res-coach"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. KOHEI"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
 function renderResInfo(graded) {
   const box = $("res-info"); box.textContent = "";
