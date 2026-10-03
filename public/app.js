@@ -400,7 +400,7 @@ function resetResult() {
   $("res-company").textContent = persona.company + " ／ " + persona.name + "（役職は判定後に表示）";
   $("res-mode").textContent = (mode === "chat" ? "チャット" : "音声") + " ・ " + $("timer").textContent;
   $("res-good").textContent = ""; $("res-improve").textContent = ""; $("res-radar").innerHTML = ""; $("res-axes").textContent = "";
-  $("res-grade").textContent = "–"; $("res-total").textContent = ""; coachSayRes("判定すると、ここに所見が出ます。");
+  $("res-grade").textContent = "–"; $("res-total").textContent = ""; coachSayRes("判定すると、ここに所見が出ます。"); gofastSay("判定すると、論理の穴を指摘します。");
   renderResInfo(false);
   rtab("q");
 }
@@ -411,10 +411,20 @@ function showResult() {
   step(4);
 }
 /* ---------- 読み上げ（ブラウザの音声合成。無料・端末の声） ---------- */
+function jaVoices() { return speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang)); }
 function pickVoice() {
-  const vs = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
-  return vs.find(v => /male|男|Ichiro|Keita|Otoya|Hattori/i.test(v.name)) || vs.find(v => /Google|Microsoft/i.test(v.name)) || vs[0] || null;
+  const vs = jaVoices(); let pref = ""; try { pref = localStorage.getItem("ropure-voice") || ""; } catch (_) {}
+  return vs.find(v => v.name === pref) || vs.find(v => /male|男|Ichiro|Keita|Otoya|Hattori/i.test(v.name)) || vs.find(v => /Google|Microsoft/i.test(v.name)) || vs[0] || null;
 }
+function renderVoices() {
+  const sel = $("voice-sel"); if (!sel) return; const vs = jaVoices(); sel.textContent = "";
+  if (!vs.length) { const o = document.createElement("option"); o.textContent = "日本語の音声が見つかりません"; sel.appendChild(o); return; }
+  const cur = pickVoice();
+  vs.forEach(v => { const o = document.createElement("option"); o.value = v.name; o.textContent = v.name + (v.localService ? "" : "（オンライン）"); if (cur && cur.name === v.name) o.selected = true; sel.appendChild(o); });
+}
+if ("speechSynthesis" in window) { renderVoices(); speechSynthesis.onvoiceschanged = renderVoices; }
+$("voice-sel").addEventListener("change", () => { try { localStorage.setItem("ropure-voice", $("voice-sel").value); } catch (_) {} });
+$("voice-test").addEventListener("click", () => speak("判定は不正解です。正解は手法です。次回は冒頭3分で、相手の売上目標と現状の着地見込みを聞いてください。"));
 function speak(text, btn, stopBtn) {
   if (!("speechSynthesis" in window)) { alert("このブラウザは読み上げに対応していません"); return; }
   speechSynthesis.cancel();
@@ -427,6 +437,8 @@ if ("speechSynthesis" in window) speechSynthesis.getVoices();
 $("res-speak").addEventListener("click", () => speak($("res-coach").textContent.replace(/^Mr\. KOHEI/, ""), $("res-speak"), $("res-speak-stop")));
 $("res-speak-stop").addEventListener("click", () => { speechSynthesis.cancel(); $("res-speak-stop").hidden = true; });
 $("dash-speak").addEventListener("click", () => speak($("coach-say").textContent.replace(/^Mr\. KOHEI/, "")));
+$("res-speak2").addEventListener("click", () => speak($("res-gofast").textContent.replace(/^Mr\. Go fast ／ 論理の指摘/, "")));
+function gofastSay(text) { const b = $("res-gofast"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. Go fast ／ 論理の指摘"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
 function coachSayRes(text) { const b = $("res-coach"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. KOHEI"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
 function renderResInfo(graded) {
   const box = $("res-info"); box.textContent = "";
@@ -851,6 +863,7 @@ $("grade").addEventListener("click", async () => {
     const fillPts = (id, arr, fallback) => { const ul = $(id); ul.textContent = ""; (arr && arr.length ? arr : [fallback]).forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }); };
     fillPts("res-good", r.good, "（コーチの全文を参照）"); fillPts("res-improve", r.improve, "（コーチの全文を参照）");
     coachSayRes(String(r.feedback || "").slice(0, 240) + (r.nextAction ? "\n次の一手：" + r.nextAction : ""));
+    gofastSay(r.secondOpinion || "（指摘なし）");
     $("res-company").textContent = persona.company + " ／ " + persona.name + "（" + persona.role + "）";
     renderResInfo(true);
     if (r.overviewReview) f.appendChild(document.createTextNode("\n\n【問1 全体像】" + r.overviewReview));

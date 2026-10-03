@@ -266,7 +266,7 @@ async function findRecordsParent() {
   if (!r.ok) throw new Error("ロープレ記録ページを作れません: " + r.status + " " + (await r.text()).slice(0, 200));
   return (recordsParent = (await r.json()).id);
 }
-export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", overviewReview = "", calcReview = "", numbersReview = "", quizText = "", scores = null, nextAction = "", custom = null }) {
+export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", overviewReview = "", calcReview = "", numbersReview = "", quizText = "", scores = null, nextAction = "", custom = null, secondOpinion = "" }) {
   if (!knowledgeEnabled()) return null;
   const parent = await findRecordsParent();
   const title = `${jstNow()} ${persona.company}（${mode === "chat" ? "チャット" : "音声"}／判定:${CAT[picked]}${correct ? "○" : "×"}）`;
@@ -295,6 +295,7 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
   if (overviewReview) blocks.push(para("問1 全体像：" + overviewReview));
   if (calcReview) blocks.push(para("問3 検算：" + calcReview));
   if (numbersReview) blocks.push(para("数字：" + numbersReview));
+  if (secondOpinion) blocks.push(para("Mr. Go fast（論理の指摘）：" + secondOpinion));
   if (scores) {
     const L = { counterpart: "相手の把握", widen: "広げる", classify: "深掘る", rephrase: "言い直し", converge: "狭める", roi: "検算" };
     blocks.push(h2("スコア（5点満点）"));

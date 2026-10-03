@@ -56,6 +56,7 @@ JSONだけを返す：
  "improve":["改善点を2〜4個。最も効いたズレから順に。上司FBの観点でできていなかったものは先頭に『上司FB：』を付ける。各80字以内"],
  "scores":{"counterpart":{"score":1〜5の整数,"why":"根拠。会話ログの発言を引いて40字以内"},"widen":{"score":1〜5,"why":"…"},"classify":{"score":1〜5,"why":"…"},"rephrase":{"score":1〜5,"why":"…"},"converge":{"score":1〜5,"why":"…"},"roi":{"score":1〜5,"why":"…"}},
  "custom":{${cks.map(c => `"${c.key}":{"score":1〜5,"why":"根拠。会話ログの発言を引いて40字以内"}`).join(",")}},
+ "second_opinion":"もう1人のアドバイザー『Mr. Go fast』の指摘。コーチ（教材の段階ごとの評価）とは別の角度で、論理の穴だけを突く：①受講者の発言の中で、根拠なく決めつけた・因果が飛んだ・数字が噛み合っていない・相手の言葉を確認せず解釈した箇所を、会話ログの発言を引いて最大3つ ②その1つ1つに『本来こう確かめるべきだった』という確認の仕方（質問文）を付ける。口調は短く断定的、スピード重視で結論から。合計220字以内。穴が無ければ『論理の穴なし。次は速さ：同じ結論に半分の時間で辿り着け』の1文",
  "next_action":"次回のロープレで最初に直すこと1つ。最も低い軸について、商談のどの場面で何を言う／聞くかを具体的に。60字以内",
  "numbers_review":"数字の振り返り。受講者は数字が苦手。①暗算チェックと問3の暗算で、どの種類の計算（％・率・逆算・1受注の売上・投資と回収）が弱いかを具体的に（間違えた問題の数字を引いて）②商談中に『その場で計算して口に出せていれば』商談がどう変わったかを1つ（例：相手が月80商談・受注率15%と言った瞬間に『月12件ですね』と返せれば、次の質問が…）③次回、商談中に頭の中でやる計算を1つだけ指定（式まで）。200字以内。暗算チェックも問3の暗算も無ければ『商談中に数字を口に出して確認する癖を』の1文だけ",
  "learnings":["このロープレから次回以降の練習に活かせる気づきを1〜3行、各80字以内。受講者の癖（例：数字を聞く前に提案した）、効いた質問、相手役の反応で不自然だった点など。無ければ空配列"]}`;
@@ -63,8 +64,8 @@ JSONだけを返す：
     const ai = client();
     const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0.4 } });
     const t = r.text || "";
-    let feedback = t, learnings = [], overviewReview = "", calcReview = "", numbersReview = "", scores = null, nextAction = "", custom = null, good = [], improve = [];
-    try { const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)); feedback = j.feedback || t; learnings = Array.isArray(j.learnings) ? j.learnings.map(String) : []; overviewReview = String(j.overview_review || ""); calcReview = String(j.calc_review || ""); numbersReview = String(j.numbers_review || ""); nextAction = String(j.next_action || ""); good = Array.isArray(j.good) ? j.good.map(String) : []; improve = Array.isArray(j.improve) ? j.improve.map(String) : [];
+    let feedback = t, learnings = [], overviewReview = "", calcReview = "", numbersReview = "", scores = null, nextAction = "", custom = null, good = [], improve = [], secondOpinion = "";
+    try { const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)); feedback = j.feedback || t; learnings = Array.isArray(j.learnings) ? j.learnings.map(String) : []; overviewReview = String(j.overview_review || ""); calcReview = String(j.calc_review || ""); numbersReview = String(j.numbers_review || ""); nextAction = String(j.next_action || ""); secondOpinion = String(j.second_opinion || ""); good = Array.isArray(j.good) ? j.good.map(String) : []; improve = Array.isArray(j.improve) ? j.improve.map(String) : [];
       if (j.scores && typeof j.scores === "object") { scores = {}; for (const k of ["counterpart", "widen", "classify", "rephrase", "converge", "roi"]) { const v = j.scores[k] || {}; const n = Math.round(Number(v.score)); scores[k] = { score: isFinite(n) ? Math.min(5, Math.max(1, n)) : 1, why: String(v.why || "") }; } }
       if (cks.length && j.custom && typeof j.custom === "object") { custom = {}; for (const c of cks) { const v = j.custom[c.key] || {}; const n = Math.round(Number(v.score)); custom[c.key] = { score: isFinite(n) ? Math.min(5, Math.max(1, n)) : 1, why: String(v.why || ""), title: c.title }; } } } catch (_) {}
     let saved = false;
@@ -72,8 +73,8 @@ JSONだけを返す：
       try { await appendKnowledge(learnings, `[ロープレ] ${jstNow()} ${persona.company}（正解:${CAT[persona.answer]}／判定:${CAT[picked]}${correct ? "○" : "×"}）`); saved = true; } catch (e) { console.error(e); }
     }
     let recordUrl = null, recordError = "";
-    try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview, calcText, proposal, overviewReview, calcReview, numbersReview, quizText, scores, nextAction, custom }); } catch (e) { console.error(e); recordError = String(e.message || e); }
-    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, learnings, saved });
+    try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview, calcText, proposal, overviewReview, calcReview, numbersReview, quizText, scores, nextAction, custom, secondOpinion }); } catch (e) { console.error(e); recordError = String(e.message || e); }
+    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion, learnings, saved });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }

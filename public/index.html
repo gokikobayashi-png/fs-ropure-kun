@@ -396,6 +396,10 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 .kinds .bar i{display:block;height:100%;background:var(--teal)}
 .kinds div.weak span:first-child{color:var(--bad);font-weight:700}
 .kinds div.weak .bar i{background:var(--bad)}
+.bubble.gofast{background:#F3EAFB;border-color:#C9A7E6}
+.bubble.gofast:before{border-right-color:#C9A7E6}
+.bubble.gofast:after{border-right-color:#F3EAFB}
+.bubble.gofast .nm{color:#6B2FA0}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -697,6 +701,10 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
             <div class="gradebox"><span class="gl" id="res-grade">–</span><span class="gs" id="res-total"></span></div>
             <div class="coach"><div id="coach-art-res"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div><div class="bubble" id="res-coach"><span class="nm">Mr. KOHEI</span></div><div class="row" style="margin-top:6px"><button class="btn" id="res-speak" type="button">🔊 読み上げ</button><button class="btn" id="res-speak-stop" type="button" hidden>停止</button></div></div></div>
           </div>
+          <div class="evalgrid" style="margin-top:12px">
+            <div style="grid-column:1"></div>
+            <div class="coach"><div><img src="/gofast.jpg" alt="Mr. Go fast" class="coach-img"></div><div><div class="bubble gofast" id="res-gofast"><span class="nm">Mr. Go fast ／ 論理の指摘</span></div><div class="row" style="margin-top:6px"><button class="btn" id="res-speak2" type="button">🔊 読み上げ</button></div></div></div>
+          </div>
           <div class="verdict" id="verdict" hidden></div>
         </div>
         <div class="panel good"><div class="gh ok">良かった点</div><ul class="pts" id="res-good"></ul></div>
@@ -840,6 +848,7 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
     <section class="panel" id="data" hidden>
       <h2>録画・データ</h2>
       <div class="g3">
+        <div><b>読み上げの声</b><p class="hint" style="margin:2px 0 8px">Mr. KOHEI／Mr. Go fast の読み上げに使う端末の音声</p><select id="voice-sel" style="margin-top:0"></select><button class="btn" id="voice-test" type="button" style="margin-top:8px">試しに読む</button></div>
         <div><b>録画の既定</b><p class="hint" style="margin:2px 0 8px">声のロープレで最初からカメラをオンにする</p><label style="display:inline-flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="rec-default"> オン</label></div>
         <div><b>保存場所</b><p class="hint" style="margin:2px 0 8px">録画・スコア履歴・設定はこのブラウザに保存されます</p><button class="btn" id="export-btn" type="button">設定と履歴をファイルに書き出す</button></div>
         <div><b>履歴を消す</b><p class="hint" style="margin:2px 0 8px">スコア履歴・間違えた暗算をすべて消す</p><button class="btn" id="data-clear" type="button" style="color:var(--bad);border-color:var(--bad)">履歴を消す</button></div>
