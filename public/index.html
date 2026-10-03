@@ -292,15 +292,15 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .lg-hero:hover{border-color:var(--teal)}
 .lg-shot-img{border:0;background:transparent;min-height:0;display:flex;align-items:center}
 .lg-shot-img img{display:block;width:100%;height:auto;border-radius:6px}
-.lg-hero-sales{display:grid;grid-template-columns:1fr 1.1fr;gap:12px;align-items:center;padding:18px 16px;background:linear-gradient(110deg,#E0F5EF 0 46%,#F7F9FC 46%);text-decoration:none;color:var(--ink)}
-@media (max-width:560px){.lg-hero-sales{grid-template-columns:1fr}}
-.hs-tag{display:inline-block;background:#1A3A5C;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px}
-.hs-tag::first-letter{}
-.hs-lead{font-size:12.5px;line-height:1.8;margin:10px 0 12px;color:var(--ink)}
-.hs-cta{display:flex;flex-wrap:wrap;gap:6px}
-.hs-cta .cta{flex:0 1 auto;padding:6px 10px;gap:0;white-space:nowrap}
-.hs-cta .cta small{font-size:9px;letter-spacing:0}
-.hs-cta .cta b{font-size:11px;letter-spacing:0}
+.lg-hero-sales{container-type:inline-size;aspect-ratio:1400/519;display:grid;grid-template-columns:1fr 1fr;gap:3cqw;align-items:center;padding:3cqw 3.5cqw;background:linear-gradient(110deg,#E0F5EF 0 46%,#F7F9FC 46%);color:var(--ink);overflow:hidden}
+.hs-text{display:grid;gap:1.4cqw;align-content:center}
+.hs-tag{display:inline-block;justify-self:start;background:#1A3A5C;color:#fff;font-size:1.6cqw;font-weight:700;padding:.5cqw 1.6cqw;border-radius:.4cqw;letter-spacing:.04em}
+.hs-head{font-size:3cqw;font-weight:700;line-height:1.35;margin:0;color:#1A3A5C;letter-spacing:.02em}
+.hs-lead{font-size:1.45cqw;line-height:1.7;margin:0;color:var(--ink-2)}
+.hs-cta{display:flex;gap:1.2cqw;margin-top:.4cqw}
+.hs-cta .cta{flex:1 1 0;min-width:0;padding:1cqw .6cqw;gap:.1cqw;white-space:nowrap;border-radius:.3cqw}
+.hs-cta .cta small{font-size:1.05cqw;letter-spacing:0}
+.hs-cta .cta b{font-size:1.5cqw;letter-spacing:0}
 .hs-img{display:block;width:100%;height:auto}
 .lg-note{font-size:11px;color:var(--ink-2);text-align:center}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
@@ -334,7 +334,8 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
     <div class="lg-hero lg-hero-sales">
       <div class="hs-text">
         <span class="hs-tag">事業内容　営業支援</span>
-        <p class="hs-lead">テレアポのみを実施する営業代行でも、自社での新規採用でもない第三の選択肢。新規拡大を創るうえで必要となる「営業戦略・戦術の構築、仮説立て、実行、改善」の全てを実行して、成果を創出します。</p>
+        <p class="hs-head">テレアポのみを実施する<br>営業代行でも、自社での<br>新規採用でもない第三の選択肢。</p>
+        <p class="hs-lead">新規拡大を創るうえで必要となる「営業戦略・戦術の構築、仮説立て、実行、改善」の全てを実行して、成果を創出します。</p>
         <div class="hs-cta">
           <a class="cta light" href="https://zentect.com/contact-case" target="_blank" rel="noopener"><small>他社との違いや事例を多数ご用意</small><b>概要資料をダウンロードする ▸</b></a>
           <a class="cta dark" href="https://zentect.com/contact-onlineconsulting" target="_blank" rel="noopener"><small>お悩みに合わせたご提案をいたします</small><b>無料オンライン相談をする ▸</b></a>
