@@ -189,6 +189,53 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .score-strip{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .score-strip span{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
 .score-strip span b{font-variant-numeric:tabular-nums}
+/* 分析ダッシュボード（青基調） */
+.panel.blue{padding:0;overflow:hidden;border-color:#BFD3F2}
+.blue .bhead{background:linear-gradient(135deg,#1457D6,#2F7BF0);color:#fff;padding:16px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.blue .bhead h2{margin:0;font-size:17px;color:#fff}
+.blue .bhead .pl{color:#CFE0FF}
+.blue .bhead .btn{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.4)}
+.blue .bbody{display:grid;grid-template-columns:150px 1fr;background:#F3F7FD}
+@media (max-width:680px){.blue .bbody{grid-template-columns:1fr}}
+.blue .side{background:#1A4FBF;color:#fff;padding:14px 10px;display:flex;flex-direction:column;gap:4px}
+@media (max-width:680px){.blue .side{flex-direction:row;flex-wrap:wrap}}
+.blue .side a{color:#DCE8FF;text-decoration:none;font-size:13px;padding:8px 10px;border-radius:6px;display:block}
+.blue .side a.on,.blue .side a:hover{background:rgba(255,255,255,.18);color:#fff}
+.blue .main{padding:16px;display:grid;gap:14px;min-width:0}
+.bk{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:560px){.bk{grid-template-columns:1fr 1fr}}
+.bk .kpi{background:linear-gradient(135deg,#2563EB,#3B82F6);color:#fff;border:0;border-radius:10px;padding:10px 14px}
+.bk .kpi .k{color:#DCE8FF}
+.bk .kpi .v small{color:#DCE8FF}
+.bcard{background:#fff;border:1px solid #D9E4F5;border-radius:10px;padding:12px 14px}
+.bcard h3{font-size:13px;margin:0 0 8px;color:#1A4FBF;font-weight:700;text-align:center;letter-spacing:.04em}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:680px){.bgrid{grid-template-columns:1fr}}
+.donuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.donut{display:grid;justify-items:center;gap:2px;font-size:12px;color:#334155;text-align:center}
+.donut svg{width:84px;height:84px}
+.donut .dv{font-size:18px;font-weight:700;fill:#1E3A8A}
+.donut .dl{font-weight:700}
+.donut .dw{font-size:11px;color:#64748B;line-height:1.4}
+.donut.weak .dl{color:#C23B2A}
+.blue .radar text{fill:#334155}
+.coach{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:start}
+@media (max-width:480px){.coach{grid-template-columns:80px 1fr}}
+.coach svg{width:100%;height:auto;display:block}
+.bubble{position:relative;background:#EAF2FF;border:1px solid #BFD3F2;border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-wrap;line-height:1.75}
+.bubble:before{content:"";position:absolute;left:-9px;top:22px;border:8px solid transparent;border-right-color:#BFD3F2;border-left:0}
+.bubble:after{content:"";position:absolute;left:-7px;top:23px;border:7px solid transparent;border-right-color:#EAF2FF;border-left:0}
+.bubble .nm{font-weight:700;color:#1A4FBF;font-size:12px;display:block;margin-bottom:4px}
+.blue .axes th{color:#1A4FBF}
+.blue .axes tr.weak td{background:#FFF1EE}
+.blue .axes .bar i{background:#2F7BF0}
+.blue .hist{color:#64748B}
+/* 上司FB */
+.fb-item{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
+.fb-item .t{font-weight:700}
+.fb-item .c{font-size:13px;color:var(--ink-2);margin-top:2px}
+.fb-item .e{font-size:12px;color:var(--accent);margin-top:2px}
+.fb-item .m{font-size:11px;color:var(--ink-2);margin-top:2px}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -335,23 +382,46 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 
 
 <!-- ダッシュボード -->
-<section class="panel" id="dash">
-  <div class="co-head">
-    <div><div class="pl" style="color:var(--accent)">スコア ／ <span id="dash-state">まだロープレがありません</span></div>
+<section class="panel blue" id="dash">
+  <div class="bhead">
+    <div><div class="pl">分析ダッシュボード ／ <span id="dash-state">まだロープレがありません</span></div>
     <h2>商談の考え方が、できているか</h2></div>
-    <span class="sp"></span>
+    <span class="sp" style="flex:1"></span>
     <button class="btn" id="dash-toggle" type="button" aria-expanded="false">見る</button>
   </div>
-  <p class="hint">毎回の判定で、教材の7段階（相手の把握・広げる・深掘る・言い直し・狭める・検算・数字）を5点満点で採点し、このブラウザに貯めます。</p>
-  <div id="dash-body" hidden>
-    <div class="kpis" id="kpis"></div>
-    <div class="dash">
-      <div class="dbox"><h3>直近の回（濃）と平均（薄）</h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg></div>
-      <div class="dbox"><h3>総合スコアの推移（直近20回）</h3><svg class="radar" id="trend" viewBox="0 0 320 180" role="img" aria-label="推移"></svg><div class="hist" id="hist"></div></div>
+  <div class="bbody" id="dash-body" hidden>
+    <nav class="side">
+      <a href="#d-coach" class="on">コーチの所見</a><a href="#d-kpi">総合</a><a href="#d-donut">軸ごと</a><a href="#d-fb">上司FBの観点</a><a href="#d-trend">推移</a><a href="#d-table">根拠</a>
+    </nav>
+    <div class="main">
+      <div class="bcard" id="d-coach"><div class="coach"><div id="coach-art"></div><div class="bubble" id="coach-say"><span class="nm">コーチ・レン</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div></div></div>
+      <div class="bk" id="kpis"></div><span id="d-kpi"></span>
+      <div class="bcard" id="d-donut"><h3>軸ごとのスコア（直近の回）</h3><div class="donuts" id="donuts"></div></div>
+      <div class="bcard" id="d-fb"><h3>上司FBの観点（直近の回）</h3><div class="donuts" id="donuts-fb"></div><p class="hint" id="fb-none" style="text-align:center">上司のFBを登録すると、観点ごとに毎回採点されます。</p></div>
+      <div class="bgrid">
+        <div class="bcard"><h3>直近の回（濃）と平均（薄）</h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg></div>
+        <div class="bcard" id="d-trend"><h3>総合スコアの推移（直近20回）</h3><svg class="radar" id="trend" viewBox="0 0 320 180" role="img" aria-label="推移"></svg><div class="hist" id="hist"></div></div>
+      </div>
+      <div class="bcard" id="d-table"><h3>軸ごとの根拠（直近の回／平均）</h3><table class="axes" id="axes"></table></div>
+      <div class="row"><button class="btn" id="dash-clear" type="button">履歴を消す</button></div>
     </div>
-    <div class="dbox" style="margin-top:12px"><h3>軸ごと（直近の回／平均）</h3><table class="axes" id="axes"></table></div>
-    <div class="next" id="next-action" hidden></div>
-    <div class="row"><button class="btn" id="dash-clear" type="button">履歴を消す</button></div>
+  </div>
+</section>
+
+<!-- 上司からのFB -->
+<section class="panel" id="fb">
+  <div class="co-head">
+    <div><div class="pl" style="color:var(--case)">上司FB ／ <span id="fb-state">観点 0件</span></div>
+    <h2>録画を見てもらったFBを、次回からの採点に入れる</h2></div>
+    <span class="sp"></span>
+    <button class="btn" id="fb-toggle" type="button" aria-expanded="false">見る</button>
+  </div>
+  <p class="hint">上司のFBをそのまま貼ると、AIが「毎回できたか採点できる観点」に変換します。以後のロープレでコーチがその観点も採点し、振り返りと次の一手に反映します。</p>
+  <div id="fb-body" hidden>
+    <label class="f">FBのメモ<textarea id="fb-text" rows="5" placeholder="例：戦略の部分は件数は？とか聞いたほうがいい。何が困っているのか？って聞いたほうがいい…"></textarea></label>
+    <div class="row"><button class="btn primary" id="fb-add" type="button">AIで観点にする</button></div>
+    <div class="status" id="fb-status"></div>
+    <div id="fb-list"></div>
   </div>
 </section>
 
