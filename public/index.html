@@ -147,6 +147,15 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .guess .mark{font-weight:700}
 .guess .mark.ok{color:var(--accent)}
 .guess .mark.ng{color:var(--bad)}
+.miss{list-style:none;margin:8px 0 0;padding:0}
+.miss li{border-top:1px solid var(--line);padding:10px 0}
+.miss .mq{font-weight:700}
+.miss .mm{font-size:12px;color:var(--ink-2);margin-top:2px}
+.miss .mi{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.miss .mi input{width:120px;margin-top:0;text-align:right;font-weight:700}
+.miss .mr{font-size:13px;margin-top:4px;white-space:pre-wrap}
+.miss .mr.ok{color:var(--accent)}
+.miss .mr.ng{color:var(--bad)}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -291,6 +300,21 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   </details>
 </section>
 
+
+<!-- 間違えた暗算チェック -->
+<section class="panel" id="missed">
+  <div class="co-head">
+    <div><div class="pl" style="color:var(--bad)">暗算 ／ <span id="miss-state">間違えた問題 0件</span></div>
+    <h2>間違えた暗算チェック</h2></div>
+    <span class="sp"></span>
+    <button class="btn" id="miss-toggle" type="button" aria-expanded="false">見る</button>
+  </div>
+  <p class="hint">商談中・商談後の暗算チェックで間違えた（または答えられなかった）問題がここに貯まります。解き直して正解すると消えます。</p>
+  <div id="miss-body" hidden>
+    <ul class="miss" id="miss-list"></ul>
+    <div class="row"><button class="btn" id="miss-clear" type="button">全部消す</button></div>
+  </div>
+</section>
 
 <!-- 知見（Notion） -->
 <section class="panel" id="know">

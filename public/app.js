@@ -16,8 +16,8 @@ async function api(path, body) {
   if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
   return j;
 }
-function showLogin() { $("login").hidden = false; $("step1").hidden = true; $("co").hidden = true; }
-$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("co").hidden = false; $("logout").hidden = false; loadKnow(); });
+function showLogin() { $("login").hidden = false; $("step1").hidden = true; $("co").hidden = true; $("missed").hidden = true; }
+$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("co").hidden = false; $("missed").hidden = false; $("logout").hidden = false; loadKnow(); });
 $("logout").addEventListener("click", () => { try { sessionStorage.removeItem("pw"); } catch (_) {} location.reload(); });
 if (pw()) $("logout").hidden = false;
 
@@ -156,7 +156,7 @@ async function generate() {
     renderAvatar($("p-avatar"), persona); renderAvatar($("call-avatar"), persona);
     $("call-name").textContent = persona.name; $("call-company").textContent = persona.company;
     status("gen-status", ""); status("call-status", "");
-    $("co-body").hidden = true; $("co-toggle").textContent = "編集する"; $("co").hidden = true;
+    $("co-body").hidden = true; $("co-toggle").textContent = "編集する"; $("co").hidden = true; $("missed").hidden = true;
     step(2);
   } catch (e) { status("gen-status", e.message, true); }
   finally { $("gen").disabled = false; lockStart(false); }
@@ -332,6 +332,7 @@ function quizAnswer(skip) {
   const ans = quizCur.answer;
   const ok = mine !== null && isFinite(mine) && Math.abs(mine - ans) <= Math.max(Math.abs(ans) * 0.02, 0.05);
   quizzes.push({ question: quizCur.question, answer: ans, unit: quizCur.unit, mine, ok, sec, kind: quizCur.kind });
+  if (!ok) addMissed({ ...quizCur, mine });
   $("quiz-in").disabled = true; $("quiz-ok").disabled = true; $("quiz-skip").disabled = true;
   const r = $("quiz-res"); r.hidden = false; r.className = "qres " + (ok ? "ok" : "ng"); r.textContent = "";
   const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = (ok ? "正解" : mine === null ? "未回答" : "不正解") + " ／ " + sec.toFixed(1) + "秒" + (sec <= 10 ? "（即答ライン）" : "（目標10秒以内）"); r.appendChild(lab);
@@ -346,6 +347,49 @@ $("quiz-next").addEventListener("click", () => { $("quiz").hidden = true; const 
 async function runQuizQueue() { while (quizQueue.length) { await quizStart(quizQueue.shift()); } }
 function resetQuiz() { quizzes = []; quizQueue = []; quizCur = null; quizResolve = null; clearInterval(quizTimer); $("quiz").hidden = true; }
 function askedList() { return quizzes.map(q => q.question); }
+
+/* ---------- 間違えた暗算チェック（このブラウザに貯める） ---------- */
+const MISS_KEY = "ropure-missed-quiz-v1";
+let missed = [];
+function loadMissed() { try { missed = JSON.parse(localStorage.getItem(MISS_KEY) || "[]"); if (!Array.isArray(missed)) missed = []; } catch (_) { missed = []; } }
+function saveMissed() { try { localStorage.setItem(MISS_KEY, JSON.stringify(missed.slice(-100))); } catch (_) {} renderMissed(); }
+function addMissed(q) {
+  const same = missed.find(m => m.question === q.question);
+  if (same) { same.miss++; same.mine = q.mine; same.at = Date.now(); }
+  else missed.push({ question: q.question, answer: q.answer, unit: q.unit, calc: q.calc || [], mental: q.mental || [], mine: q.mine, miss: 1, at: Date.now(), company: persona ? persona.company : "" });
+  saveMissed();
+}
+function renderMissed() {
+  $("miss-state").textContent = "間違えた問題 " + missed.length + "件";
+  const ul = $("miss-list"); ul.textContent = "";
+  if (!missed.length) { const li = document.createElement("li"); li.className = "hint"; li.textContent = "まだありません。"; ul.appendChild(li); return; }
+  missed.slice().reverse().forEach(m => {
+    const li = document.createElement("li");
+    const q = document.createElement("div"); q.className = "mq"; q.textContent = m.question; li.appendChild(q);
+    const meta = document.createElement("div"); meta.className = "mm"; meta.textContent = new Date(m.at).toLocaleDateString("ja-JP") + (m.company ? "・" + m.company : "") + "／" + m.miss + "回間違い／前回の答え：" + (m.mine === null || m.mine === undefined ? "未回答" : m.mine + (m.unit || "")); li.appendChild(meta);
+    const row = document.createElement("div"); row.className = "mi";
+    const inp = document.createElement("input"); inp.type = "number"; inp.step = "any"; inp.inputMode = "decimal"; inp.placeholder = "解き直す"; row.appendChild(inp);
+    const u = document.createElement("span"); u.textContent = m.unit || ""; row.appendChild(u);
+    const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn"; btn.textContent = "答える"; row.appendChild(btn);
+    const show = document.createElement("button"); show.type = "button"; show.className = "btn"; show.textContent = "答えを見る"; row.appendChild(show);
+    li.appendChild(row);
+    const res = document.createElement("div"); res.className = "mr"; li.appendChild(res);
+    const reveal = (ok) => { res.className = "mr " + (ok ? "ok" : "ng"); res.textContent = (ok ? "正解。一覧から消しました" : "不正解") + "\n答え：" + m.answer + (m.unit || "") + (m.calc.length ? "\n" + m.calc.join("\n") : "") + (m.mental.length ? "\n暗算のコツ：" + m.mental.join("／") : ""); };
+    const answer = () => {
+      const v = Number(inp.value); if (inp.value.trim() === "" || !isFinite(v)) return;
+      const ok = Math.abs(v - m.answer) <= Math.max(Math.abs(m.answer) * 0.02, 0.05);
+      if (ok) { missed = missed.filter(x => x !== m); try { localStorage.setItem(MISS_KEY, JSON.stringify(missed)); } catch (_) {} $("miss-state").textContent = "間違えた問題 " + missed.length + "件"; }
+      else { m.miss++; m.mine = v; m.at = Date.now(); try { localStorage.setItem(MISS_KEY, JSON.stringify(missed)); } catch (_) {} }
+      inp.disabled = true; btn.disabled = true; reveal(ok);
+    };
+    btn.addEventListener("click", answer); inp.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); answer(); } });
+    show.addEventListener("click", () => { res.className = "mr"; res.textContent = "答え：" + m.answer + (m.unit || "") + (m.calc.length ? "\n" + m.calc.join("\n") : "") + (m.mental.length ? "\n暗算のコツ：" + m.mental.join("／") : ""); });
+    ul.appendChild(li);
+  });
+}
+$("miss-toggle").addEventListener("click", () => { const open = $("miss-body").hidden; $("miss-body").hidden = !open; $("miss-toggle").textContent = open ? "閉じる" : "見る"; $("miss-toggle").setAttribute("aria-expanded", String(open)); if (open) renderMissed(); });
+$("miss-clear").addEventListener("click", () => { missed = []; saveMissed(); });
+loadMissed(); renderMissed();
 
 /* ---------- ③ チャットロープレ ---------- */
 async function askPersona() {
@@ -525,4 +569,4 @@ $("grade").addEventListener("click", async () => {
     showRecord(r);
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
-$("again").addEventListener("click", () => { $("record").hidden = true; $("co").hidden = false; step(1); lockStart(false); window.scrollTo(0, 0); });
+$("again").addEventListener("click", () => { $("record").hidden = true; $("co").hidden = false; $("missed").hidden = false; renderMissed(); step(1); lockStart(false); window.scrollTo(0, 0); });
