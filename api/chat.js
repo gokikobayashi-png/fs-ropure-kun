@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   if (!auth(req, res)) return;
   try {
-    const { persona, history = [], message = "" } = await readJson(req);
+    const { persona, history = [], message = "", company = null } = await readJson(req);
     if (!persona || !persona.company) return res.status(400).json({ error: "persona が必要です" });
 
     let knowledge = "";
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     const ai = client();
     const r = await generate(ai, {
       contents,
-      config: { systemInstruction: personaSystemInstruction(persona, knowledge) + CHAT_NOTE, temperature: 0.8 },
+      config: { systemInstruction: personaSystemInstruction(persona, knowledge, company) + CHAT_NOTE, temperature: 0.8 },
     });
     const reply = (r.text || "").trim().replace(/^[「『]|[」』]$/g, "");
     if (!reply) throw new Error("相手の返事を作れませんでした。もう一度送ってください");

@@ -114,6 +114,35 @@ export const ZENTECT = `ゼンテクト（株式会社ゼンテクト）の商�
 - 実例の相手の言葉：「何社か話した中で一番納得感がある」（アクティブ・ブレインズ）。`;
 
 /* =========================================================
+   自社情報（画面で設定）。無ければ上の ZENTECT を使う
+   company = { company, product, value, proof, pricing, objections:[], plans:[{name,monthly}], prep, months, trial_months, calls, apo_rate, win_rate }
+   ========================================================= */
+const s = v => String(v ?? "").trim();
+export function hasCompany(c) { return !!(c && (s(c.company) || s(c.product)) && (s(c.value) || s(c.pricing) || s(c.proof))); }
+export function companyName(c) { return hasCompany(c) ? s(c.company) || "自社" : "ゼンテクト"; }
+export function companyText(c) {
+  if (!hasCompany(c)) return ZENTECT;
+  const plans = (Array.isArray(c.plans) ? c.plans : []).filter(x => s(x.name) && Number(x.monthly) > 0);
+  const objs = (Array.isArray(c.objections) ? c.objections : []).map(s).filter(Boolean);
+  return [
+    `${s(c.company)}（自社＝受講者が所属する営業代行会社）の商材情報`,
+    `- プロダクト/サービス：${s(c.product)}`,
+    s(c.value) && `- 提供価値：${s(c.value)}`,
+    s(c.proof) && `- 実績・根拠：${s(c.proof)}`,
+    s(c.pricing) && `- 価格・料金体系：${s(c.pricing)}`,
+    plans.length && `- 検算に使う月費用：${plans.map(x => `${s(x.name)} 月${Number(x.monthly)}万円`).join("／")}。準備費${Number(c.prep) || 0}万円。標準期間${Number(c.months) || 6}ヶ月（まず試すなら${Number(c.trial_months) || 3}ヶ月）`,
+    (Number(c.calls) > 0 || Number(c.apo_rate) > 0) && `- 基準の稼働とファネル：月${Number(c.calls) || "?"}コール、アポ率${Number(c.apo_rate) || "?"}%、受注率${Number(c.win_rate) || "?"}%（相手の実績があればそちらを優先）`,
+    objs.length && `- 相手からよく出る反論・懸念：${objs.join("／")}`,
+  ].filter(Boolean).join("\n");
+}
+// 相手役が「営業代行の料金」として知っていること
+function priceForPersona(c) {
+  if (!hasCompany(c)) return "営業代行。固定なら月90万（IS）〜130万（一気通貫）＋準備費20万、最低6ヶ月。成果報酬ならアポ1件3〜7万＋準備費20万。";
+  const plans = (Array.isArray(c.plans) ? c.plans : []).filter(x => s(x.name) && Number(x.monthly) > 0);
+  return [s(c.product), s(c.pricing) || (plans.length ? plans.map(x => `${s(x.name)} 月${Number(x.monthly)}万`).join("／") + (Number(c.prep) ? `＋準備費${Number(c.prep)}万` : "") : "")].filter(Boolean).join("。");
+}
+
+/* =========================================================
    Notion「ロープレ知見」：読み込み・追記
    NOTION_TOKEN と NOTION_KNOWLEDGE_PAGE_ID があるときだけ動く。無ければ空。
    ========================================================= */
@@ -201,7 +230,7 @@ async function findRecordsParent() {
   if (!r.ok) throw new Error("ロープレ記録ページを作れません: " + r.status + " " + (await r.text()).slice(0, 200));
   return (recordsParent = (await r.json()).id);
 }
-export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode }) {
+export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", overviewReview = "", calcReview = "" }) {
   if (!knowledgeEnabled()) return null;
   const parent = await findRecordsParent();
   const title = `${jstNow()} ${persona.company}（${mode === "chat" ? "チャット" : "音声"}／判定:${CAT[picked]}${correct ? "○" : "×"}）`;
@@ -213,7 +242,10 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
     bullet("冒頭のひとこと：" + (persona.opening_line || "")),
     h2("判定"),
     bullet(`受講者の判定：${picked} ${CAT[picked]}（${correct ? "正解" : "不正解"}）／正解：${persona.answer} ${CAT[persona.answer]}`),
-    bullet("受講者の言い直し：" + (rephrase || "（なし）")),
+    bullet("問1 相手の営業の説明：" + (overview || "（なし）")),
+    bullet("問2 受講者の言い直し：" + (rephrase || "（なし）")),
+    bullet("問3 検算：" + (calcText || "（なし）")),
+    bullet("問3 こういうやり方なら：" + (proposal || "（なし）")),
     bullet("正解の理由：" + (persona.exp || "")),
     bullet("言い直しの模範例：" + (persona.rephrase_example || "")),
     h2("会話ログ"),
@@ -223,6 +255,8 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
     blocks.push(para(`${String(i + 1).padStart(2, "0")}　${who ? who + "：" : ""}${t.text}`, t.who === "me"));
   });
   blocks.push(h2("コーチ（AI）の振り返り"), para(feedback || ""));
+  if (overviewReview) blocks.push(para("問1 全体像：" + overviewReview));
+  if (calcReview) blocks.push(para("問3 検算：" + calcReview));
   blocks.push({ object: "block", type: "toggle", toggle: { rich_text: [{ type: "text", text: { content: "相手の事実（答え合わせ用）" } }], children: (persona.hidden_facts || []).slice(0, 90).map(bullet) } });
   const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
     parent: { page_id: parent }, properties: { title: { title: [{ type: "text", text: { content: title.slice(0, 1900) } }] } }, children: blocks.slice(0, 100),
@@ -242,9 +276,11 @@ export function jstNow() {
 /* =========================================================
    相手役（商談相手）のシステム指示
    ========================================================= */
-export function personaSystemInstruction(p, knowledge = "") {
+export function personaSystemInstruction(p, knowledge = "", company = null) {
+  const me = companyName(company);
+  const objs = hasCompany(company) ? (company.objections || []).map(s).filter(Boolean) : [];
   const facts = (p.hidden_facts || []).map((f, i) => `${i + 1}. ${f}`).join("\n");
-  return `あなたは「${p.company}」の${p.name}（${p.role}）。営業代行会社ゼンテクトの営業担当と、初回の商談（30分の打ち合わせ）をしている。相手はあなたの営業の課題を整理しに来た。
+  return `あなたは「${p.company}」の${p.name}（${p.role}）。営業代行会社${me}の営業担当と、初回の商談（30分の打ち合わせ）をしている。相手はあなたの営業の課題を整理しに来た。
 
 ■ あなたの会社と営業の事実（聞かれたことだけ答える。聞かれていないことを自分から並べない）
 ${facts}
@@ -260,9 +296,9 @@ ${facts}
 
 ■ 性格・難易度：${p.personality}
 
-■ 相手（ゼンテクト）について、あなたが${p.role}として知っていること・気にすること
-- 営業代行。固定なら月90万（IS）〜130万（一気通貫）＋準備費20万、最低6ヶ月。成果報酬ならアポ1件3〜7万＋準備費20万。
-- だから立場上「それ払って回収できるのか」「うちの単価で何件取れば元が取れるのか」「本当にうちの業界が分かるのか」「アポだけ取って質が低いんじゃないか」を気にする。相手が料金や体制を言ったら、自社の数字と照らして率直に反応する（例：「月90万？うちの粗利だと何件必要ですか」）。
+■ 相手（${me}）について、あなたが${p.role}として知っていること・気にすること
+- ${priceForPersona(company)}
+- だから立場上「それ払って回収できるのか」「うちの単価で何件取れば元が取れるのか」「本当にうちの業界が分かるのか」「アポだけ取って質が低いんじゃないか」を気にする。相手が料金や体制を言ったら、自社の数字と照らして率直に反応する（例：「月90万？うちの粗利だと何件必要ですか」）。${objs.length ? `\n- 話の流れに合えば、次のような懸念も口にする（全部は言わない。1〜2個）：${objs.join("／")}` : ""}
 - ただし相手がまだ自社の全体像を聞き終えていないのに提案や料金の話を始めたら、「で、うちの何が問題なんですか？」と切り返す。
 
 ■ 話し方

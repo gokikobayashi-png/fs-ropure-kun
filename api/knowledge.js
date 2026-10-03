@@ -1,6 +1,6 @@
 // GET  /api/knowledge            → { enabled, count, items:[{type,text}] }
 // POST /api/knowledge {text,title} → 議事録などを「ロープレに使える知見」に要約してNotionへ追記
-import { client, auth, readJson, FRAMEWORK, ZENTECT, generate, knowledgeEnabled, loadKnowledge, appendKnowledge, jstNow } from "./_lib.js";
+import { client, auth, readJson, FRAMEWORK, companyText, generate, knowledgeEnabled, loadKnowledge, appendKnowledge, jstNow } from "./_lib.js";
 
 export default async function handler(req, res) {
   if (!auth(req, res)) return;
@@ -11,12 +11,12 @@ export default async function handler(req, res) {
     }
     if (req.method !== "POST") return res.status(405).end();
     if (!knowledgeEnabled()) return res.status(400).json({ error: "Notion連携が未設定です（NOTION_TOKEN / NOTION_KNOWLEDGE_PAGE_ID）" });
-    const { text = "", title = "" } = await readJson(req);
+    const { text = "", title = "", company = null } = await readJson(req);
     if (text.trim().length < 50) return res.status(400).json({ error: "議事録の本文が短すぎます" });
 
     const prompt = `${FRAMEWORK}
 
-${ZENTECT}
+${companyText(company)}
 
 以下は、ゼンテクトの営業担当が実際に行った商談の議事録（またはメモ）。
 これを「音声ロープレの社長役・コーチが次回から使える知見」に変換する。

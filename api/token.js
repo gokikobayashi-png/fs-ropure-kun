@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   if (!auth(req, res)) return;
   try {
-    const { persona } = await readJson(req);
+    const { persona, company = null } = await readJson(req);
     if (!persona || !persona.company) return res.status(400).json({ error: "persona が必要です" });
 
     let knowledge = "";
@@ -17,7 +17,7 @@ export default async function handler(req, res) {
         languageCode: "ja-JP",
         voiceConfig: { prebuiltVoiceConfig: { voiceName: persona.voice || "Charon" } },
       },
-      systemInstruction: personaSystemInstruction(persona, knowledge),
+      systemInstruction: personaSystemInstruction(persona, knowledge, company),
       inputAudioTranscription: {},
       outputAudioTranscription: {},
     };

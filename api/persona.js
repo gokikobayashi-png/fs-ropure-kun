@@ -1,6 +1,6 @@
 // POST /api/persona  { industry?, product?, size?, answer?: "A"|"B"|"C"|"D"|"", difficulty: "easy"|"normal"|"hard" }
 // → 相手企業ペルソナ（JSON）
-import { client, auth, readJson, FRAMEWORK, ZENTECT, CAT, generate, loadKnowledge, knowledgeText } from "./_lib.js";
+import { client, auth, readJson, FRAMEWORK, companyText, companyName, CAT, generate, loadKnowledge, knowledgeText } from "./_lib.js";
 
 const PERSONALITY = {
   easy: "協力的。聞かれれば数字も背景も素直に話す。相手の言い直しが近ければ乗ってくる。",
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     try { knowledge = knowledgeText(await loadKnowledge()); } catch (e) { console.error(e); }
     const prompt = `${FRAMEWORK}
 
-${ZENTECT}
+${companyText(b.company)}
 ${knowledge ? `\n■ 過去の実商談から得た知見（この中の業種・数字感・反論パターンを参考にして、現実味のある相手を作る。ただし同じ会社をそのまま再現しない）\n${knowledge}\n` : ""}
 営業代行のヒアリング練習用に、架空の相手企業と、その商談相手を1人作る。受講者は事前に「会社概要」しか見えず、音声かチャットで質問して掘る。
 
@@ -49,7 +49,7 @@ ${wish}
 - hidden_facts の最初の3つは必ず：①役職と経歴（前職・社歴）②決裁権の範囲と社内の承認の流れ ③今回時間を取った経緯と、この人が社内で負っているミッション（誰から何を期待されているか）。この役職の人が知っていること・知らないこと（例：経営企画なら現場の率は曖昧、ISリーダーなら単価や粗利は曖昧）を事実に反映する。
 - 本当の課題は ${answer}（${CAT[answer]}）。ただし本人はそう認識しておらず、別の言い方（「営業が弱い」「人が足りない」「もっと数を打ちたい」「いい人が採れない」など）で語る。
 - hidden_facts に、聞かれれば答える事実を12個程度、数字入りで書く（今期の売上目標と現状の着地見込み〔商材単価に見合う数字をランダムに。目標と見込みの差から必要な受注数・商談数が逆算できるように〕・誰に売っているか・何を・単価と課金形態・営業人数と経歴・使っている手法・月の行動量・アポ率・受注率・受注先に共通点があるか・数字を取っているか・過去にやってやめた施策・社長の本業の忙しさ 等）。正解に至る手がかりと、別の分類に見えるノイズを両方入れる。判定順序（戦略→手法→量→質）を踏まないと間違えるように。
-- hidden_facts の最後に、ゼンテクトの料金（IS月90万／一気通貫130万／成果報酬アポ3〜7万）を聞いたときにこの役職の人が言いそうな懸念を1つ入れる（決裁権がなければ「上にどう説明するか」の視点も）（自社の粗利・受注単価と照らした具体的な言い方で）。
+- hidden_facts の最後に、${companyName(b.company)}の料金（上の商材情報の価格）を聞いたときにこの役職の人が言いそうな懸念を1つ入れる（決裁権がなければ「上にどう説明するか」の視点も）（自社の粗利・受注単価と照らした具体的な言い方で）。
 - 実在の企業名・人名は使わない。
 - personality は次の文をそのまま使う：${PERSONALITY[difficulty]}
 

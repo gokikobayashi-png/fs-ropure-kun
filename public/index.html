@@ -100,6 +100,28 @@ details.cheat li{margin:2px 0}
 .speaker .nm{font-weight:700}
 .speaker .co{font-size:12px;color:var(--ink-2)}
 @media (max-width:420px){.av{width:84px;height:84px}}
+.co-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.co-head h2{margin:4px 0}
+.co-head .sp{flex:1}
+.sub{font-size:14px;font-weight:700;margin:18px 0 2px;padding-top:12px;border-top:1px solid var(--line)}
+.list-row{display:flex;gap:6px;margin-top:6px;align-items:center}
+.list-row input{margin-top:0}
+.list-row .x{flex:none;width:38px;height:38px;padding:0;color:var(--bad)}
+.list-row .yen{flex:none;width:120px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 12px}
+@media (max-width:560px){.g3{grid-template-columns:1fr 1fr}}
+input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin-top:4px}
+.q{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0;padding-top:0}
+.qn{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent)}
+.q h3{font-size:15px;margin:2px 0 4px}
+.calc{margin-top:12px;padding:12px 14px;border-radius:6px;background:var(--bg);font-size:14px;line-height:1.9}
+.calc .formula{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.calc .res{font-weight:700;font-size:16px}
+.calc.ok .res{color:var(--accent)}
+.calc.ng .res{color:var(--bad)}
+.calc .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:middle}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -111,7 +133,7 @@ details.cheat li{margin:2px 0}
   <span class="sp"></span>
   <button class="btn" id="logout" type="button" hidden>ログアウト</button>
 </header>
-<div class="steps"><span id="s1" class="on">① ケース設定</span><span id="s2">② 相手を生成</span><span id="s3">③ ロープレ</span><span id="s4">④ 課題はどれか</span></div>
+<div class="steps"><span id="s1" class="on">① ケース設定</span><span id="s2">② 相手を生成</span><span id="s3">③ ロープレ</span><span id="s4">④ 振り返り3問</span></div>
 
 <!-- ログイン -->
 <section class="panel" id="login" hidden>
@@ -119,6 +141,57 @@ details.cheat li{margin:2px 0}
   <input type="text" id="pw" placeholder="共有パスワード" autocomplete="off">
   <div class="row"><button class="btn primary" id="pw-ok" type="button">入る</button></div>
   <div class="status err" id="pw-status"></div>
+</section>
+
+<!-- 自社情報 -->
+<section class="panel" id="co">
+  <div class="co-head">
+    <div><div class="pl" style="color:var(--accent)">自社情報 ／ <span id="co-state">既定（ゼンテクト）</span></div>
+    <h2>自社の商材と料金</h2></div>
+    <span class="sp"></span>
+    <button class="btn" id="co-toggle" type="button" aria-expanded="false">編集する</button>
+  </div>
+  <p class="hint">相手役が知っている「営業代行の料金」と、商談後の検算（問3）の月費用・準備費・基準値はここから取ります。保存はこのブラウザに残ります。</p>
+  <div id="co-body" hidden>
+    <div class="sub">資料から取り込む</div>
+    <label class="f">テキストを貼り付け<textarea id="co-src" rows="5" placeholder="会社紹介・製品資料の文章を貼り付け…"></textarea></label>
+    <label class="f">PDF をアップロード（複数可・合計3MBまで）<input type="file" id="co-pdf" accept="application/pdf" multiple style="display:block;margin-top:6px"></label>
+    <div class="row"><button class="btn primary" id="co-read" type="button">AIで読み取る</button><span class="hint" style="margin:0">読み取った内容は下に入るだけで、保存するまで反映されません</span></div>
+    <div class="status" id="co-read-status"></div>
+
+    <div class="sub">内容を確認・編集</div>
+    <div class="g2">
+      <label class="f">会社名 *<input type="text" id="co-company"></label>
+      <label class="f">プロダクト/サービス *<input type="text" id="co-product"></label>
+    </div>
+    <label class="f">提供価値（バリュープロップ）<textarea id="co-value" rows="3"></textarea></label>
+    <label class="f">実績・根拠（プルーフポイント）<textarea id="co-proof" rows="3"></textarea></label>
+    <label class="f">価格・料金体系<textarea id="co-pricing" rows="3"></textarea></label>
+
+    <div class="sub">検算の基準（問3で使う）</div>
+    <p class="hint">月額の固定プラン。商談後の検算で「月費用」として選べます（単位：万円）。</p>
+    <div id="co-plans"></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="co-plan-add" type="button">＋ プランを追加</button></div>
+    <div class="g3">
+      <label class="f">準備費（万円）<input type="number" id="co-prep" min="0" step="1"></label>
+      <label class="f">標準の期間（月）<input type="number" id="co-months" min="1" step="1"></label>
+      <label class="f">「まず試す」の期間（月）<input type="number" id="co-trial" min="1" step="1"></label>
+      <label class="f">月の稼働量（コール数）<input type="number" id="co-calls" min="0" step="10"></label>
+      <label class="f">基準のアポ率（%）<input type="number" id="co-apo" min="0" step="0.1"></label>
+      <label class="f">基準の受注率（%）<input type="number" id="co-win" min="0" step="0.1"></label>
+    </div>
+
+    <div class="sub co-head" style="margin-top:18px"><span>よくある反論・懸念（<span id="co-obj-n">0</span>件）</span><span class="sp"></span></div>
+    <p class="hint">相手役が話の流れで1〜2個ずつ口にします。</p>
+    <div id="co-objs"></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="co-obj-add" type="button">＋ 追加</button></div>
+
+    <div class="row">
+      <button class="btn primary" id="co-save" type="button">保存する</button>
+      <button class="btn" id="co-reset" type="button">既定（ゼンテクト）に戻す</button>
+    </div>
+    <div class="status" id="co-status"></div>
+  </div>
 </section>
 
 <!-- ① 設定 -->
@@ -249,18 +322,54 @@ details.cheat li{margin:2px 0}
   <p class="hint" id="chat-hint" hidden>本番と同じく、1回に聞くのは1つずつ。長文でまとめて聞くと相手は一部しか答えない。</p>
 </section>
 
-<!-- ④ 判定 -->
+<!-- ④ 振り返り3問 -->
 <section class="panel" id="step4" hidden>
-  <div class="pl">STEP 4</div>
-  <h2>課題はどれか。</h2>
-  <div class="opts" id="opts">
-    <button class="opt" data-k="A" type="button" aria-pressed="false"><span class="k">A</span>戦略</button>
-    <button class="opt" data-k="B" type="button" aria-pressed="false"><span class="k">B</span>手法</button>
-    <button class="opt" data-k="C" type="button" aria-pressed="false"><span class="k">C</span>量</button>
-    <button class="opt" data-k="D" type="button" aria-pressed="false"><span class="k">D</span>質</button>
+  <div class="pl">STEP 4 ／ 商談中の自己チェック（3問）</div>
+  <h2>商談を振り返る。詰まったら、この3問に戻る。</h2>
+
+  <div class="q">
+    <div class="qn">問1 ／ 広げる</div>
+    <h3>相手の営業を、順を追って自分の言葉で説明できるか</h3>
+    <label class="f">誰に・何を・どう売って・月に何件商談し・何%決まるか
+      <textarea id="overview" rows="4" placeholder="例：ゼネコンの現場所長に、4.4万の買い切りインカムを、展示会リードへの電話と訪問で売っている。月20商談、受注率10%前後。1社4台が平均"></textarea></label>
+    <p class="hint">書けなければ、まだ広げる余地があったということ。</p>
   </div>
-  <label class="f">相手の課題を自分の言葉で言い直す（商談で実際に言った文でいい）
-    <textarea id="rephrase" rows="3" placeholder="例：4.4万の買い切りを1社4台で積んでいる限り、月100万の代行費を回収できる構造にならないですよね"></textarea></label>
+
+  <div class="q">
+    <div class="qn">問2 ／ 深掘る</div>
+    <h3>課題を4分類のどれかに置けたか。相手より一段深い言葉で言い直せたか</h3>
+    <div class="opts" id="opts">
+      <button class="opt" data-k="A" type="button" aria-pressed="false"><span class="k">A</span>戦略</button>
+      <button class="opt" data-k="B" type="button" aria-pressed="false"><span class="k">B</span>手法</button>
+      <button class="opt" data-k="C" type="button" aria-pressed="false"><span class="k">C</span>量</button>
+      <button class="opt" data-k="D" type="button" aria-pressed="false"><span class="k">D</span>質</button>
+    </div>
+    <label class="f">相手の課題を自分の言葉で言い直す（商談で実際に言った文でいい）
+      <textarea id="rephrase" rows="3" placeholder="例：4.4万の買い切りを1社4台で積んでいる限り、月100万の代行費を回収できる構造にならないですよね"></textarea></label>
+  </div>
+
+  <div class="q">
+    <div class="qn">問3 ／ 狭める</div>
+    <h3>検算は成立か不成立か。「こういうやり方なら」を1つ出したか</h3>
+    <p class="hint">相手が3〜6ヶ月でうちに払う額を、その期間の受注で回収できるか。相手の実績を聞けた変数はその数字、聞けていなければ基準値のまま。</p>
+    <div class="g3">
+      <label class="f">月費用（プラン）<select id="c-plan"></select></label>
+      <label class="f">期間（月）<input type="number" id="c-months" min="1" step="1"></label>
+      <label class="f">準備費（万円）<input type="number" id="c-prep" min="0" step="1"></label>
+      <label class="f">稼働量（月のコール数）<input type="number" id="c-calls" min="0" step="10"></label>
+      <label class="f">アポ率（%）<input type="number" id="c-apo" min="0" step="0.1"></label>
+      <label class="f">受注率（%）<input type="number" id="c-win" min="0" step="0.1"></label>
+    </div>
+    <label class="f">1受注の売上（万円）── 買い切りなら単価×導入数、SaaS/月額ならARR（月額×12×アカウント数）
+      <input type="number" id="c-revenue" min="0" step="0.1" placeholder="例：4.4万×4台 → 17.6"></label>
+    <div class="calc" id="calc">
+      <div class="formula">投資額 ＝ 期間 × 月費用 ＋ 準備費　／　回収額 ＝ 期間内の受注数 × 1受注の売上（受注数 ＝ 稼働量 × アポ率 × 受注率 × 期間）</div>
+      <div id="calc-body">1受注の売上を入れると計算します。</div>
+    </div>
+    <label class="f">「こういうやり方なら」を1つ（成立ならフルで、不成立なら絞る／1受注を大きくする／座組みを変える）
+      <textarea id="proposal" rows="3" placeholder="例：セグメントをゼネコンのDX推進部1つに絞って、まず1ヶ月で検証しませんか"></textarea></label>
+  </div>
+
   <div class="row">
     <button class="btn primary" id="grade" type="button">判定してもらう</button>
     <button class="btn" id="again" type="button" hidden>もう1社やる</button>
