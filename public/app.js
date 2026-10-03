@@ -438,6 +438,7 @@ $("res-speak").addEventListener("click", () => speak($("res-coach").textContent.
 $("res-speak-stop").addEventListener("click", () => { speechSynthesis.cancel(); $("res-speak-stop").hidden = true; });
 $("dash-speak").addEventListener("click", () => speak($("coach-say").textContent.replace(/^Mr\. KOHEI/, "")));
 $("res-speak2").addEventListener("click", () => speak($("res-gofast").textContent.replace(/^Mr\. Go fast ／ 論理の指摘/, "")));
+$("dash-speak2").addEventListener("click", () => speak($("dash-gofast").textContent.replace(/^Mr\. Go fast ／ 量/, "")));
 function gofastSay(text) { const b = $("res-gofast"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. Go fast ／ 論理の指摘"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
 function coachSayRes(text) { const b = $("res-coach"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. KOHEI"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
 function renderResInfo(graded) {
@@ -608,7 +609,30 @@ function coachSay(text) { const b = $("coach-say"); b.textContent = ""; const n 
 function renderHistory() {
   const t = $("hist-table"); t.innerHTML = `<tr><th>日時</th><th>相手</th><th>方式</th><th>4分類</th><th>総合</th><th>次の一手</th></tr>` + (history.length ? history.slice().reverse().map(e => `<tr><td class="n">${new Date(e.at).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td><td>${e.company}<span class="why">（${e.role || ""}）</span></td><td>${e.mode === "chat" ? "チャット" : "音声"}</td><td class="n">${e.correct ? "○" : "×"}</td><td class="n"><b>${e.total.toFixed(1)}</b></td><td class="why">${e.next || ""}</td></tr>`).join("") : `<tr><td colspan="6" class="why">まだありません。</td></tr>`);
 }
+function gofastVolume() {
+  const now = Date.now(), day = 86400000;
+  const n = history.length, today = history.filter(e => now - e.at < day).length, week = history.filter(e => now - e.at < 7 * day).length, month = history.filter(e => now - e.at < 30 * day).length;
+  const days = new Set(history.map(e => new Date(e.at).toDateString())).size;
+  const last = n ? Math.floor((now - history[n - 1].at) / day) : null;
+  const avgMin = n ? Math.round(history.reduce((a, e) => a + (e.sec || 0), 0) / n / 60) : 0;
+  const L = [];
+  if (!n) return "記録ゼロ。話にならない。今日中に3本。量をやらない人間に質は来ない。";
+  L.push(`今日${today}本、今週${week}本、累計${n}本（${days}日）。`);
+  if (today === 0) L.push("今日はまだゼロ。これを読んでいる暇があったら1本やれ。");
+  else if (today < 3) L.push(`今日${today}本で終わる気か。最低3本。`);
+  else L.push(`今日${today}本。やっと普通。`);
+  if (week < 5) L.push(`週${week}本は少ない。週5本が下限、週10本で初めて伸びる。`);
+  else if (week < 10) L.push(`週${week}本。下限はクリア。週10本に上げろ。`);
+  else L.push(`週${week}本。量は合格。次は1本あたりの時間を短く、同じ結論に速く辿り着け。`);
+  if (last !== null && last >= 2) L.push(`最後にやったのは${last}日前。空けた分だけ戻る。`);
+  if (avgMin && avgMin > 20) L.push(`1本平均${avgMin}分。長い。15分で全体像を掴めるようにしろ。`);
+  const correct = history.filter(e => e.correct).length;
+  if (n >= 5 && correct / n < 0.5) L.push(`4分類の正解率${Math.round(correct / n * 100)}%。考えてから打つな、打ってから考えろ。数をこなせば判定順序が体に入る。`);
+  return L.join("");
+}
+function gofastDashSay(text) { const b = $("dash-gofast"); b.textContent = ""; const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = "Mr. Go fast ／ 量"; b.appendChild(nm); b.appendChild(document.createTextNode(text)); }
 function renderDash() {
+  gofastDashSay(gofastVolume());
   const n = history.length;
   if ($("dash-state")) $("dash-state").textContent = n ? `${n}回分の記録` : "まだロープレがありません";
   if (!n) { $("kpis").innerHTML = ""; $("axes").innerHTML = ""; $("donuts").innerHTML = ""; $("donuts-fb").innerHTML = ""; $("fb-none").hidden = false; drawRadar(null, null); drawTrend([]); $("hist").textContent = ""; coachSay("まだロープレの記録がありません。1回やると、ここで所見を話します。"); return; }
