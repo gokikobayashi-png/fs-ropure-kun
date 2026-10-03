@@ -5,6 +5,7 @@ const $ = id => document.getElementById(id);
 const CAT = { A: "戦略", B: "手法", C: "量", D: "質" };
 let persona = null, session = null, transcript = [], picked = null;
 let micCtx = null, micStream = null, micNode = null, playCtx = null, nextPlay = 0, sources = [];
+let camStream = null, recorder = null, recChunks = [], recDest = null, recUrl = "";
 let timerId = null, startedAt = 0, curIn = "", curOut = "", inEl = null, outEl = null, mode = "voice", chatBusy = false;
 
 /* ---------- 認証（共有パスワード） ---------- */
@@ -16,8 +17,8 @@ async function api(path, body) {
   if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
   return j;
 }
-function showLogin() { $("login").hidden = false; $("step1").hidden = true; $("co").hidden = true; $("missed").hidden = true; }
-$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("co").hidden = false; $("missed").hidden = false; $("logout").hidden = false; loadKnow(); });
+function showLogin() { $("login").hidden = false; $("step1").hidden = true; $("co").hidden = true; $("missed").hidden = true; $("dash").hidden = true; }
+$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} $("login").hidden = true; $("step1").hidden = false; $("co").hidden = false; $("missed").hidden = false; $("dash").hidden = false; $("logout").hidden = false; loadKnow(); });
 $("logout").addEventListener("click", () => { try { sessionStorage.removeItem("pw"); } catch (_) {} location.reload(); });
 if (pw()) $("logout").hidden = false;
 
@@ -157,7 +158,7 @@ async function generate() {
     $("call-name").textContent = persona.name; $("call-company").textContent = persona.company;
     $("call-brief").textContent = persona.brief; $("call-opening").textContent = "冒頭のひとこと「" + persona.opening_line + "」";
     status("gen-status", ""); status("call-status", "");
-    $("co-body").hidden = true; $("co-toggle").textContent = "編集する"; $("co").hidden = true; $("missed").hidden = true;
+    $("co-body").hidden = true; $("co-toggle").textContent = "編集する"; $("co").hidden = true; $("missed").hidden = true; $("dash").hidden = true;
     step(2);
   } catch (e) { status("gen-status", e.message, true); }
   finally { $("gen").disabled = false; lockStart(false); }
@@ -184,7 +185,7 @@ function play(b64) {
   if (!playCtx) return;
   const pcm = b64ToPcm(b64);
   const buf = playCtx.createBuffer(1, pcm.length, 24000); buf.getChannelData(0).set(pcm);
-  const src = playCtx.createBufferSource(); src.buffer = buf; src.connect(playCtx.destination);
+  const src = playCtx.createBufferSource(); src.buffer = buf; src.connect(playCtx.destination); if (recDest) src.connect(recDest);
   const t = Math.max(playCtx.currentTime + 0.02, nextPlay); src.start(t); nextPlay = t + buf.duration;
   sources.push(src); talking(true); src.onended = () => { sources = sources.filter(s => s !== src); if (!sources.length) talking(false); };
 }
@@ -233,6 +234,7 @@ async function startCall() {
     const { token, model, config } = await api("token", { persona, company: coForApi() });
 
     playCtx = new AudioContext({ sampleRate: 24000 }); await playCtx.resume();
+    await startRecording();
     const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: "v1alpha" } });
     let opened;
     const openP = new Promise((res, rej) => { opened = { res, rej }; });
@@ -273,7 +275,42 @@ async function startCall() {
     lockStart(false);
   }
 }
+async function startRecording() {
+  recorder = null; recChunks = []; recDest = null; $("selfcam").hidden = true; $("playback").hidden = true;
+  if (!$("rec-on").checked || typeof MediaRecorder === "undefined") return;
+  try {
+    try { camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } }); } catch (_) { camStream = null; }
+    if (camStream) { $("selfvid").srcObject = camStream; $("selfcam").hidden = false; }
+    recDest = playCtx.createMediaStreamDestination();
+    playCtx.createMediaStreamSource(micStream).connect(recDest); // 自分の声
+    const tracks = [...(camStream ? camStream.getVideoTracks() : []), ...recDest.stream.getAudioTracks()];
+    const mime = ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4", "audio/webm"].find(m => MediaRecorder.isTypeSupported(m)) || "";
+    recorder = new MediaRecorder(new MediaStream(tracks), mime ? { mimeType: mime } : undefined);
+    recorder.ondataavailable = e => { if (e.data && e.data.size) recChunks.push(e.data); };
+    recorder.start(1000);
+    if (!camStream) status("call-status", "カメラが使えないので、声だけ録画します");
+  } catch (e) { console.error(e); status("call-status", "録画を開始できませんでした：" + (e.message || e), true); }
+}
+function stopRecording() {
+  const r = recorder; recorder = null;
+  try { camStream && camStream.getTracks().forEach(t => t.stop()); } catch (_) {} camStream = null; $("selfcam").hidden = true;
+  if (!r) return;
+  const finish = () => {
+    if (!recChunks.length) return;
+    const blob = new Blob(recChunks, { type: r.mimeType || "video/webm" });
+    if (recUrl) URL.revokeObjectURL(recUrl); recUrl = URL.createObjectURL(blob);
+    const isVideo = /video/.test(blob.type);
+    const name = "ropure_" + jst() + "_" + (persona ? persona.company : "") + (isVideo ? ".webm" : ".weba");
+    $("rec-dl").href = recUrl; $("rec-dl").download = name;
+    $("rec-info").textContent = (isVideo ? "映像＋音声" : "音声のみ") + "／" + (blob.size / 1048576).toFixed(1) + "MB。このブラウザを閉じると消えるので、残すなら保存を";
+    const v = $("rec-play"); v.hidden = false; v.src = recUrl;
+    $("playback").hidden = false;
+  };
+  if (r.state !== "inactive") { r.onstop = finish; r.stop(); } else finish();
+}
+function jst() { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 16).replace("T", "_").replace(":", ""); }
 function cleanupAudio() {
+  stopRecording();
   try { micNode && micNode.disconnect(); } catch (_) {}
   try { micStream && micStream.getTracks().forEach(t => t.stop()); } catch (_) {}
   try { micCtx && micCtx.close(); } catch (_) {}
@@ -348,6 +385,70 @@ $("quiz-next").addEventListener("click", () => { $("quiz").hidden = true; const 
 async function runQuizQueue() { while (quizQueue.length) { await quizStart(quizQueue.shift()); } }
 function resetQuiz() { quizzes = []; quizQueue = []; quizCur = null; quizResolve = null; clearInterval(quizTimer); $("quiz").hidden = true; }
 function askedList() { return quizzes.map(q => q.question); }
+
+/* ---------- スコア履歴とダッシュボード（このブラウザに保存） ---------- */
+const HIST_KEY = "ropure-history-v1";
+const AXES = [["counterpart", "相手の把握"], ["widen", "広げる"], ["classify", "深掘る"], ["rephrase", "言い直し"], ["converge", "狭める"], ["roi", "検算"], ["numbers", "数字"]];
+let history = [];
+function loadHistory() { try { history = JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); if (!Array.isArray(history)) history = []; } catch (_) { history = []; } }
+function saveHistory() { try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-200))); } catch (_) {} }
+function numbersScore() {
+  // 暗算チェックの正答率と問3の暗算から。チェックが無ければ null
+  const n = quizzes.length, c = quizzes.filter(q => q.ok).length;
+  const parts = [];
+  if (n) parts.push(c / n);
+  if (guess) parts.push([guess.okInvest, guess.okWins, guess.okRecover, guess.ok].filter(Boolean).length / 4);
+  if (!parts.length) return null;
+  const r = parts.reduce((a, b) => a + b, 0) / parts.length;
+  return { score: Math.max(1, Math.round(r * 4) + 1), why: (n ? `暗算チェック ${c}/${n} 正解` : "") + (guess ? (n ? "／" : "") + "問3の暗算 " + [guess.okInvest, guess.okWins, guess.okRecover, guess.ok].filter(Boolean).length + "/4" : "") };
+}
+function recordHistory(r) {
+  if (!r.scores) return null;
+  const sc = { ...r.scores }; const ns = numbersScore(); if (ns) sc.numbers = ns;
+  const keys = AXES.map(a => a[0]).filter(k => sc[k]);
+  const total = keys.reduce((s, k) => s + sc[k].score, 0) / keys.length;
+  const e = { at: Date.now(), company: persona.company, role: persona.role, mode, correct: !!r.correct, answer: r.answer, picked, scores: sc, total: Math.round(total * 10) / 10, next: r.nextAction || "", sec: Math.round((Date.now() - startedAt) / 1000) };
+  history.push(e); saveHistory(); return e;
+}
+function avgScores(list) { const out = {}; AXES.forEach(([k]) => { const v = list.map(e => e.scores[k] && e.scores[k].score).filter(x => x); out[k] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }); return out; }
+function polar(cx, cy, r, i, n) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+function drawRadar(latest, avg) {
+  const svg = $("radar"); const n = AXES.length, cx = 160, cy = 150, R = 100; let h = "";
+  for (let g = 1; g <= 5; g++) { const pts = AXES.map((_, i) => polar(cx, cy, R * g / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); h += `<polygon points="${pts}" fill="none" stroke="#D6DDD9" stroke-width="${g === 5 ? 1.2 : .6}"/>`; }
+  AXES.forEach(([k, label], i) => { const [x, y] = polar(cx, cy, R, i, n); const [lx, ly] = polar(cx, cy, R + 22, i, n); h += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#D6DDD9" stroke-width=".6"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="11" fill="#55636F" text-anchor="middle" dominant-baseline="middle">${label}</text>`; });
+  const poly = (sc, fill, stroke, op) => { const pts = AXES.map(([k], i) => polar(cx, cy, R * ((sc[k] && (sc[k].score ?? sc[k])) || 0) / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); return `<polygon points="${pts}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="1.5"/>`; };
+  if (avg) h += poly(avg, "#55636F", "#55636F", .12);
+  if (latest) h += poly(latest.scores, "#0F6E56", "#0F6E56", .3) + AXES.map(([k], i) => { const s = latest.scores[k] ? latest.scores[k].score : 0; const [x, y] = polar(cx, cy, R * s / 5, i, n); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#0F6E56"/>`; }).join("");
+  svg.innerHTML = h;
+}
+function drawTrend(list) {
+  const svg = $("trend"); const L = list.slice(-20); const W = 320, H = 180, px = 28, py = 14; let h = "";
+  for (let g = 1; g <= 5; g++) { const y = py + (H - 2 * py) * (1 - (g - 1) / 4); h += `<line x1="${px}" y1="${y.toFixed(1)}" x2="${W - 8}" y2="${y.toFixed(1)}" stroke="#D6DDD9" stroke-width=".6"/><text x="${px - 6}" y="${y.toFixed(1)}" font-size="10" fill="#55636F" text-anchor="end" dominant-baseline="middle">${g}</text>`; }
+  if (!L.length) { svg.innerHTML = h; return; }
+  const xs = i => L.length === 1 ? (px + W - 8) / 2 : px + (W - 8 - px) * i / (L.length - 1);
+  const ys = v => py + (H - 2 * py) * (1 - (v - 1) / 4);
+  h += `<polyline points="${L.map((e, i) => xs(i).toFixed(1) + "," + ys(e.total).toFixed(1)).join(" ")}" fill="none" stroke="#0F6E56" stroke-width="2"/>`;
+  L.forEach((e, i) => { h += `<circle cx="${xs(i).toFixed(1)}" cy="${ys(e.total).toFixed(1)}" r="3.5" fill="${e.correct ? "#0F6E56" : "#B23A2E"}"><title>${new Date(e.at).toLocaleDateString("ja-JP")} ${e.company} 総合${e.total}（判定${e.correct ? "○" : "×"}）</title></circle>`; });
+  svg.innerHTML = h;
+}
+function renderDash() {
+  const n = history.length;
+  $("dash-state").textContent = n ? `${n}回分の記録` : "まだロープレがありません";
+  if (!n) { $("kpis").innerHTML = ""; $("axes").innerHTML = ""; $("next-action").hidden = true; drawRadar(null, null); drawTrend([]); $("hist").textContent = ""; return; }
+  const latest = history[n - 1], avg = avgScores(history), prev = history.slice(0, -1);
+  const avgTotal = history.reduce((s, e) => s + e.total, 0) / n;
+  const correct = history.filter(e => e.correct).length;
+  const kpi = (k, v, sub) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${sub ? `<small> ${sub}</small>` : ""}</div></div>`;
+  $("kpis").innerHTML = kpi("直近の総合", latest.total.toFixed(1), "/5") + kpi("平均", avgTotal.toFixed(1), "/5") + kpi("4分類の正解率", Math.round(correct / n * 100) + "%", `${correct}/${n}`) + kpi("ロープレ回数", n, "回");
+  drawRadar(latest, prev.length ? avgScores(prev) : null); drawTrend(history);
+  $("hist").textContent = "● 緑＝4分類が正解、赤＝不正解。点にカーソルを合わせると会社名が出ます";
+  const weakK = AXES.map(([k]) => k).filter(k => avg[k] !== null).sort((a, b) => avg[a] - avg[b])[0];
+  $("axes").innerHTML = `<tr><th>軸</th><th>直近</th><th style="width:30%">平均</th><th>直近の根拠</th></tr>` + AXES.map(([k, label]) => { const s = latest.scores[k]; const a = avg[k]; return `<tr class="${k === weakK ? "weak" : ""}"><td>${label}${k === weakK ? "（弱点）" : ""}</td><td class="n">${s ? s.score : "—"}</td><td><div class="bar"><i style="width:${a ? a / 5 * 100 : 0}%"></i></div><span class="why">${a ? a.toFixed(1) : "—"}</span></td><td class="why">${s ? s.why : "記録なし"}</td></tr>`; }).join("");
+  const na = $("next-action"); na.hidden = !latest.next; if (latest.next) { na.textContent = ""; const l = document.createElement("span"); l.className = "lab"; l.textContent = "次の一手（直近の回のコーチより）"; na.appendChild(l); na.appendChild(document.createTextNode(latest.next)); }
+}
+$("dash-toggle").addEventListener("click", () => { const open = $("dash-body").hidden; $("dash-body").hidden = !open; $("dash-toggle").textContent = open ? "閉じる" : "見る"; $("dash-toggle").setAttribute("aria-expanded", String(open)); if (open) renderDash(); });
+$("dash-clear").addEventListener("click", () => { history = []; saveHistory(); renderDash(); });
+loadHistory(); renderDash();
 
 /* ---------- 間違えた暗算チェック（このブラウザに貯める） ---------- */
 const MISS_KEY = "ropure-missed-quiz-v1";
@@ -566,8 +667,10 @@ $("grade").addEventListener("click", async () => {
     if (r.overviewReview) f.appendChild(document.createTextNode("\n\n【問1 全体像】" + r.overviewReview));
     if (r.calcReview) f.appendChild(document.createTextNode("\n\n【問3 検算】" + r.calcReview));
     if (r.numbersReview) f.appendChild(document.createTextNode("\n\n【数字】" + r.numbersReview));
+    const ent = recordHistory(r);
+    const strip = $("score-strip"); strip.hidden = !ent; if (ent) { strip.innerHTML = AXES.map(([k, label]) => ent.scores[k] ? `<span title="${ent.scores[k].why.replace(/"/g, "&quot;")}">${label} <b>${ent.scores[k].score}</b></span>` : "").join("") + `<span style="background:var(--accent-soft);border-color:var(--accent)">総合 <b>${ent.total.toFixed(1)}</b>/5</span>`; if (ent.next) f.appendChild(document.createTextNode("\n\n【次の一手】" + ent.next)); }
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();
     showRecord(r);
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
-$("again").addEventListener("click", () => { $("record").hidden = true; $("co").hidden = false; $("missed").hidden = false; renderMissed(); step(1); lockStart(false); window.scrollTo(0, 0); });
+$("again").addEventListener("click", () => { $("record").hidden = true; $("co").hidden = false; $("missed").hidden = false; $("dash").hidden = false; renderMissed(); renderDash(); $("playback").hidden = true; $("score-strip").hidden = true; step(1); lockStart(false); window.scrollTo(0, 0); });

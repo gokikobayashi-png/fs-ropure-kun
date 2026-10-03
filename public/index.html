@@ -158,6 +158,37 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .miss .mr{font-size:13px;margin-top:4px;white-space:pre-wrap}
 .miss .mr.ok{color:var(--accent)}
 .miss .mr.ng{color:var(--bad)}
+.rec-opt{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-2);margin-top:4px;width:100%}
+.selfcam{flex:none;width:200px;max-width:40%;aspect-ratio:4/3;background:#111;border-radius:8px;overflow:hidden;position:relative}
+.selfcam video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+.selfcam .rec-dot{position:absolute;top:6px;left:8px;font-family:var(--mono);font-size:11px;color:#fff;background:rgba(201,55,44,.9);padding:1px 7px;border-radius:999px}
+.playback{margin-top:12px;padding:12px 14px;border-radius:6px;border:1px solid var(--line);background:var(--surface)}
+.playback video,.playback audio{width:100%;max-height:360px;border-radius:6px;background:#000;margin-top:8px;display:block}
+.dash{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;margin-top:12px}
+@media (max-width:680px){.dash{grid-template-columns:1fr}}
+.dbox{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--bg)}
+.dbox h3{font-size:13px;margin:0 0 6px;color:var(--ink-2);font-weight:500;letter-spacing:.04em}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+@media (max-width:560px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--surface)}
+.kpi .k{font-size:11px;color:var(--ink-2)}
+.kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
+.kpi .v small{font-size:12px;font-weight:400;color:var(--ink-2)}
+.radar{width:100%;height:auto;display:block}
+.axes{width:100%;border-collapse:collapse;font-size:13px}
+.axes td,.axes th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.axes th{font-weight:500;color:var(--ink-2);font-size:11px}
+.axes td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.axes .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;min-width:60px}
+.axes .bar i{display:block;height:100%;background:var(--accent)}
+.axes tr.weak td{background:var(--bad-soft)}
+.axes .why{font-size:12px;color:var(--ink-2)}
+.next{margin-top:10px;padding:10px 12px;border-radius:6px;background:var(--accent-soft);font-size:14px}
+.next .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--accent);display:block}
+.hist{font-size:12px;color:var(--ink-2);margin-top:8px}
+.score-strip{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.score-strip span{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
+.score-strip span b{font-variant-numeric:tabular-nums}
 #know-list{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)}
 [hidden]{display:none!important}
 </style>
@@ -303,6 +334,27 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 </section>
 
 
+<!-- ダッシュボード -->
+<section class="panel" id="dash">
+  <div class="co-head">
+    <div><div class="pl" style="color:var(--accent)">スコア ／ <span id="dash-state">まだロープレがありません</span></div>
+    <h2>商談の考え方が、できているか</h2></div>
+    <span class="sp"></span>
+    <button class="btn" id="dash-toggle" type="button" aria-expanded="false">見る</button>
+  </div>
+  <p class="hint">毎回の判定で、教材の7段階（相手の把握・広げる・深掘る・言い直し・狭める・検算・数字）を5点満点で採点し、このブラウザに貯めます。</p>
+  <div id="dash-body" hidden>
+    <div class="kpis" id="kpis"></div>
+    <div class="dash">
+      <div class="dbox"><h3>直近の回（濃）と平均（薄）</h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg></div>
+      <div class="dbox"><h3>総合スコアの推移（直近20回）</h3><svg class="radar" id="trend" viewBox="0 0 320 180" role="img" aria-label="推移"></svg><div class="hist" id="hist"></div></div>
+    </div>
+    <div class="dbox" style="margin-top:12px"><h3>軸ごと（直近の回／平均）</h3><table class="axes" id="axes"></table></div>
+    <div class="next" id="next-action" hidden></div>
+    <div class="row"><button class="btn" id="dash-clear" type="button">履歴を消す</button></div>
+  </div>
+</section>
+
 <!-- 間違えた暗算チェック -->
 <section class="panel" id="missed">
   <div class="co-head">
@@ -350,6 +402,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
     <button class="btn primary" id="chat-start" type="button">💬 チャットで始める</button>
     <button class="btn" id="regen" type="button">別の相手にする</button>
   </div>
+  <label class="rec-opt"><input type="checkbox" id="rec-on"> カメラを映して録画する（声のロープレ。自分の顔・声と相手の声をこのブラウザで録画。あとで再生・保存できます）</label>
   <div class="status" id="call-status"></div>
 </section>
 
@@ -362,7 +415,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
     <span class="sp" style="flex:1"></span>
     <button class="btn stop" id="hangup" type="button" disabled>商談を終える</button>
   </div>
-  <div class="speaker"><div class="av sm" id="call-avatar"></div><div class="who-text"><div class="nm" id="call-name"></div><div class="co" id="call-company"></div><div class="brief" id="call-brief" style="margin-top:6px;font-size:13px"></div><div class="co" id="call-opening" style="margin-top:4px"></div></div></div>
+  <div class="speaker"><div class="av sm" id="call-avatar"></div><div class="selfcam" id="selfcam" hidden><video id="selfvid" autoplay muted playsinline></video><span class="rec-dot">● REC</span></div><div class="who-text"><div class="nm" id="call-name"></div><div class="co" id="call-company"></div><div class="brief" id="call-brief" style="margin-top:6px;font-size:13px"></div><div class="co" id="call-opening" style="margin-top:4px"></div></div></div>
   <div class="transcript" id="transcript"></div>
   <div class="chatbox" id="chatbox" hidden>
     <textarea id="chat-input" rows="2" placeholder="相手への質問や言い直しを入力（Enterで送信／Shift+Enterで改行）"></textarea>
@@ -451,7 +504,13 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
   </div>
   <div class="status" id="grade-status"></div>
   <div class="verdict" id="verdict" hidden></div>
+  <div class="score-strip" id="score-strip" hidden></div>
   <div class="verdict" id="feedback" hidden style="background:var(--surface);border:1px solid var(--line)"></div>
+  <div class="playback" id="playback" hidden>
+    <span class="lab" style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--case)">録画</span>
+    <div class="row" style="margin-top:4px"><a class="btn primary" id="rec-dl" href="#" download>録画を保存</a><span class="hint" id="rec-info" style="margin:0"></span></div>
+    <video id="rec-play" controls playsinline hidden></video>
+  </div>
   <div class="record" id="record" hidden>
     <span class="lab">RECORD</span>
     <span id="record-msg"></span>
