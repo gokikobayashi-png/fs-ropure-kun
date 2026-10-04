@@ -54,6 +54,13 @@ public/pcm-capture.js  AudioWorklet（ダウンサンプル）
    - `GEMINI_TEXT_MODEL` … 任意。既定 `gemini-3.6-flash`
    - `NOTION_TOKEN` … 任意。Notionの内部インテグレーションのトークン（知見の読み書き用）
    - `NOTION_KNOWLEDGE_PAGE_ID` … 任意。「ロープレ知見」ページのID（URL末尾の32桁）。ページをインテグレーションに共有しておく
+   - `MEMBERS_JSON` … 任意。メンバー一覧を上書き。例 `[{"email":"a@zentect.com","name":"山田","short":"山田","admin":true}]`
+
+## メンバー別アカウントと成績の共有
+
+- ログインは ID（メールアドレス）＋共通パスワード（`APP_PASSWORD`）。メンバーは `api/_lib.js` の `MEMBERS`（または `MEMBERS_JSON`）
+- `NOTION_TOKEN` と `NOTION_KNOWLEDGE_PAGE_ID` があると、「ロープレ知見」ページの中に **「ロープレ成績」データベース** が自動で作られ、1回＝1行で全員の成績が保存される（端末が変わっても引き継ぎ、管理者はチーム画面で全員分を見られる）
+- この2つが無いときは、成績はブラウザ（メンバー別のキー）にだけ残る
 4. Deploy → 発行されたURLを開く → マイク許可
 
 ローカルで試すなら `npm i -g vercel` → `vercel dev`（`.env` に上の変数を書く）。
