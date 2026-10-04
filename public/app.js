@@ -9,24 +9,47 @@ let micCtx = null, micStream = null, micNode = null, playCtx = null, nextPlay = 
 let camStream = null, recorder = null, recChunks = [], recDest = null, recUrl = "";
 let timerId = null, startedAt = 0, curIn = "", curOut = "", inEl = null, outEl = null, mode = "voice", chatBusy = false;
 
-/* ---------- 認証（共有パスワード） ---------- */
+/* ---------- 認証（ID＝メールアドレス＋共通パスワード） ---------- */
 function pw() { try { return (sessionStorage.getItem("pw") || "").normalize("NFKC").replace(/[^\x20-\x7E]/g, ""); } catch (_) { return ""; } }
+let user = null, members = [], shared = false; // ログイン中の本人／メンバー一覧／サーバー保存が有効か
+function loadUser() { try { user = JSON.parse(sessionStorage.getItem("user") || "null"); } catch (_) { user = null; } return user; }
+function uk(k) { return user ? `${k}:${user.email}` : k; } // メンバー別の localStorage キー
 async function api(path, body) {
-  const r = await fetch("/api/" + path, { method: "POST", headers: { "content-type": "application/json", "x-app-password": pw() }, body: JSON.stringify(body || {}) });
+  const r = await fetch("/api/" + path, { method: "POST", headers: { "content-type": "application/json", "x-app-password": pw(), "x-app-user": user ? user.email : "" }, body: JSON.stringify(body || {}) });
   const j = await r.json().catch(() => ({}));
   if (r.status === 401) { status("pw-status", j.error || "パスワードが違います"); showLogin(); throw new Error(j.error || "ログインが必要"); }
   if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
   return j;
 }
-function showLogin() { $("login").hidden = false; $("app").hidden = true; document.body.style.overflow = "hidden"; setTimeout(() => $("pw").focus(), 50); }
+function showLogin() { $("login").hidden = false; $("app").hidden = true; document.body.style.overflow = "hidden"; setTimeout(() => ($("lg-email").value ? $("pw") : $("lg-email")).focus(), 50); }
 function hideLogin() { $("login").hidden = true; $("app").hidden = false; document.body.style.overflow = ""; }
-$("pw-ok").addEventListener("click", () => { try { sessionStorage.setItem("pw", $("pw").value.normalize("NFKC").trim()); } catch (_) {} if (!$("pw").value.trim()) { status("pw-status", "パスワードを入れてください", true); return; } hideLogin(); $("logout").hidden = false; status("pw-status", ""); loadKnow(); });
-$("pw").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); $("pw-ok").click(); } });
+function renderUserChip() {
+  const c = $("user-chip"); if (!user) { c.hidden = true; return; }
+  c.textContent = ""; const b = document.createElement("b"); b.textContent = user.name; c.appendChild(b);
+  if (user.admin) { const a = document.createElement("span"); a.className = "adm"; a.textContent = "管理者"; c.appendChild(a); }
+  c.hidden = false;
+}
+async function login() {
+  const email = $("lg-email").value.trim().toLowerCase(), p = $("pw").value.normalize("NFKC").trim();
+  if (!email) { status("pw-status", "ID（メールアドレス）を入れてください", true); return; }
+  if (!p) { status("pw-status", "パスワードを入れてください", true); return; }
+  try { sessionStorage.setItem("pw", p); localStorage.setItem("ropure-last-email", email); } catch (_) {}
+  $("pw-ok").disabled = true; status("pw-status", "確認中…");
+  try {
+    user = { email }; // api() がヘッダに載せるため仮置き
+    const j = await api("me", { email });
+    user = j.user; members = j.members || []; shared = !!j.shared;
+    try { sessionStorage.setItem("user", JSON.stringify(user)); } catch (_) {}
+    status("pw-status", ""); hideLogin(); $("logout").hidden = false;
+    afterLogin();
+  } catch (e) { user = null; status("pw-status", e.message, true); }
+  finally { $("pw-ok").disabled = false; }
+}
+$("pw-ok").addEventListener("click", login);
+["pw", "lg-email"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); login(); } }));
 $("pw-eye").addEventListener("click", () => { const i = $("pw"); i.type = i.type === "password" ? "text" : "password"; });
-if (!pw()) showLogin();
-$("logout").addEventListener("click", () => { try { sessionStorage.removeItem("pw"); } catch (_) {} location.reload(); });
-if (pw()) $("logout").hidden = false;
-
+try { $("lg-email").value = localStorage.getItem("ropure-last-email") || ""; } catch (_) {}
+$("logout").addEventListener("click", () => { try { sessionStorage.removeItem("pw"); sessionStorage.removeItem("user"); } catch (_) {} location.reload(); });
 
 /* ---------- 自社情報（このブラウザに保存） ---------- */
 const CO_KEY = "ropure-company-v1";
@@ -89,10 +112,12 @@ $("co-save").addEventListener("click", () => {
   if (!c.plans.length) { status("co-status", "検算に使う月額プランを1つ以上入れてください", true); return; }
   company = c; try { localStorage.setItem(CO_KEY, JSON.stringify(c)); } catch (_) {}
   showCoState(); status("co-status", "保存しました。次に相手を生成するときから反映されます");
+  if (shared) api("history", { action: "set_setting", key: "company", value: c }).then(() => status("co-status", "保存しました（全メンバー共通）。次に相手を生成するときから反映されます")).catch(e => status("co-status", "この端末には保存。共有保存に失敗：" + e.message, true));
 });
 $("co-reset").addEventListener("click", () => {
   company = null; try { localStorage.removeItem(CO_KEY); } catch (_) {}
   fillCompany(CO_DEFAULT); showCoState(); status("co-status", "既定（ゼンテクト）に戻しました");
+  if (shared) api("history", { action: "set_setting", key: "company", value: null }).catch(() => {});
 });
 function fileB64(f) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = () => rej(r.error); r.readAsDataURL(f); }); }
 $("co-read").addEventListener("click", async () => {
@@ -137,13 +162,23 @@ $("know-add").addEventListener("click", async () => {
   } catch (e) { status("know-result", e.message, true); }
   finally { $("know-add").disabled = false; }
 });
-loadKnow();
+async function afterLogin() {
+  renderUserChip();
+  loadTemplates(); renderTemplates(); loadChecks(); renderChecks(); loadMissed(); renderMissed(); loadHistory();
+  $("dash-seg").hidden = !(user && user.admin);
+  loadKnow();
+  if (shared) {
+    api("history", { action: "get_setting", key: "company" }).then(j => { if (j.value && j.value.company) { company = j.value; try { localStorage.setItem(CO_KEY, JSON.stringify(company)); } catch (_) {} fillCompany(company); showCoState(); } }).catch(() => {});
+  }
+  await syncHistory();
+  renderDash();
+}
 
 /* ---------- 画面遷移 ---------- */
 function view(name) {
   ["play", "dash", "history", "settings"].forEach(v => { $("view-" + v).hidden = v !== name; });
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.view === name));
-  if (name === "dash") renderDash();
+  if (name === "dash") { renderDash(); if (dashScope === "team") renderTeam(); }
   if (name === "history") renderHistory();
   if (name === "settings") { renderChecks(); renderMissed(); }
   window.scrollTo(0, 0);
@@ -157,7 +192,7 @@ document.querySelectorAll("#setnav button").forEach(b => b.addEventListener("cli
 try { $("rec-default").checked = localStorage.getItem("ropure-rec-default") === "1"; $("rec-on").checked = $("rec-default").checked; } catch (_) {}
 $("rec-default").addEventListener("change", () => { try { localStorage.setItem("ropure-rec-default", $("rec-default").checked ? "1" : "0"); } catch (_) {} $("rec-on").checked = $("rec-default").checked; });
 $("export-btn").addEventListener("click", () => {
-  const data = {}; ["ropure-company-v1", "ropure-boss-fb-v1", "ropure-missed-quiz-v1", "ropure-history-v1", "ropure-templates-v1"].forEach(k => { try { data[k] = JSON.parse(localStorage.getItem(k) || "null"); } catch (_) {} });
+  const data = {}; ["ropure-company-v1", uk("ropure-boss-fb-v1"), uk("ropure-missed-quiz-v1"), uk("ropure-history-v1"), uk("ropure-templates-v1")].forEach(k => { try { data[k] = JSON.parse(localStorage.getItem(k) || "null"); } catch (_) {} });
   const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "zenai-ropure-" + jst() + ".json"; a.click();
 });
 $("data-clear").addEventListener("click", () => { history = []; saveHistory(); missed = []; saveMissed(); renderDash(); status("gen-status", ""); });
@@ -181,8 +216,8 @@ function caseSettings() { return { industry: $("industry").value.trim(), product
 function applyCase(c) { $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey)); }
 const TPL_KEY = "ropure-templates-v1";
 let templates = [];
-function loadTemplates() { try { templates = JSON.parse(localStorage.getItem(TPL_KEY) || "[]"); if (!Array.isArray(templates)) templates = []; } catch (_) { templates = []; } }
-function saveTemplates() { try { localStorage.setItem(TPL_KEY, JSON.stringify(templates.slice(0, 30))); } catch (_) {} renderTemplates(); }
+function loadTemplates() { try { templates = JSON.parse(localStorage.getItem(uk(TPL_KEY)) || "[]"); if (!Array.isArray(templates)) templates = []; } catch (_) { templates = []; } }
+function saveTemplates() { try { localStorage.setItem(uk(TPL_KEY), JSON.stringify(templates.slice(0, 30))); } catch (_) {} renderTemplates(); }
 const LAYER_NAME = { "": "レイヤー任意", ceo: "社長", director: "営業本部長", sales_mgr: "営業部長", section: "営業課長", marketing: "マーケ責任者", bizdev: "新規事業部長", planning: "経営企画", is_lead: "ISリーダー" };
 const DIFF_NAME = { easy: "協力的", normal: "普通", hard: "手強い" };
 function renderTemplates() {
@@ -520,8 +555,8 @@ const FB_SEED = [
   { key: "fb_elicit", title: "具体性はこちらから提示せず引き出す", check: "やり方の具体性を自分から提示せず、「〜はいろんなエリアありますよね」「どこからやるとか決まっているんですか？」と相手に言わせたか", example: "メールはいろんなエリアありますよね。どこからやるとか決まっているんですか？", at: 0, src: "上司FB（初期登録）" },
 ];
 let checks = [];
-function loadChecks() { try { const v = JSON.parse(localStorage.getItem(FB_KEY) || "null"); checks = Array.isArray(v) ? v : FB_SEED.map(x => ({ ...x, at: Date.now() })); } catch (_) { checks = FB_SEED.map(x => ({ ...x, at: Date.now() })); } if (!localStorage.getItem(FB_KEY)) saveChecks(); }
-function saveChecks() { try { localStorage.setItem(FB_KEY, JSON.stringify(checks.slice(0, 12))); } catch (_) {} renderChecks(); }
+function loadChecks() { try { const v = JSON.parse(localStorage.getItem(uk(FB_KEY)) || "null"); checks = Array.isArray(v) ? v : FB_SEED.map(x => ({ ...x, at: Date.now() })); } catch (_) { checks = FB_SEED.map(x => ({ ...x, at: Date.now() })); } if (!localStorage.getItem(uk(FB_KEY))) saveChecks(); }
+function saveChecks() { try { localStorage.setItem(uk(FB_KEY), JSON.stringify(checks.slice(0, 12))); } catch (_) {} renderChecks(); }
 function checksForApi() { return checks.map(c => ({ key: c.key, title: c.title, check: c.check, example: c.example })); }
 function renderChecks() {
   $("fb-state").textContent = "観点 " + checks.length + "件"; $("fb-cnt").textContent = checks.length ? String(checks.length) : "";
@@ -554,11 +589,28 @@ $("fb-add").addEventListener("click", async () => {
 });
 loadChecks(); renderChecks();
 
-/* ---------- スコア履歴とダッシュボード（このブラウザに保存） ---------- */
+/* ---------- スコア履歴とダッシュボード（メンバー別・サーバー保存＋この端末にキャッシュ） ---------- */
 const HIST_KEY = "ropure-history-v1";
 const AXES = [["counterpart", "相手の把握"], ["widen", "広げる"], ["classify", "深掘る"], ["rephrase", "言い直し"], ["converge", "狭める"], ["roi", "検算"], ["numbers", "数字"]];
-function loadHistory() { try { history = JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); if (!Array.isArray(history)) history = []; } catch (_) { history = []; } }
-function saveHistory() { try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-200))); } catch (_) {} }
+let team = null, allRows = null, dashScope = "me", teamFocus = "all", teamPeriod = "month";
+function loadHistory() { try { history = JSON.parse(localStorage.getItem(uk(HIST_KEY)) || "[]"); if (!Array.isArray(history)) history = []; } catch (_) { history = []; } }
+function saveHistory() { try { localStorage.setItem(uk(HIST_KEY), JSON.stringify(history.slice(-300))); } catch (_) {} }
+async function syncHistory() {
+  if (!user) return;
+  try {
+    const j = await api("history", { action: "list" });
+    shared = !!j.shared;
+    if (j.shared) {
+      // サーバーが正。まだ送れていないローカル分（pending）は再送
+      const pending = history.filter(e => e.pending);
+      history = (j.mine || []).slice().sort((x, y) => x.at - y.at);
+      for (const e of pending) { try { const r = await api("history", { action: "add", entry: { ...e, pending: undefined } }); e.pending = false; e.id = r.id; history.push(e); } catch (_) { history.push(e); } }
+      history.sort((x, y) => x.at - y.at); saveHistory();
+      team = j.team || null; allRows = j.all || null;
+    }
+    $("dash-clear").hidden = shared;
+  } catch (e) { console.warn("成績の同期に失敗", e); }
+}
 function numbersScore() {
   // 暗算チェックの正答率と問3の暗算から。チェックが無ければ null
   const n = quizzes.length, c = quizzes.filter(q => q.ok).length;
@@ -569,58 +621,77 @@ function numbersScore() {
   const r = parts.reduce((a, b) => a + b, 0) / parts.length;
   return { score: Math.max(1, Math.round(r * 4) + 1), why: (n ? `暗算チェック ${c}/${n} 正解` : "") + (guess ? (n ? "／" : "") + "問3の暗算 " + [guess.okInvest, guess.okWins, guess.okRecover, guess.ok].filter(Boolean).length + "/4" : "") };
 }
+
+function avgScores(list) { const out = {}; AXES.forEach(([k]) => { const v = list.map(e => e.scores[k] && e.scores[k].score).filter(x => x); out[k] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }); return out; }
+
+function polar(cx, cy, r, i, n) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+
+function renderAxList(ent) {
+  const avg = avgScores(history); const box = $("res-axes"); box.textContent = "";
+  const weakK = AXES.map(([k]) => k).filter(k => avg[k] !== null).sort((a, b) => avg[a] - avg[b])[0];
+  AXES.forEach(([k, label]) => { const s = ent.scores[k]; const d = document.createElement("div"); if (k === weakK) d.className = "weak"; const l = document.createElement("span"); l.textContent = label + (k === weakK ? "（弱点）" : ""); const v = document.createElement("span"); const b = document.createElement("b"); b.textContent = s ? s.score : "—"; b.style.color = s && s.score <= 2 ? "var(--bad)" : s && s.score >= 5 ? "#059669" : ""; v.appendChild(b); const a = document.createElement("span"); a.className = "avg"; a.textContent = " / " + (avg[k] !== null ? avg[k].toFixed(1) : "—"); v.appendChild(a); d.appendChild(l); d.appendChild(v); d.title = s ? s.why : ""; box.appendChild(d); });
+}
+
+function drawRadarInto(svg, latest, avg) {
+  const n = AXES.length, cx = 160, cy = 150, R = 100; let h = "";
+  for (let g = 1; g <= 5; g++) { const pts = AXES.map((_, i) => polar(cx, cy, R * g / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); h += `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="${g === 5 ? 1.2 : .6}"/>`; }
+  AXES.forEach(([k, label], i) => { const [x, y] = polar(cx, cy, R, i, n); const [lx, ly] = polar(cx, cy, R + 22, i, n); h += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="11" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">${label}</text>`; });
+  const poly = (sc, fill, stroke, op, dash) => { const pts = AXES.map(([k], i) => polar(cx, cy, R * ((sc[k] && (sc[k].score ?? sc[k])) || 0) / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); return `<polygon points="${pts}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${dash ? 1.5 : 2.2}"${dash ? ' stroke-dasharray="5 4"' : ""}/>`; };
+  if (avg) h += poly(avg, "none", "#6B7280", 0, true);
+  if (latest) h += poly(latest.scores, "#05AABA", "#1A3A5C", .28) + AXES.map(([k], i) => { const s = latest.scores[k] ? latest.scores[k].score : 0; const [x, y] = polar(cx, cy, R * s / 5, i, n); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#05AABA"/>`; }).join("");
+  svg.innerHTML = h;
+}
+
+function donut(label, score, why, weak) {
+  const r = 34, c = 2 * Math.PI * r, p = score ? score / 5 : 0;
+  return `<div class="donut${weak ? " weak" : ""}" title="${(why || "").replace(/"/g, "&quot;")}"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="${r}" fill="none" stroke="#E2E8F0" stroke-width="10"/><circle cx="42" cy="42" r="${r}" fill="none" stroke="${weak ? "#EF4444" : "#05AABA"}" stroke-width="10" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" class="dv">${score ? score : "—"}</text></svg><span class="dl">${label}</span>${why ? `<span class="dw">${why}</span>` : ""}</div>`;
+}
+
+function coachSay(text) { const b = $("coach-say"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. KOHEI"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
+
+function gofastDashSay(text) { const b = $("dash-gofast"); b.textContent = ""; const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = "Mr. Go fast ／ 量"; b.appendChild(nm); b.appendChild(document.createTextNode(text)); }
+
 function recordHistory(r) {
   if (!r.scores) return null;
   const sc = { ...r.scores }; const ns = numbersScore(); if (ns) sc.numbers = ns;
   const keys = AXES.map(a => a[0]).filter(k => sc[k]);
   const total = keys.reduce((s, k) => s + sc[k].score, 0) / keys.length;
   const e = { at: Date.now(), company: persona.company, role: persona.role, mode, correct: !!r.correct, answer: r.answer, picked, scores: sc, custom: r.custom || null, tpl: persona.tpl || null, style: persona.style || "", quiz: quizzes.map(q => ({ kind: q.kind, ok: q.ok })), total: Math.round(total * 10) / 10, next: r.nextAction || "", feedback: String(r.feedback || "").slice(0, 600), sec: Math.round((Date.now() - startedAt) / 1000) };
-  history.push(e); saveHistory(); return e;
+  history.push(e); saveHistory();
+  if (shared) api("history", { action: "add", entry: e }).then(j => { e.id = j.id; saveHistory(); syncHistory(); }).catch(() => { e.pending = true; saveHistory(); });
+  return e;
 }
-function avgScores(list) { const out = {}; AXES.forEach(([k]) => { const v = list.map(e => e.scores[k] && e.scores[k].score).filter(x => x); out[k] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }); return out; }
-function polar(cx, cy, r, i, n) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
-function drawRadar(latest, avg) { drawRadarInto($("radar"), latest, avg); }
-function renderAxList(ent) {
-  const avg = avgScores(history); const box = $("res-axes"); box.textContent = "";
-  const weakK = AXES.map(([k]) => k).filter(k => avg[k] !== null).sort((a, b) => avg[a] - avg[b])[0];
-  AXES.forEach(([k, label]) => { const s = ent.scores[k]; const d = document.createElement("div"); if (k === weakK) d.className = "weak"; const l = document.createElement("span"); l.textContent = label + (k === weakK ? "（弱点）" : ""); const v = document.createElement("span"); const b = document.createElement("b"); b.textContent = s ? s.score : "—"; b.style.color = s && s.score <= 2 ? "var(--bad)" : s && s.score >= 5 ? "#059669" : ""; v.appendChild(b); const a = document.createElement("span"); a.className = "avg"; a.textContent = " / " + (avg[k] !== null ? avg[k].toFixed(1) : "—"); v.appendChild(a); d.appendChild(l); d.appendChild(v); d.title = s ? s.why : ""; box.appendChild(d); });
-}
-function drawRadarInto(svg, latest, avg) {
-  const n = AXES.length, cx = 160, cy = 150, R = 100; let h = "";
-  for (let g = 1; g <= 5; g++) { const pts = AXES.map((_, i) => polar(cx, cy, R * g / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); h += `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="${g === 5 ? 1.2 : .6}"/>`; }
-  AXES.forEach(([k, label], i) => { const [x, y] = polar(cx, cy, R, i, n); const [lx, ly] = polar(cx, cy, R + 22, i, n); h += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="11" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">${label}</text>`; });
-  const poly = (sc, fill, stroke, op) => { const pts = AXES.map(([k], i) => polar(cx, cy, R * ((sc[k] && (sc[k].score ?? sc[k])) || 0) / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); return `<polygon points="${pts}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="1.5"/>`; };
-  if (avg) h += poly(avg, "#6B7280", "#6B7280", .12);
-  if (latest) h += poly(latest.scores, "#05AABA", "#05AABA", .3) + AXES.map(([k], i) => { const s = latest.scores[k] ? latest.scores[k].score : 0; const [x, y] = polar(cx, cy, R * s / 5, i, n); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#05AABA"/>`; }).join("");
-  svg.innerHTML = h;
+/* 週ごとの平均（直近8週） */
+function weekKey(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }
+function weekly(list, n = 8) {
+  const m = new Map(); list.forEach(e => { const k = weekKey(e.at); (m.get(k) || m.set(k, []).get(k)).push(e.total); });
+  const keys = [...m.keys()].sort((a, b) => a - b).slice(-n);
+  return keys.map(k => { const v = m.get(k); const d = new Date(k); return { k, label: `${d.getMonth() + 1}/${d.getDate()}週`, avg: v.reduce((a, b) => a + b, 0) / v.length, n: v.length }; });
 }
 function drawTrend(list) {
-  const svg = $("trend"); const L = list.slice(-20); const W = 320, H = 180, px = 28, py = 14; let h = "";
-  for (let g = 1; g <= 5; g++) { const y = py + (H - 2 * py) * (1 - (g - 1) / 4); h += `<line x1="${px}" y1="${y.toFixed(1)}" x2="${W - 8}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${px - 6}" y="${y.toFixed(1)}" font-size="10" fill="#6B7280" text-anchor="end" dominant-baseline="middle">${g}</text>`; }
+  const svg = $("trend"); const W = 520, H = 200, px = 34, py = 16, pb = 30; const L = weekly(list); let h = "";
+  for (let g = 0; g <= 5; g++) { const y = py + (H - py - pb) * (1 - g / 5); h += `<line x1="${px}" y1="${y.toFixed(1)}" x2="${W - 12}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".8"/><text x="${px - 8}" y="${y.toFixed(1)}" font-size="10" fill="#6B7280" text-anchor="end" dominant-baseline="middle">${g}</text>`; }
   if (!L.length) { svg.innerHTML = h; return; }
-  const xs = i => L.length === 1 ? (px + W - 8) / 2 : px + (W - 8 - px) * i / (L.length - 1);
-  const ys = v => py + (H - 2 * py) * (1 - (v - 1) / 4);
-  h += `<polyline points="${L.map((e, i) => xs(i).toFixed(1) + "," + ys(e.total).toFixed(1)).join(" ")}" fill="none" stroke="#05AABA" stroke-width="2"/>`;
-  L.forEach((e, i) => { h += `<circle cx="${xs(i).toFixed(1)}" cy="${ys(e.total).toFixed(1)}" r="3.5" fill="${e.correct ? "#05AABA" : "#EF4444"}"><title>${new Date(e.at).toLocaleDateString("ja-JP")} ${e.company} 総合${e.total}（判定${e.correct ? "○" : "×"}）</title></circle>`; });
+  const xs = i => L.length === 1 ? (px + W - 12) / 2 : px + (W - 12 - px) * i / (L.length - 1);
+  const ys = v => py + (H - py - pb) * (1 - v / 5);
+  const line = L.map((e, i) => xs(i).toFixed(1) + "," + ys(e.avg).toFixed(1)).join(" ");
+  h += `<polygon points="${px},${H - pb} ${line} ${xs(L.length - 1).toFixed(1)},${H - pb}" fill="rgba(5,170,186,.10)"/><polyline points="${line}" fill="none" stroke="#05AABA" stroke-width="2.5"/>`;
+  L.forEach((e, i) => { h += `<circle cx="${xs(i).toFixed(1)}" cy="${ys(e.avg).toFixed(1)}" r="4.5" fill="#1A3A5C" stroke="#fff" stroke-width="2"><title>${e.label}：平均 ${e.avg.toFixed(1)}（${e.n}本）</title></circle><text x="${xs(i).toFixed(1)}" y="${H - 10}" font-size="10" fill="#6B7280" text-anchor="middle">${e.label}</text>`; });
   svg.innerHTML = h;
 }
-function donut(label, score, why, weak) {
-  const r = 34, c = 2 * Math.PI * r, p = score ? score / 5 : 0;
-  return `<div class="donut${weak ? " weak" : ""}" title="${(why || "").replace(/"/g, "&quot;")}"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="${r}" fill="none" stroke="#E2E8F0" stroke-width="10"/><circle cx="42" cy="42" r="${r}" fill="none" stroke="${weak ? "#EF4444" : "#05AABA"}" stroke-width="10" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" class="dv">${score ? score : "—"}</text></svg><span class="dl">${label}</span>${why ? `<span class="dw">${why}</span>` : ""}</div>`;
-}
-function coachSay(text) { const b = $("coach-say"); b.textContent = ""; const n = document.createElement("span"); n.className = "nm"; n.textContent = "Mr. KOHEI"; b.appendChild(n); b.appendChild(document.createTextNode(text)); }
+function drawRadar(latest, avg) { drawRadarInto($("radar"), latest, avg); }
 function renderHistory() {
   const t = $("hist-table"); t.innerHTML = `<tr><th>日時</th><th>相手</th><th>方式</th><th>4分類</th><th>総合</th><th>次の一手</th></tr>` + (history.length ? history.slice().reverse().map(e => `<tr><td class="n">${new Date(e.at).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td><td>${e.company}<span class="why">（${e.role || ""}）</span></td><td>${e.mode === "chat" ? "チャット" : "音声"}</td><td class="n">${e.correct ? "○" : "×"}</td><td class="n"><b>${e.total.toFixed(1)}</b></td><td class="why">${e.next || ""}</td></tr>`).join("") : `<tr><td colspan="6" class="why">まだありません。</td></tr>`);
 }
-function gofastVolume() {
+function gofastVolume(list, who = "") {
   const now = Date.now(), day = 86400000;
-  const n = history.length, today = history.filter(e => now - e.at < day).length, week = history.filter(e => now - e.at < 7 * day).length, month = history.filter(e => now - e.at < 30 * day).length;
-  const days = new Set(history.map(e => new Date(e.at).toDateString())).size;
-  const last = n ? Math.floor((now - history[n - 1].at) / day) : null;
-  const avgMin = n ? Math.round(history.reduce((a, e) => a + (e.sec || 0), 0) / n / 60) : 0;
+  const n = list.length, today = list.filter(e => now - e.at < day).length, week = list.filter(e => now - e.at < 7 * day).length;
+  const days = new Set(list.map(e => new Date(e.at).toDateString())).size;
+  const last = n ? Math.floor((now - list[n - 1].at) / day) : null;
+  const avgMin = n ? Math.round(list.reduce((a, e) => a + (e.sec || 0), 0) / n / 60) : 0;
   const L = [];
-  if (!n) return "記録ゼロ。話にならない。今日中に3本。量をやらない人間に質は来ない。";
-  L.push(`今日${today}本、今週${week}本、累計${n}本（${days}日）。`);
+  if (!n) return `${who}記録ゼロ。話にならない。今日中に3本。量をやらない人間に質は来ない。`;
+  L.push(`${who}今日${today}本、今週${week}本、累計${n}本（${days}日）。`);
   if (today === 0) L.push("今日はまだゼロ。これを読んでいる暇があったら1本やれ。");
   else if (today < 3) L.push(`今日${today}本で終わる気か。最低3本。`);
   else L.push(`今日${today}本。やっと普通。`);
@@ -629,26 +700,52 @@ function gofastVolume() {
   else L.push(`週${week}本。量は合格。次は1本あたりの時間を短く、同じ結論に速く辿り着け。`);
   if (last !== null && last >= 2) L.push(`最後にやったのは${last}日前。空けた分だけ戻る。`);
   if (avgMin && avgMin > 20) L.push(`1本平均${avgMin}分。長い。15分で全体像を掴めるようにしろ。`);
-  const correct = history.filter(e => e.correct).length;
+  const correct = list.filter(e => e.correct).length;
   if (n >= 5 && correct / n < 0.5) L.push(`4分類の正解率${Math.round(correct / n * 100)}%。考えてから打つな、打ってから考えろ。数をこなせば判定順序が体に入る。`);
   return L.join("");
 }
-function gofastDashSay(text) { const b = $("dash-gofast"); b.textContent = ""; const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = "Mr. Go fast ／ 量"; b.appendChild(nm); b.appendChild(document.createTextNode(text)); }
+function teamAvgScores() { return team && team.teamAxes && Object.values(team.teamAxes).some(v => v) ? team.teamAxes : null; }
+function renderRanking() {
+  const box = $("ranking"); box.textContent = "";
+  const now = Date.now(), day = 86400000;
+  let rows;
+  if (team && team.members && team.members.length) rows = team.members.map(m => ({ ...m, me: user && m.email === user.email }));
+  else rows = [{ email: user ? user.email : "", short: user ? user.short || user.name : "自分", me: true, month: history.filter(e => now - e.at < 30 * day).length, week: history.filter(e => now - e.at < 7 * day).length, count: history.length }];
+  rows.sort((a, b) => b.month - a.month || b.count - a.count);
+  const max = Math.max(1, ...rows.map(r => r.month));
+  rows.forEach((r, i) => {
+    const d = document.createElement("div"); d.className = "rank" + (r.me ? " me" : "");
+    const no = document.createElement("div"); no.className = "no" + (r.month === 0 ? " low" : i >= 2 ? " mid" : ""); no.textContent = i + 1;
+    const mid = document.createElement("div"); mid.style.flex = "1";
+    const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = r.short || r.name; if (r.me) { const y = document.createElement("span"); y.className = "you"; y.textContent = "あなた"; nm.appendChild(y); }
+    const bar = document.createElement("div"); bar.className = "bar"; const bi = document.createElement("i"); bi.style.width = (r.month / max * 100) + "%"; if (r.month === 0) bi.style.background = "#EF4444"; bar.appendChild(bi);
+    const sub = document.createElement("div"); sub.className = "sub"; sub.textContent = `今週 ${r.week}本 ／ 累計 ${r.count}本`;
+    mid.append(nm, bar, sub);
+    const c = document.createElement("div"); c.className = "cnt"; c.textContent = r.month; const sm = document.createElement("small"); sm.textContent = "本"; c.appendChild(sm);
+    d.append(no, mid, c); box.appendChild(d);
+  });
+  if (team && team.members) { const f = document.createElement("p"); f.className = "hint"; f.textContent = `チーム合計（今月）${rows.reduce((a, r) => a + r.month, 0)}本`; box.appendChild(f); }
+  if (!shared) { const f = document.createElement("p"); f.className = "hint"; f.textContent = "※ サーバー保存が未設定のため、この端末の記録だけで表示しています"; box.appendChild(f); }
+}
 function renderDash() {
-  gofastDashSay(gofastVolume());
   const n = history.length;
-  if ($("dash-state")) $("dash-state").textContent = n ? `${n}回分の記録` : "まだロープレがありません";
-  if (!n) { $("kpis").innerHTML = ""; $("axes").innerHTML = ""; $("donuts").innerHTML = ""; $("donuts-fb").innerHTML = ""; $("fb-none").hidden = false; drawRadar(null, null); drawTrend([]); $("hist").textContent = ""; coachSay("まだロープレの記録がありません。1回やると、ここで所見を話します。"); return; }
+  $("band-av").textContent = (user ? (user.short || user.name) : "？").slice(0, 1);
+  $("band-title").textContent = "個人ダッシュボード — " + (user ? user.name : "");
+  $("band-sub").textContent = (user ? user.email : "") + ` ｜ 累計 ${n}本` + (n ? ` ｜ 最終 ${new Date(history[n - 1].at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : "");
+  renderRanking();
+  gofastDashSay(gofastVolume(history));
+  const tavg = teamAvgScores();
+  if (!n) { $("kpis").innerHTML = ""; $("axes").innerHTML = ""; $("donuts-fb").innerHTML = ""; $("fb-none").hidden = false; $("radar-total").textContent = ""; drawRadar(null, tavg); drawTrend([]); $("hist").textContent = ""; coachSay("まだロープレの記録がありません。1回やると、ここで所見を話します。"); return; }
   const latest = history[n - 1], avg = avgScores(history), prev = history.slice(0, -1);
   const avgTotal = history.reduce((s, e) => s + e.total, 0) / n;
   const correct = history.filter(e => e.correct).length;
   const kpi = (k, v, sub) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${sub ? `<small> ${sub}</small>` : ""}</div></div>`;
   $("kpis").innerHTML = kpi("直近の総合", latest.total.toFixed(1), "/5") + kpi("平均", avgTotal.toFixed(1), "/5") + kpi("4分類の正解率", Math.round(correct / n * 100) + "%", `${correct}/${n}`) + kpi("ロープレ回数", n, "回");
-  drawRadar(latest, prev.length ? avgScores(prev) : null); drawTrend(history);
-  $("hist").textContent = "● 緑＝4分類が正解、赤＝不正解。点にカーソルを合わせると会社名が出ます";
+  $("radar-total").textContent = `総合 ${latest.total.toFixed(1)} / 5.0`;
+  drawRadar(latest, tavg || (prev.length ? avgScores(prev) : null)); drawTrend(history);
+  $("hist").textContent = "週ごとの平均総合。点にカーソルを合わせると本数が出ます";
   const weakK = AXES.map(([k]) => k).filter(k => avg[k] !== null).sort((a, b) => avg[a] - avg[b])[0];
-  $("axes").innerHTML = `<tr><th>軸</th><th>直近</th><th style="width:30%">平均</th><th>直近の根拠</th></tr>` + AXES.map(([k, label]) => { const s = latest.scores[k]; const a = avg[k]; return `<tr class="${k === weakK ? "weak" : ""}"><td>${label}${k === weakK ? "（弱点）" : ""}</td><td class="n">${s ? s.score : "—"}</td><td><div class="bar"><i style="width:${a ? a / 5 * 100 : 0}%"></i></div><span class="why">${a ? a.toFixed(1) : "—"}</span></td><td class="why">${s ? s.why : "記録なし"}</td></tr>`; }).join("");
-  $("donuts").innerHTML = AXES.map(([k, label]) => { const s = latest.scores[k]; return donut(label, s ? s.score : 0, s ? s.why : "", k === weakK); }).join("");
+  $("axes").innerHTML = `<tr><th>軸</th><th>直近</th><th style="width:30%">平均</th><th>チーム</th><th>直近の根拠</th></tr>` + AXES.map(([k, label]) => { const s = latest.scores[k]; const a = avg[k]; const t = tavg ? tavg[k] : null; return `<tr class="${k === weakK ? "weak" : ""}"><td>${label}${k === weakK ? "（弱点）" : ""}</td><td class="n">${s ? s.score : "—"}</td><td><div class="bar"><i style="width:${a ? a / 5 * 100 : 0}%"></i></div><span class="why">${a ? a.toFixed(1) : "—"}</span></td><td class="n why">${t ? t.toFixed(1) : "—"}</td><td class="why">${s ? s.why : "記録なし"}</td></tr>`; }).join("");
   const cu = latest.custom ? Object.values(latest.custom) : [];
   const cuWeak = cu.length ? Math.min(...cu.map(c => c.score)) : 0;
   $("donuts-fb").innerHTML = cu.map(c => donut(c.title, c.score, c.why, c.score === cuWeak && c.score <= 3)).join("");
@@ -656,21 +753,93 @@ function renderDash() {
   const weakLabel = (AXES.find(a => a[0] === weakK) || [])[1] || "";
   const trend = prev.length ? (latest.total - prev[prev.length - 1].total) : 0;
   const fbWeak = cu.filter(c => c.score <= 2);
+  const teamGap = tavg && weakK && tavg[weakK] ? (avg[weakK] - tavg[weakK]) : null;
   coachSay([
     `直近は ${latest.company} との商談で、総合 ${latest.total.toFixed(1)}／5${prev.length ? `（前回比 ${trend >= 0 ? "+" : ""}${trend.toFixed(1)}）` : ""}。4分類は${latest.correct ? "正解" : "不正解"}でした。`,
-    weakLabel ? `平均で一番低いのは「${weakLabel}」（${avg[weakK].toFixed(1)}）。${latest.scores[weakK] ? latest.scores[weakK].why : ""}` : "",
+    weakLabel ? `平均で一番低いのは「${weakLabel}」（${avg[weakK].toFixed(1)}${teamGap !== null ? `、チーム平均との差 ${teamGap >= 0 ? "+" : ""}${teamGap.toFixed(1)}` : ""}）。${latest.scores[weakK] ? latest.scores[weakK].why : ""}` : "",
     fbWeak.length ? `上司のFBの観点では「${fbWeak.map(c => c.title).join("」「")}」ができていません。${fbWeak[0].why}` : (cu.length ? "上司のFBの観点は、おおむね守れています。" : ""),
     latest.next ? `次の一手：${latest.next}` : "",
   ].filter(Boolean).join("\n"));
 }
+/* ---------- チーム（管理者） ---------- */
+function setDashScope(sc) {
+  dashScope = sc;
+  document.querySelectorAll("#dash-seg button").forEach(b => b.classList.toggle("on", b.dataset.scope === sc));
+  $("dash").hidden = sc === "team"; $("team").hidden = sc !== "team";
+  if (sc === "team") renderTeam();
+}
+document.querySelectorAll("#dash-seg button").forEach(b => b.addEventListener("click", () => setDashScope(b.dataset.scope)));
+document.querySelectorAll("#team-period button").forEach(b => b.addEventListener("click", () => { teamPeriod = b.dataset.p; document.querySelectorAll("#team-period button").forEach(x => x.classList.toggle("on", x === b)); renderTeam(); }));
+function periodFilter(e) { const age = Date.now() - e.at, day = 86400000; return teamPeriod === "week" ? age < 7 * day : teamPeriod === "month" ? age < 30 * day : true; }
+function renderTeam() {
+  if (!user || !user.admin) return;
+  const mem = (team && team.members) || [];
+  const seg = $("team-seg"); seg.textContent = "";
+  [{ email: "all", short: "チーム全体" }, ...mem].forEach(m => { const b = document.createElement("button"); b.type = "button"; b.textContent = m.short || m.name; b.classList.toggle("on", teamFocus === m.email); b.addEventListener("click", () => { teamFocus = m.email; renderTeam(); }); seg.appendChild(b); });
+  const rows = (allRows || []).filter(r => periodFilter(r.entry));
+  const focusRows = teamFocus === "all" ? rows : rows.filter(r => r.email === teamFocus);
+  const list = focusRows.map(r => r.entry).sort((a, b) => a.at - b.at);
+  const pl = { week: "今週", month: "今月", all: "全期間" }[teamPeriod];
+  $("team-sub").textContent = `${pl} ｜ ${teamFocus === "all" ? "チーム全体" : (mem.find(m => m.email === teamFocus) || {}).name || ""} ｜ ${list.length}本` + (shared ? "" : "（サーバー保存が未設定）");
+  // KPI
+  const kpi = (k, v, sub) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${sub ? `<small> ${sub}</small>` : ""}</div></div>`;
+  const avgT = list.length ? list.reduce((a, e) => a + e.total, 0) / list.length : 0;
+  const correct = list.filter(e => e.correct).length;
+  const active = new Set(focusRows.map(r => r.email)).size;
+  const avgMin = list.length ? Math.round(list.reduce((a, e) => a + (e.sec || 0), 0) / list.length / 60) : 0;
+  $("team-kpis").innerHTML = kpi(`${pl}の本数`, list.length, "本") + kpi("平均 総合", list.length ? avgT.toFixed(1) : "—", "/5") + kpi("4分類の正解率", list.length ? Math.round(correct / list.length * 100) + "%" : "—", list.length ? `${correct}/${list.length}` : "") + kpi(teamFocus === "all" ? "実施した人" : "1本の平均時間", teamFocus === "all" ? active : avgMin, teamFocus === "all" ? `/${mem.length}人` : "分");
+  // メンバー比較
+  const per = mem.map(m => { const L = rows.filter(r => r.email === m.email).map(r => r.entry); const a = avgScores(L); const ks = AXES.map(x => x[0]).filter(k => a[k] !== null); const weak = ks.sort((x, y) => a[x] - a[y])[0]; return { m, L, a, n: L.length, avg: L.length ? L.reduce((s, e) => s + e.total, 0) / L.length : null, correct: L.filter(e => e.correct).length, weak, last: L.length ? L[L.length - 1].at : 0 }; });
+  const lab = k => (AXES.find(a => a[0] === k) || [])[1] || "—";
+  $("team-table").innerHTML = `<tr><th>メンバー</th><th>本数</th><th>平均 総合</th><th>4分類 正解率</th><th>弱点の軸</th><th>最終実施</th></tr>` + per.map(p => `<tr class="${p.n === 0 ? "weak" : ""}"><td><b>${p.m.name}</b>${p.m.admin ? ' <span class="why">管理者</span>' : ""}</td><td class="n">${p.n}</td><td class="n">${p.avg !== null ? p.avg.toFixed(1) : "—"}</td><td class="n">${p.n ? Math.round(p.correct / p.n * 100) + "%" : "—"}</td><td>${p.weak ? lab(p.weak) + `（${p.a[p.weak].toFixed(1)}）` : "—"}</td><td class="why">${p.last ? new Date(p.last).toLocaleDateString("ja-JP") : "まだなし"}</td></tr>`).join("");
+  // ヒートマップ
+  const col = v => v === null ? "" : v >= 4 ? "background:#C7F0E6" : v >= 3 ? "background:#E0F5EF" : v >= 2 ? "background:#FEF3C7" : "background:#FEE2E2";
+  const ta = avgScores(rows.map(r => r.entry));
+  $("team-heat").innerHTML = `<tr><th>軸</th>${mem.map(m => `<th>${m.short || m.name}</th>`).join("")}<th>チーム</th></tr>` + AXES.map(([k, label]) => `<tr><td>${label}</td>${per.map(p => `<td class="h" style="${col(p.a[k])}">${p.a[k] !== null ? p.a[k].toFixed(1) : "—"}</td>`).join("")}<td class="h">${ta[k] !== null ? ta[k].toFixed(1) : "—"}</td></tr>`).join("");
+  // 日別の本数（直近14日・積み上げ）
+  const colors = ["#1A3A5C", "#05AABA", "#059669", "#F59E0B", "#8B5CF6", "#EF4444"];
+  const days = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); days.push(d.getTime()); }
+  const W = 320, H = 180, px = 24, py = 10, pb = 22, bw = (W - px - 8) / 14;
+  const src = (allRows || []).filter(r => teamFocus === "all" || r.email === teamFocus);
+  const counts = days.map(d0 => mem.map(m => src.filter(r => r.email === m.email && r.entry.at >= d0 && r.entry.at < d0 + 86400000).length));
+  const maxD = Math.max(1, ...counts.map(c => c.reduce((a, b) => a + b, 0)));
+  let h = "";
+  for (let g = 0; g <= maxD; g += Math.max(1, Math.ceil(maxD / 4))) { const y = py + (H - py - pb) * (1 - g / maxD); h += `<line x1="${px}" y1="${y.toFixed(1)}" x2="${W - 8}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${px - 5}" y="${y.toFixed(1)}" font-size="9" fill="#6B7280" text-anchor="end" dominant-baseline="middle">${g}</text>`; }
+  days.forEach((d0, i) => { let acc = 0; counts[i].forEach((c, mi) => { if (!c) return; const hh = (H - py - pb) * c / maxD; const y = py + (H - py - pb) * (1 - (acc + c) / maxD); h += `<rect x="${(px + i * bw + 2).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="${hh.toFixed(1)}" fill="${colors[mi % colors.length]}" rx="2"><title>${mem[mi].short}：${c}本</title></rect>`; acc += c; }); const d = new Date(d0); if (i % 2 === 1) h += `<text x="${(px + i * bw + bw / 2).toFixed(1)}" y="${H - 6}" font-size="9" fill="#6B7280" text-anchor="middle">${d.getMonth() + 1}/${d.getDate()}</text>`; });
+  $("team-days").innerHTML = h;
+  $("team-days-legend").innerHTML = mem.map((m, i) => `<span><i style="background:${colors[i % colors.length]}"></i>${m.short || m.name}</span>`).join("");
+  // Mr. KOHEI（質）
+  const K = [];
+  if (!rows.length) K.push(`${pl}はまだ誰も記録がありません。`);
+  else {
+    const teamWeak = AXES.map(x => x[0]).filter(k => ta[k] !== null).sort((x, y) => ta[x] - ta[y]); const best = teamWeak[teamWeak.length - 1];
+    if (teamWeak.length) K.push(`チームで一番弱いのは「${lab(teamWeak[0])}」（${ta[teamWeak[0]].toFixed(1)}）、一番できているのは「${lab(best)}」（${ta[best].toFixed(1)}）。`);
+    const strongest = AXES.map(([k, label]) => { const b = per.filter(p => p.a[k] !== null && p.n >= 2).sort((x, y) => y.a[k] - x.a[k])[0]; return b && b.a[k] >= 3.5 ? `${label}は${b.m.short}（${b.a[k].toFixed(1)}）` : null; }).filter(Boolean);
+    if (strongest.length) K.push(`うまい人：${strongest.slice(0, 3).join("、")}。朝会で1本見せ合うといい。`);
+    per.filter(p => p.weak && p.n >= 2 && p.a[p.weak] <= 2.5).forEach(p => K.push(`${p.m.short}は「${lab(p.weak)}」が${p.a[p.weak].toFixed(1)}。ここを次の3本のテーマに。`));
+  }
+  const kb = $("team-kohei"); kb.textContent = ""; const kn = document.createElement("span"); kn.className = "nm"; kn.textContent = "Mr. KOHEI ／ チームの質"; kb.appendChild(kn); kb.appendChild(document.createTextNode(K.join("")));
+  // Mr. Go fast（量）
+  const G = [];
+  const wk = mem.map(m => ({ m, w: (allRows || []).filter(r => r.email === m.email && Date.now() - r.entry.at < 7 * 86400000).length }));
+  G.push(`今週のチーム合計 ${wk.reduce((a, x) => a + x.w, 0)}本。${wk.map(x => `${x.m.short}${x.w}`).join("、")}。`);
+  wk.filter(x => x.w === 0).forEach(x => G.push(`${x.m.short}はゼロ。今日中に2本。`));
+  wk.filter(x => x.w > 0 && x.w < 5).forEach(x => G.push(`${x.m.short}は週${x.w}で止まっている、下限の5に届かせろ。`));
+  const slow = per.filter(p => p.n).map(p => ({ p, min: Math.round(p.L.reduce((a, e) => a + (e.sec || 0), 0) / p.n / 60) })).filter(x => x.min > 20);
+  if (slow.length) G.push(`平均時間：${slow.map(x => `${x.p.m.short}${x.min}分`).join("・")}、長い。`);
+  if (list.length) G.push(`4分類の正解率は${Math.round(correct / list.length * 100)}%。週20本を超えてから質を語れ。`);
+  const gb = $("team-gofast"); gb.textContent = ""; const gn = document.createElement("span"); gn.className = "nm"; gn.textContent = "Mr. Go fast ／ チームの量"; gb.appendChild(gn); gb.appendChild(document.createTextNode(G.join("")));
+  // メンバー管理
+  $("team-members").innerHTML = `<tr><th>名前</th><th>ID（メールアドレス）</th><th>権限</th><th>累計</th></tr>` + mem.map(m => `<tr><td><b>${m.name}</b></td><td class="why">${m.email}</td><td>${m.admin ? "管理者" : "メンバー"}</td><td class="n">${m.count}本</td></tr>`).join("");
+}
 $("dash-clear").addEventListener("click", () => { history = []; saveHistory(); renderDash(); });
-loadHistory(); renderDash(); loadTemplates(); renderTemplates();
+loadTemplates(); renderTemplates();
 
 /* ---------- 間違えた暗算チェック（このブラウザに貯める） ---------- */
 const MISS_KEY = "ropure-missed-quiz-v1";
 let missed = [];
-function loadMissed() { try { missed = JSON.parse(localStorage.getItem(MISS_KEY) || "[]"); if (!Array.isArray(missed)) missed = []; } catch (_) { missed = []; } }
-function saveMissed() { try { localStorage.setItem(MISS_KEY, JSON.stringify(missed.slice(-100))); } catch (_) {} renderMissed(); }
+function loadMissed() { try { missed = JSON.parse(localStorage.getItem(uk(MISS_KEY)) || "[]"); if (!Array.isArray(missed)) missed = []; } catch (_) { missed = []; } }
+function saveMissed() { try { localStorage.setItem(uk(MISS_KEY), JSON.stringify(missed.slice(-100))); } catch (_) {} renderMissed(); }
 function addMissed(q) {
   const same = missed.find(m => m.question === q.question);
   if (same) { same.miss++; same.mine = q.mine; same.at = Date.now(); }
@@ -704,8 +873,8 @@ function renderMissed() {
     const answer = () => {
       const v = Number(inp.value); if (inp.value.trim() === "" || !isFinite(v)) return;
       const ok = Math.abs(v - m.answer) <= Math.max(Math.abs(m.answer) * 0.02, 0.05);
-      if (ok) { missed = missed.filter(x => x !== m); try { localStorage.setItem(MISS_KEY, JSON.stringify(missed)); } catch (_) {} $("miss-state").textContent = "間違えた問題 " + missed.length + "件"; }
-      else { m.miss++; m.mine = v; m.at = Date.now(); try { localStorage.setItem(MISS_KEY, JSON.stringify(missed)); } catch (_) {} }
+      if (ok) { missed = missed.filter(x => x !== m); try { localStorage.setItem(uk(MISS_KEY), JSON.stringify(missed)); } catch (_) {} $("miss-state").textContent = "間違えた問題 " + missed.length + "件"; }
+      else { m.miss++; m.mine = v; m.at = Date.now(); try { localStorage.setItem(uk(MISS_KEY), JSON.stringify(missed)); } catch (_) {} }
       inp.disabled = true; btn.disabled = true; reveal(ok);
     };
     btn.addEventListener("click", answer); inp.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); answer(); } });
@@ -912,3 +1081,8 @@ $("grade").addEventListener("click", async () => {
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
 $("again").addEventListener("click", () => { $("record").hidden = true; $("playback").hidden = true; $("score-strip").hidden = true; step(1); lockStart(false); window.scrollTo(0, 0); });
+
+/* ---------- 起動 ---------- */
+loadUser();
+if (pw() && user) { hideLogin(); $("logout").hidden = false; renderUserChip(); api("me", { email: user.email }).then(j => { user = j.user; members = j.members || []; shared = !!j.shared; try { sessionStorage.setItem("user", JSON.stringify(user)); } catch (_) {} afterLogin(); }).catch(() => {}); }
+else showLogin();

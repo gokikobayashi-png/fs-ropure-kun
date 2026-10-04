@@ -210,6 +210,28 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .bk .kpi .v small{color:#CFEFF2}
 .bcard{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px}
 .bcard h3{font-size:13px;margin:0 0 8px;color:#1A3A5C;font-weight:700;text-align:center;letter-spacing:.04em}
+.bcard h3 .chip{font-weight:500;font-size:11px;background:#F7F9FC;border:1px solid #E2E8F0;border-radius:4px;padding:2px 8px;color:#6B7280;margin-left:6px;vertical-align:middle}
+.band{background:linear-gradient(90deg,#1A3A5C,#05AABA);color:#fff;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.band .av{width:38px;height:38px;border-radius:50%;background:#fff;color:#1A3A5C;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+.band .t{font-size:17px;font-weight:700}.band .s{font-size:12px;opacity:.9}.band .sp{flex:1}
+.seg{display:flex;gap:2px;background:rgba(255,255,255,.18);border-radius:999px;padding:3px}
+.seg button{font-family:var(--sans);border:0;background:transparent;color:#fff;font-size:12px;padding:5px 12px;border-radius:999px;cursor:pointer}
+.seg button.on{background:#fff;color:#1A3A5C;font-weight:700}
+.dgrid{display:grid;grid-template-columns:300px 1fr;gap:12px;align-items:start}
+@media (max-width:760px){.dgrid{grid-template-columns:1fr}}
+.dcol{display:grid;gap:12px}
+.rank{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid #E2E8F0;border-radius:6px}
+.rank.me{background:#E0F5EF}
+.rank .no{width:24px;text-align:center;font-size:17px;font-weight:700;color:#05AABA}.rank .no.low{color:#EF4444}.rank .no.mid{color:#6B7280}
+.rank .nm{font-size:13px;font-weight:700}.rank .nm .you{font-size:10px;background:#1A3A5C;color:#fff;padding:1px 5px;border-radius:3px;margin-left:5px}
+.rank .bar{height:6px;background:#E2E8F0;border-radius:3px;margin-top:5px}.rank .bar i{display:block;height:6px;background:#05AABA;border-radius:3px}
+.rank .sub{font-size:11px;color:#6B7280;margin:3px 0 0;padding:0;border:0}
+.rank .cnt{font-size:19px;font-weight:700;color:#1A3A5C;font-variant-numeric:tabular-nums}.rank .cnt small{font-size:11px;color:#6B7280;font-weight:400}
+.legend{display:flex;gap:14px;justify-content:center;font-size:11px;color:#6B7280;margin-top:4px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;vertical-align:middle;margin-right:4px;border-radius:2px}
+.legend i.me{background:rgba(5,170,186,.3);border:2px solid #1A3A5C;box-sizing:border-box}.legend i.team{height:0;border-top:2px dashed #6B7280;border-radius:0}
+#radar{max-width:380px;display:block;margin:0 auto}
+.heat td.h{text-align:center;font-weight:700;font-variant-numeric:tabular-nums;color:#1A3A5C}
 .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:680px){.bgrid{grid-template-columns:1fr}}
 .donuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
@@ -244,6 +266,12 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .lg-left{background:linear-gradient(160deg,#1E2761 0%,#1A3A5C 45%,#05AABA 100%);display:grid;place-items:center;padding:40px 24px;position:relative;color:#fff}
 .lg-card{background:#fff;color:var(--ink);border-radius:14px;padding:40px 36px 28px;width:100%;max-width:400px;display:grid;gap:14px;justify-items:center;box-shadow:0 12px 40px rgba(0,0,0,.18)}
 .lg-logo{display:block;margin-bottom:4px}
+.lg-wm{font-size:28px;font-weight:700;letter-spacing:.14em;color:#1A3A5C;margin:6px 0 0}
+.lg-wm span{font-size:18px;letter-spacing:.04em;margin-left:4px}
+.lg-links{display:flex;gap:28px;font-size:12px;color:#fff;opacity:.9;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.user-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
+.user-chip b{color:var(--ink)}
+.user-chip .adm{font-size:10px;background:#1A3A5C;color:#fff;padding:1px 6px;border-radius:3px}
 .lg-title{font-size:20px;font-weight:700}
 .lg-sub{font-size:12px;color:var(--ink-2);text-align:center;margin-top:-8px}
 .lg-field{display:flex;align-items:center;gap:8px;width:100%;background:#F1F5F9;border:1px solid var(--line);border-radius:8px;padding:0 10px;margin-top:10px}
@@ -254,6 +282,7 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .lg-btn{width:70%;margin-top:6px;background:var(--accent);color:#fff;border:0;border-radius:999px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans)}
 .lg-btn:hover{background:#1E2761}
 .lg-copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:12px;color:#E0F5EF}
+.lg-left>div{display:grid;justify-items:center;width:100%}
 .lg-right{background:#F7F9FC;padding:40px 32px;display:grid;gap:18px;align-content:start;justify-items:center}
 .lg-h2{font-size:22px;color:#1A3A5C;text-align:center;margin:0 0 6px;line-height:1.5}
 .pcard{width:100%;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05)}
@@ -414,8 +443,10 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
     <button type="button" data-view="history">履歴</button>
     <button type="button" data-view="settings">設定</button>
     <a href="https://claude.ai/artifact/8dihxDdxYEfwF3TWdHEyQv#e9c3d714-c83a" target="_blank" rel="noopener" class="ext">FS商談の考え方 ↗</a>
+    <a href="https://claude.ai/artifact/Q9vEioqV2KShG43YsAZZdB" target="_blank" rel="noopener" class="ext">営業暗算トレーニング ↗</a>
   </nav>
   <span class="sp"></span>
+  <span class="user-chip" id="user-chip" hidden></span>
   <button class="btn" id="logout" type="button" hidden>ログアウト</button>
 </header>
 
@@ -738,16 +769,48 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 <!-- ダッシュボード -->
 <div class="view" id="view-dash" hidden>
 <section class="panel blue" id="dash"><div class="bbody" id="dash-body"><div class="main">
+      <div class="band" id="dash-band">
+        <div class="av" id="band-av">小</div>
+        <div><div class="t" id="band-title">個人ダッシュボード</div><div class="s" id="band-sub"></div></div>
+        <span class="sp"></span>
+        <div class="seg" id="dash-seg" hidden><button type="button" data-scope="me" class="on">自分</button><button type="button" data-scope="team">チーム（管理者）</button></div>
+      </div>
+      <div class="dgrid">
+        <div class="dcol">
+          <div class="bcard"><h3>🏆 ロープレ実施件数ランキング <span class="chip" id="rank-period">今月</span></h3><div id="ranking"></div></div>
+          <div class="bcard" id="d-fb"><h3>上司FBの観点（直近の回）</h3><div class="donuts" id="donuts-fb"></div><p class="hint" id="fb-none" style="text-align:center">上司のFBを登録すると、観点ごとに毎回採点されます。</p></div>
+        </div>
+        <div class="dcol">
+          <div class="bcard" id="d-trend"><h3>⭐ スキルスコア（質） <span class="chip">週次推移</span></h3><svg class="radar" id="trend" viewBox="0 0 520 200" role="img" aria-label="推移"></svg><div class="hist" id="hist"></div></div>
+          <div class="bcard"><h3>スキル別スコア詳細（教材7軸） <span class="chip" id="radar-total"></span></h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg><div class="legend"><span><i class="me"></i>あなた（直近）</span><span><i class="team"></i>チーム平均</span></div></div>
+        </div>
+      </div>
       <div class="bcard" id="d-coach"><div class="coach"><div id="coach-art"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div><div class="bubble" id="coach-say"><span class="nm">Mr. KOHEI</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div><div class="row" style="margin-top:6px"><button class="btn" id="dash-speak" type="button">🔊 読み上げ</button></div></div></div>
       <div class="coach" style="margin-top:12px"><div><img src="/gofast.jpg" alt="Mr. Go fast" class="coach-img"></div><div><div class="bubble gofast" id="dash-gofast"><span class="nm">Mr. Go fast ／ 量</span></div><div class="row" style="margin-top:6px"><button class="btn" id="dash-speak2" type="button">🔊 読み上げ</button></div></div></div></div>
-      <div class="bk" id="kpis"></div><span id="d-kpi"></span>
-      <div class="bcard" id="d-donut"><h3>軸ごとのスコア（直近の回）</h3><div class="donuts" id="donuts"></div></div>
-      <div class="bcard" id="d-fb"><h3>上司FBの観点（直近の回）</h3><div class="donuts" id="donuts-fb"></div><p class="hint" id="fb-none" style="text-align:center">上司のFBを登録すると、観点ごとに毎回採点されます。</p></div>
-      <div class="bgrid">
-        <div class="bcard"><h3>直近の回（濃）と平均（薄）</h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg></div>
-        <div class="bcard" id="d-trend"><h3>総合スコアの推移（直近20回）</h3><svg class="radar" id="trend" viewBox="0 0 320 180" role="img" aria-label="推移"></svg><div class="hist" id="hist"></div></div>
-      </div>
+      <div class="bk" id="kpis"></div>
       <div class="bcard" id="d-table"><h3>軸ごとの根拠（直近の回／平均）</h3><table class="axes" id="axes"></table></div>
+    </div></div></section>
+
+<!-- チーム（管理者） -->
+<section class="panel blue" id="team" hidden><div class="bbody"><div class="main">
+      <div class="band">
+        <div class="av" style="background:#05AABA">チ</div>
+        <div><div class="t">チーム</div><div class="s" id="team-sub"></div></div>
+        <span class="sp"></span>
+        <div class="seg" id="team-seg"></div>
+        <div class="seg" id="team-period"><button type="button" data-p="week">今週</button><button type="button" data-p="month" class="on">今月</button><button type="button" data-p="all">全期間</button></div>
+      </div>
+      <div class="bgrid">
+        <div class="bcard"><div class="coach"><div><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div class="bubble" id="team-kohei"><span class="nm">Mr. KOHEI ／ チームの質</span></div></div></div>
+        <div class="bcard"><div class="coach"><div><img src="/gofast.jpg" alt="Mr. Go fast" class="coach-img"></div><div class="bubble gofast" id="team-gofast"><span class="nm">Mr. Go fast ／ チームの量</span></div></div></div>
+      </div>
+      <div class="bk" id="team-kpis"></div>
+      <div class="bcard"><h3>メンバー比較</h3><table class="axes" id="team-table"></table></div>
+      <div class="bgrid">
+        <div class="bcard"><h3>軸別ヒートマップ（平均）</h3><table class="axes heat" id="team-heat"></table></div>
+        <div class="bcard"><h3>日別の本数（直近14日）</h3><svg class="radar" id="team-days" viewBox="0 0 320 180" role="img" aria-label="日別"></svg><div class="legend" id="team-days-legend"></div></div>
+      </div>
+      <div class="bcard"><h3>メンバー管理</h3><table class="axes" id="team-members"></table><p class="hint">ID＝メールアドレス、パスワードは全員共通。メンバーの追加・変更は環境変数 MEMBERS_JSON（または開発者）で行います。</p></div>
     </div></div></section>
 </div>
 
@@ -873,14 +936,17 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 </div>
 <section id="login" hidden aria-label="ログイン">
   <div class="lg-left">
+   <div>
     <div class="lg-card">
-      <img src="/logo.png" alt="Zentect" width="157" height="40" class="lg-logo">
-      <div class="lg-title">ZenAIロープレ</div>
-      <div class="lg-sub">AIが演じる相手と、FS商談を声かチャットで練習する</div>
-      <label class="lg-field"><span class="lg-ic">🔒</span><input type="password" id="pw" placeholder="共有パスワード" autocomplete="current-password"><button type="button" class="lg-eye" id="pw-eye" aria-label="パスワードを表示">👁</button></label>
+      <div class="lg-wm">ZENAI<span>ロープレ</span></div>
+      <div class="lg-sub">Zentect</div>
+      <label class="lg-field"><span class="lg-ic">👤</span><input type="email" id="lg-email" placeholder="ID / メールアドレス" autocomplete="username" inputmode="email"></label>
+      <label class="lg-field"><span class="lg-ic">🔒</span><input type="password" id="pw" placeholder="パスワード" autocomplete="current-password"><button type="button" class="lg-eye" id="pw-eye" aria-label="パスワードを表示">👁</button></label>
       <button class="lg-btn" id="pw-ok" type="button">ログイン</button>
       <div class="status err" id="pw-status" style="text-align:center"></div>
     </div>
+    <div class="lg-links"><span>パスワードを忘れた方は管理者（小林）へ ›</span><span>未登録の方は管理者へ ›</span></div>
+   </div>
     <div class="lg-copy">© Zentect Inc.</div>
   </div>
   <div class="lg-right">

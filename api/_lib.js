@@ -9,13 +9,32 @@ export function client() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 }
 
-// 簡易ログイン：APP_PASSWORD を設定した場合、ヘッダ x-app-password が一致しないと 401
+// メンバー（ID＝メールアドレス、パスワードは全員共通）。MEMBERS_JSON で上書きできる
+export const MEMBERS = (() => {
+  try { if (process.env.MEMBERS_JSON) return JSON.parse(process.env.MEMBERS_JSON); } catch (_) {}
+  return [
+    { email: "goki.kobayashi@zentect.com", name: "小林 剛己", short: "小林", admin: true },
+    { email: "kei.tamura@zentect.com", name: "田村", short: "田村" },
+    { email: "yukihiro.kamioka@zentect.com", name: "上岡", short: "上岡" },
+    { email: "shinichiro.miyatake@zentect.com", name: "宮武", short: "宮武" },
+  ];
+})();
+export function findMember(email) {
+  const e = String(email || "").trim().toLowerCase();
+  return MEMBERS.find(m => m.email.toLowerCase() === e) || null;
+}
+// 簡易ログイン：APP_PASSWORD（共通）＋ x-app-user（メンバーのメール）。
+// APP_PASSWORD 未設定のときはパスワード確認なし。x-app-user が無い旧クライアントは管理者扱いにせず匿名で通す。
 export function auth(req, res) {
   const pw = process.env.APP_PASSWORD;
-  if (!pw) return true;
-  if (req.headers["x-app-password"] === pw) return true;
-  res.status(401).json({ error: "パスワードが違います" });
-  return false;
+  if (pw && req.headers["x-app-password"] !== pw) { res.status(401).json({ error: "パスワードが違います" }); return false; }
+  const email = req.headers["x-app-user"];
+  if (email) {
+    const m = findMember(email);
+    if (!m) { res.status(401).json({ error: "このメールアドレスは登録されていません" }); return false; }
+    req.user = m;
+  }
+  return true;
 }
 
 export async function readJson(req) {
@@ -366,4 +385,130 @@ ${COMPETITORS}` : ""}${p.style && STYLES[p.style] ? `
 ${knowledge ? `
 ■ 過去の実商談から得た知見（相手役のリアリティに反映する。該当するものだけ使う）
 ${knowledge}` : ""}`;
+}
+
+/* =========================================================
+   ロープレ成績DB（メンバー別・端末をまたいで共有）
+   「ロープレ知見」ページの中に Notion データベース「ロープレ成績」を自動で作る。
+   1行＝1回のロープレ。ダッシュボード用の要約は「データ」列にJSONで持つ。
+   自社情報など全員共通の設定も、種別=設定 の行として同じDBに置く。
+   ========================================================= */
+const RESULTS_DB_TITLE = "ロープレ成績";
+let resultsDb = process.env.NOTION_RESULTS_DB_ID || "";
+const RESULTS_PROPS = {
+  "名前": { title: {} },
+  "メール": { rich_text: {} },
+  "メンバー": { rich_text: {} },
+  "種別": { select: { options: [{ name: "記録", color: "blue" }, { name: "設定", color: "gray" }] } },
+  "日時": { date: {} },
+  "総合": { number: { format: "number" } },
+  "正解": { checkbox: {} },
+  "モード": { select: { options: [{ name: "音声" }, { name: "チャット" }] } },
+  "相手": { rich_text: {} },
+  "秒": { number: { format: "number" } },
+  "データ": { rich_text: {} },
+};
+export function resultsEnabled() { return !!(process.env.NOTION_TOKEN && (process.env.NOTION_RESULTS_DB_ID || process.env.NOTION_KNOWLEDGE_PAGE_ID)); }
+async function findResultsDb() {
+  if (resultsDb) return resultsDb;
+  const id = process.env.NOTION_KNOWLEDGE_PAGE_ID;
+  let cursor;
+  for (let i = 0; i < 20; i++) {
+    const r = await fetch(`https://api.notion.com/v1/blocks/${id}/children?page_size=100` + (cursor ? `&start_cursor=${cursor}` : ""), { headers: notionHeaders() });
+    if (!r.ok) throw new Error("Notion読み込み失敗: " + r.status);
+    const j = await r.json();
+    const hit = (j.results || []).find(b => b.type === "child_database" && b.child_database && b.child_database.title === RESULTS_DB_TITLE);
+    if (hit) return (resultsDb = hit.id);
+    if (!j.has_more) break;
+    cursor = j.next_cursor;
+  }
+  const r = await fetch("https://api.notion.com/v1/databases", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
+    parent: { type: "page_id", page_id: id }, icon: { type: "emoji", emoji: "📊" },
+    title: [{ type: "text", text: { content: RESULTS_DB_TITLE } }],
+    properties: RESULTS_PROPS,
+  }) });
+  if (!r.ok) throw new Error("ロープレ成績DBを作れません: " + r.status + " " + (await r.text()).slice(0, 200));
+  return (resultsDb = (await r.json()).id);
+}
+const rt = s => { const t = String(s ?? ""); const out = []; for (let i = 0; i < t.length && out.length < 50; i += 1900) out.push({ type: "text", text: { content: t.slice(i, i + 1900) } }); return out.length ? out : [{ type: "text", text: { content: "" } }]; };
+const rtText = p => (p && Array.isArray(p.rich_text) ? p.rich_text.map(x => x.plain_text).join("") : "");
+export async function addResult(user, entry) {
+  if (!resultsEnabled()) return null;
+  const db = await findResultsDb();
+  const at = entry.at || Date.now();
+  const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
+    parent: { database_id: db },
+    properties: {
+      "名前": { title: [{ type: "text", text: { content: `${user.short || user.name} ${jstNow()} ${entry.company || ""}`.slice(0, 1900) } }] },
+      "メール": { rich_text: rt(user.email) },
+      "メンバー": { rich_text: rt(user.name) },
+      "種別": { select: { name: "記録" } },
+      "日時": { date: { start: new Date(at).toISOString() } },
+      "総合": { number: Number(entry.total) || 0 },
+      "正解": { checkbox: !!entry.correct },
+      "モード": { select: { name: entry.mode === "chat" ? "チャット" : "音声" } },
+      "相手": { rich_text: rt(entry.company || "") },
+      "秒": { number: Number(entry.sec) || 0 },
+      "データ": { rich_text: rt(JSON.stringify(entry)) },
+    },
+  }) });
+  if (!r.ok) throw new Error("成績の保存失敗: " + r.status + " " + (await r.text()).slice(0, 200));
+  return (await r.json()).id;
+}
+async function queryResults(filter, sorts) {
+  const db = await findResultsDb();
+  const out = [];
+  let cursor;
+  for (let i = 0; i < 30; i++) {
+    const body = { page_size: 100, filter, sorts };
+    if (cursor) body.start_cursor = cursor;
+    const r = await fetch(`https://api.notion.com/v1/databases/${db}/query`, { method: "POST", headers: notionHeaders(), body: JSON.stringify(body) });
+    if (!r.ok) throw new Error("成績の読み込み失敗: " + r.status + " " + (await r.text()).slice(0, 200));
+    const j = await r.json();
+    out.push(...(j.results || []));
+    if (!j.has_more) break;
+    cursor = j.next_cursor;
+  }
+  return out;
+}
+// 記録を全件（管理者）またはメール指定で取る。戻り値は {email, name, entry}
+export async function listResults({ email = null } = {}) {
+  if (!resultsEnabled()) return [];
+  const and = [{ property: "種別", select: { equals: "記録" } }];
+  if (email) and.push({ property: "メール", rich_text: { equals: email } });
+  const pages = await queryResults({ and }, [{ property: "日時", direction: "ascending" }]);
+  const out = [];
+  for (const p of pages) {
+    const P = p.properties || {};
+    let entry = null;
+    try { entry = JSON.parse(rtText(P["データ"])); } catch (_) {}
+    if (!entry) continue;
+    entry.id = p.id;
+    out.push({ email: rtText(P["メール"]), name: rtText(P["メンバー"]), entry });
+  }
+  return out;
+}
+export async function deleteResult(id) {
+  const r = await fetch(`https://api.notion.com/v1/pages/${id}`, { method: "PATCH", headers: notionHeaders(), body: JSON.stringify({ archived: true }) });
+  return r.ok;
+}
+// 共通設定（自社情報など）：種別=設定、名前=key の行に JSON を持つ
+export async function getSetting(key) {
+  if (!resultsEnabled()) return null;
+  const pages = await queryResults({ and: [{ property: "種別", select: { equals: "設定" } }, { property: "相手", rich_text: { equals: key } }] });
+  if (!pages.length) return null;
+  try { return JSON.parse(rtText(pages[0].properties["データ"])); } catch (_) { return null; }
+}
+export async function setSetting(key, value, user) {
+  if (!resultsEnabled()) return false;
+  const pages = await queryResults({ and: [{ property: "種別", select: { equals: "設定" } }, { property: "相手", rich_text: { equals: key } }] });
+  const props = { "データ": { rich_text: rt(JSON.stringify(value)) }, "メール": { rich_text: rt(user ? user.email : "") }, "メンバー": { rich_text: rt(user ? user.name : "") }, "日時": { date: { start: new Date().toISOString() } } };
+  let r;
+  if (pages.length) r = await fetch(`https://api.notion.com/v1/pages/${pages[0].id}`, { method: "PATCH", headers: notionHeaders(), body: JSON.stringify({ properties: props }) });
+  else {
+    const db = await findResultsDb();
+    r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({ parent: { database_id: db }, properties: { ...props, "名前": { title: [{ type: "text", text: { content: "設定：" + key } }] }, "種別": { select: { name: "設定" } }, "相手": { rich_text: rt(key) } } }) });
+  }
+  if (!r.ok) throw new Error("設定の保存失敗: " + r.status + " " + (await r.text()).slice(0, 200));
+  return true;
 }
