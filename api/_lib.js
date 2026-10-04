@@ -488,6 +488,11 @@ export async function listResults({ email = null } = {}) {
   }
   return out;
 }
+export async function updateResult(id, entry) {
+  const r = await fetch(`https://api.notion.com/v1/pages/${id}`, { method: "PATCH", headers: notionHeaders(), body: JSON.stringify({ properties: { "データ": { rich_text: rt(JSON.stringify(entry)) } } }) });
+  if (!r.ok) throw new Error("成績の更新失敗: " + r.status + " " + (await r.text()).slice(0, 200));
+  return true;
+}
 export async function deleteResult(id) {
   const r = await fetch(`https://api.notion.com/v1/pages/${id}`, { method: "PATCH", headers: notionHeaders(), body: JSON.stringify({ archived: true }) });
   return r.ok;

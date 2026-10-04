@@ -3,7 +3,7 @@
 //  action=list   … 本人の記録＋チーム要約。管理者は全員の記録も
 //  action=delete … 自分の記録を1件消す（管理者は誰のでも）
 //  action=get_setting / set_setting … 全員共通の設定（自社情報など）
-import { auth, readJson, MEMBERS, resultsEnabled, addResult, listResults, deleteResult, getSetting, setSetting } from "./_lib.js";
+import { auth, readJson, MEMBERS, resultsEnabled, addResult, listResults, updateResult, deleteResult, getSetting, setSetting } from "./_lib.js";
 
 const AXES = ["counterpart", "widen", "classify", "rephrase", "converge", "roi", "numbers", "listening", "closing"];
 function summarize(rows) {
@@ -40,6 +40,19 @@ export default async function handler(req, res) {
       if (!e.scores) return res.status(400).json({ error: "entry.scores がありません" });
       const id = await addResult(user, e);
       return res.json({ ok: true, id });
+    }
+    if (action === "update") {
+      // 動画リンクなど、後から足す項目だけを更新（本人の記録のみ。管理者は誰のでも）
+      const rows = await listResults({});
+      const hit = rows.find(r => r.entry.id === body.id);
+      if (!hit) return res.status(404).json({ error: "見つかりません" });
+      if (!user.admin && hit.email !== user.email) return res.status(403).json({ error: "自分の記録だけ更新できます" });
+      const patch = body.patch && typeof body.patch === "object" ? body.patch : {};
+      const allowed = ["video", "memo"];
+      const next = { ...hit.entry }; for (const k of allowed) if (k in patch) next[k] = patch[k] === null ? undefined : String(patch[k]).slice(0, 500);
+      delete next.id;
+      await updateResult(body.id, next);
+      return res.json({ ok: true });
     }
     if (action === "delete") {
       const rows = await listResults({});

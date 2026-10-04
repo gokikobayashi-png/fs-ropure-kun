@@ -402,7 +402,7 @@ function stopRecording() {
     const blob = new Blob(recChunks, { type: r.mimeType || "video/webm" });
     if (recUrl) URL.revokeObjectURL(recUrl); recUrl = URL.createObjectURL(blob);
     const isVideo = /video/.test(blob.type);
-    const name = "ropure_" + jst() + "_" + (persona ? persona.company : "") + (isVideo ? ".webm" : ".weba");
+    const name = "ロープレ_" + (user ? (user.short || user.name) : "") + "_" + jst() + "_" + (persona ? persona.company : "") + (isVideo ? ".webm" : ".weba");
     $("rec-dl").href = recUrl; $("rec-dl").download = name;
     $("rec-info").textContent = (isVideo ? "映像＋音声" : "音声のみ") + "／" + (blob.size / 1048576).toFixed(1) + "MB。このブラウザを閉じると消えるので、残すなら保存を";
     const v = $("rec-play"); v.hidden = false; v.src = recUrl;
@@ -436,7 +436,7 @@ function resetResult() {
   $("res-date").textContent = new Date().toLocaleString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
   $("res-company").textContent = persona.company + " ／ " + persona.name + "（役職は判定後に表示）";
   $("res-mode").textContent = (mode === "chat" ? "チャット" : "音声") + " ・ " + $("timer").textContent;
-  $("res-good").textContent = ""; $("res-improve").textContent = ""; $("res-radar").innerHTML = ""; $("res-axes").textContent = "";
+  $("res-good").textContent = ""; $("res-improve").textContent = ""; $("res-radar").innerHTML = ""; $("res-axes").textContent = ""; $("video-url").value = ""; status("video-status", ""); lastEntry = null;
   $("res-grade").textContent = "–"; $("res-total").textContent = ""; coachSayRes("判定すると、ここに所見が出ます。"); gofastSay("判定すると、論理の穴を指摘します。");
   renderResInfo(false);
   rtab("q");
@@ -617,7 +617,7 @@ function renderSkillList(box, sk, teamSk) {
     row.append(top, parts); box.appendChild(row);
   });
 }
-let team = null, allRows = null, dashScope = "me", teamFocus = "all", teamPeriod = "month";
+let team = null, allRows = null, dashScope = "me", teamFocus = "all", teamPeriod = "month", lastEntry = null;
 function loadHistory() { try { history = JSON.parse(localStorage.getItem(uk(HIST_KEY)) || "[]"); if (!Array.isArray(history)) history = []; } catch (_) { history = []; } }
 function saveHistory() { try { localStorage.setItem(uk(HIST_KEY), JSON.stringify(history.slice(-300))); } catch (_) {} }
 async function syncHistory() {
@@ -682,10 +682,19 @@ function recordHistory(r) {
   const keys = AXES.map(a => a[0]).filter(k => sc[k]);
   const total = keys.reduce((s, k) => s + sc[k].score, 0) / keys.length;
   const e = { at: Date.now(), company: persona.company, role: persona.role, mode, correct: !!r.correct, answer: r.answer, picked, scores: sc, custom: r.custom || null, tpl: persona.tpl || null, style: persona.style || "", quiz: quizzes.map(q => ({ kind: q.kind, ok: q.ok })), total: Math.round(total * 10) / 10, next: r.nextAction || "", feedback: String(r.feedback || "").slice(0, 600), sec: Math.round((Date.now() - startedAt) / 1000) };
-  history.push(e); saveHistory();
-  if (shared) api("history", { action: "add", entry: e }).then(j => { e.id = j.id; saveHistory(); syncHistory(); }).catch(() => { e.pending = true; saveHistory(); });
+  history.push(e); saveHistory(); lastEntry = e;
+  if (shared) api("history", { action: "add", entry: e }).then(j => { e.id = j.id; saveHistory(); if (e.video) api("history", { action: "update", id: e.id, patch: { video: e.video } }).catch(() => {}); syncHistory(); }).catch(() => { e.pending = true; saveHistory(); });
   return e;
 }
+/* 動画リンク（Googleドライブ）を直近の記録に付ける */
+$("video-save").addEventListener("click", async () => {
+  const url = $("video-url").value.trim();
+  if (!/^https?:\/\//.test(url)) { status("video-status", "https:// から始まるリンクを貼ってください", true); return; }
+  if (!lastEntry) { status("video-status", "先に「判定する」を押して、この回の記録を作ってください", true); return; }
+  lastEntry.video = url; saveHistory(); status("video-status", "保存中…");
+  try { if (shared && lastEntry.id) await api("history", { action: "update", id: lastEntry.id, patch: { video: url } }); status("video-status", "履歴に動画リンクを保存しました（履歴タブの ▶ から開けます）"); }
+  catch (e) { status("video-status", "この端末には保存。共有保存に失敗：" + e.message, true); }
+});
 /* 週ごとの平均（直近8週） */
 function weekKey(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }
 function weekly(list, n = 8) {
@@ -706,7 +715,8 @@ function drawTrend(list) {
 }
 function drawRadar(latest, avg) { drawRadarInto($("radar"), latest, avg); }
 function renderHistory() {
-  const t = $("hist-table"); t.innerHTML = `<tr><th>日時</th><th>相手</th><th>方式</th><th>4分類</th><th>総合</th><th>次の一手</th></tr>` + (history.length ? history.slice().reverse().map(e => `<tr><td class="n">${new Date(e.at).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td><td>${e.company}<span class="why">（${e.role || ""}）</span></td><td>${e.mode === "chat" ? "チャット" : "音声"}</td><td class="n">${e.correct ? "○" : "×"}</td><td class="n"><b>${e.total.toFixed(1)}</b></td><td class="why">${e.next || ""}</td></tr>`).join("") : `<tr><td colspan="6" class="why">まだありません。</td></tr>`);
+  const esc = v => String(v || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  const t = $("hist-table"); t.innerHTML = `<tr><th>日時</th><th>相手</th><th>方式</th><th>動画</th><th>4分類</th><th>総合</th><th>次の一手</th></tr>` + (history.length ? history.slice().reverse().map(e => `<tr><td class="n">${new Date(e.at).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td><td>${esc(e.company)}<span class="why">（${esc(e.role)}）</span></td><td>${e.mode === "chat" ? "チャット" : "音声"}</td><td>${/^https?:\/\//.test(e.video || "") ? `<a class="vid" href="${esc(e.video)}" target="_blank" rel="noopener">▶ 動画</a>` : '<span class="why">—</span>'}</td><td class="n">${e.correct ? "○" : "×"}</td><td class="n"><b>${e.total.toFixed(1)}</b></td><td class="why">${esc(e.next)}</td></tr>`).join("") : `<tr><td colspan="7" class="why">まだありません。</td></tr>`);
 }
 function gofastVolume(list, who = "") {
   const now = Date.now(), day = 86400000;
