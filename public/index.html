@@ -217,6 +217,9 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .seg{display:flex;gap:2px;background:rgba(255,255,255,.18);border-radius:999px;padding:3px}
 .seg button{font-family:var(--sans);border:0;background:transparent;color:#fff;font-size:12px;padding:5px 12px;border-radius:999px;cursor:pointer}
 .seg button.on{background:#fff;color:#1A3A5C;font-weight:700}
+.coach2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.coach2{grid-template-columns:1fr}}
+.coach2 .coach{grid-template-columns:84px 1fr}
 .dgrid{display:grid;grid-template-columns:300px 1fr;gap:12px;align-items:start}
 @media (max-width:760px){.dgrid{grid-template-columns:1fr}}
 .dcol{display:grid;gap:12px}
@@ -299,12 +302,13 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 
 /* ===== 新レイアウト ===== */
 body{padding:0 0 40px}
-header.top{display:flex;align-items:center;gap:18px;height:56px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+header.top{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;flex-wrap:nowrap;overflow-x:auto;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
 header.top .brand{display:flex;align-items:center;gap:10px}
 header.top .brand img{display:block}
 .badge-app{background:var(--teal);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px}
-.tabs{display:flex;gap:2px;margin-left:8px}
-.tabs button{font-family:var(--sans);font-size:14px;background:none;border:0;border-bottom:2px solid transparent;padding:16px 14px 14px;color:var(--ink-2);cursor:pointer;font-weight:500}
+.tabs{display:flex;gap:0;margin-left:4px;white-space:nowrap}
+.tabs .ext+.ext{border-left:0}
+.tabs button{font-family:var(--sans);font-size:14px;background:none;border:0;border-bottom:2px solid transparent;padding:16px 11px 14px;color:var(--ink-2);cursor:pointer;font-weight:500}
 .tabs button.on{color:var(--navy);font-weight:700;border-bottom-color:var(--teal)}
 .tabs button:hover{color:var(--navy)}
 main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
@@ -382,7 +386,7 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 .setbody>section[hidden]{display:none}
 .panel.blue{margin-top:16px}
 
-.tabs .ext{font-size:13px;color:var(--ink-2);text-decoration:none;padding:16px 12px 14px;border-bottom:2px solid transparent}
+.tabs .ext{font-size:12px;color:var(--ink-2);text-decoration:none;padding:17px 9px 14px;white-space:nowrap;border-bottom:2px solid transparent}
 .tabs .ext:hover{color:var(--navy)}
 .styles{display:flex;flex-direction:column;gap:10px;margin-top:6px}
 .stylegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -452,7 +456,7 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
   </nav>
   <span class="sp"></span>
   <span class="user-chip" id="user-chip" hidden></span>
-  <button class="btn" id="logout" type="button" hidden>ログアウト</button>
+  <button class="btn" id="logout" type="button" hidden style="white-space:nowrap;padding:6px 12px;font-size:13px">ログアウト</button>
 </header>
 
 <main class="wrap">
@@ -780,6 +784,8 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
         <span class="sp"></span>
         <div class="seg" id="dash-seg" hidden><button type="button" data-scope="me" class="on">自分</button><button type="button" data-scope="team">チーム（管理者）</button></div>
       </div>
+      <div class="bcard" id="d-coach"><div class="coach2"><div class="coach"><div id="coach-art"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div><div class="bubble" id="coach-say"><span class="nm">Mr. KOHEI</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div><div class="row" style="margin-top:6px"><button class="btn" id="dash-speak" type="button">🔊 読み上げ</button></div></div></div>
+      <div class="coach"><div><img src="/gofast.jpg" alt="Mr. Go fast" class="coach-img"></div><div><div class="bubble gofast" id="dash-gofast"><span class="nm">Mr. Go fast ／ 量</span></div><div class="row" style="margin-top:6px"><button class="btn" id="dash-speak2" type="button">🔊 読み上げ</button></div></div></div></div></div>
       <div class="dgrid">
         <div class="dcol">
           <div class="bcard"><h3>🏆 ロープレ実施件数ランキング <span class="chip" id="rank-period">今月</span></h3><div id="ranking"></div></div>
@@ -790,8 +796,6 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
           <div class="bcard"><h3>スキル別スコア詳細 <span class="chip" id="radar-total"></span></h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg><div class="legend"><span><i class="me"></i>あなた（直近）</span><span><i class="team"></i>チーム平均</span></div><div class="axlist" id="skill-list" style="margin-top:8px"></div></div>
         </div>
       </div>
-      <div class="bcard" id="d-coach"><div class="coach"><div id="coach-art"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div><div class="bubble" id="coach-say"><span class="nm">Mr. KOHEI</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div><div class="row" style="margin-top:6px"><button class="btn" id="dash-speak" type="button">🔊 読み上げ</button></div></div></div>
-      <div class="coach" style="margin-top:12px"><div><img src="/gofast.jpg" alt="Mr. Go fast" class="coach-img"></div><div><div class="bubble gofast" id="dash-gofast"><span class="nm">Mr. Go fast ／ 量</span></div><div class="row" style="margin-top:6px"><button class="btn" id="dash-speak2" type="button">🔊 読み上げ</button></div></div></div></div>
       <div class="bk" id="kpis"></div>
       <div class="bcard" id="d-table"><h3>軸ごとの根拠（直近の回／平均）</h3><table class="axes" id="axes"></table></div>
     </div></div></section>
