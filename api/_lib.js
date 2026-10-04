@@ -316,7 +316,7 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
   if (numbersReview) blocks.push(para("数字：" + numbersReview));
   if (secondOpinion) blocks.push(para("Mr. Go fast（論理の指摘）：" + secondOpinion));
   if (scores) {
-    const L = { counterpart: "相手の把握", widen: "広げる", classify: "深掘る", rephrase: "言い直し", converge: "狭める", roi: "検算" };
+    const L = { counterpart: "相手の把握", widen: "広げる", classify: "深掘る", rephrase: "言い直し", converge: "狭める", roi: "検算", listening: "傾聴態度", closing: "クロージング" };
     blocks.push(h2("スコア（5点満点）"));
     for (const k of Object.keys(L)) if (scores[k]) blocks.push(bullet(`${L[k]}：${scores[k].score}／${scores[k].why}`));
     if (custom) for (const k of Object.keys(custom)) blocks.push(bullet(`上司FBの観点「${custom[k].title}」：${custom[k].score}／${custom[k].why}`));

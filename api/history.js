@@ -5,7 +5,7 @@
 //  action=get_setting / set_setting … 全員共通の設定（自社情報など）
 import { auth, readJson, MEMBERS, resultsEnabled, addResult, listResults, deleteResult, getSetting, setSetting } from "./_lib.js";
 
-const AXES = ["counterpart", "widen", "classify", "rephrase", "converge", "roi", "numbers"];
+const AXES = ["counterpart", "widen", "classify", "rephrase", "converge", "roi", "numbers", "listening", "closing"];
 function summarize(rows) {
   // メンバーごとの本数・今週・今月・平均総合・軸平均、チーム全体の軸平均
   const now = Date.now(), day = 86400000;

@@ -592,6 +592,31 @@ loadChecks(); renderChecks();
 /* ---------- スコア履歴とダッシュボード（メンバー別・サーバー保存＋この端末にキャッシュ） ---------- */
 const HIST_KEY = "ropure-history-v1";
 const AXES = [["counterpart", "相手の把握"], ["widen", "広げる"], ["classify", "深掘る"], ["rephrase", "言い直し"], ["converge", "狭める"], ["roi", "検算"], ["numbers", "数字"]];
+// 見せ方は5スキル。中身は教材7軸（＋傾聴態度・クロージング）を割り当てて平均する
+const SKILLS = [["hearing", "ヒアリング力", ["counterpart", "widen"]], ["dig", "課題深掘り", ["classify", "rephrase"]], ["proposal", "提案力", ["converge", "roi", "numbers"]], ["closing", "クロージング", ["closing"]], ["listening", "傾聴態度", ["listening", "rephrase"]]];
+const AX_LABEL = Object.fromEntries([...AXES, ["listening", "傾聴態度"], ["closing", "クロージング"]]);
+const scoreVal = v => (v && typeof v === "object" ? v.score : v) || null;
+function skillOf(sc, def) {
+  let keys = def[2];
+  if (def[0] === "closing" && !scoreVal(sc.closing)) keys = ["converge"]; // 古い記録はクロージング未採点 → 狭めるで代用
+  const parts = keys.map(k => [k, scoreVal(sc[k])]).filter(x => x[1]);
+  if (!parts.length) return { score: null, parts: [] };
+  return { score: Math.round(parts.reduce((a, x) => a + x[1], 0) / parts.length * 10) / 10, parts };
+}
+function skillScores(sc) { return Object.fromEntries(SKILLS.map(d => [d[0], skillOf(sc || {}, d)])); }
+function renderSkillList(box, sk, teamSk) {
+  box.textContent = "";
+  const vals = SKILLS.map(d => sk[d[0]].score).filter(v => v !== null); const min = vals.length ? Math.min(...vals) : null;
+  SKILLS.forEach(([k, label]) => {
+    const v = sk[k]; const row = document.createElement("div"); row.className = "sk" + (v.score !== null && v.score === min && min < 4 ? " weak" : "");
+    const top = document.createElement("div"); top.className = "sk-top";
+    const l = document.createElement("span"); l.textContent = label + (v.score !== null && v.score === min && min < 4 ? "（課題）" : ""); const n = document.createElement("b"); n.textContent = v.score === null ? "—" : v.score.toFixed(1);
+    if (teamSk && teamSk[k] && teamSk[k].score !== null) { const t = document.createElement("span"); t.className = "avg"; t.textContent = " / チーム " + teamSk[k].score.toFixed(1); n.appendChild(t); }
+    top.append(l, n);
+    const parts = document.createElement("div"); parts.className = "sk-parts"; parts.textContent = v.parts.length ? "← " + v.parts.map(([pk, pv]) => `${AX_LABEL[pk]} ${pv}`).join("・") : "← 記録なし";
+    row.append(top, parts); box.appendChild(row);
+  });
+}
 let team = null, allRows = null, dashScope = "me", teamFocus = "all", teamPeriod = "month";
 function loadHistory() { try { history = JSON.parse(localStorage.getItem(uk(HIST_KEY)) || "[]"); if (!Array.isArray(history)) history = []; } catch (_) { history = []; } }
 function saveHistory() { try { localStorage.setItem(uk(HIST_KEY), JSON.stringify(history.slice(-300))); } catch (_) {} }
@@ -622,7 +647,7 @@ function numbersScore() {
   return { score: Math.max(1, Math.round(r * 4) + 1), why: (n ? `暗算チェック ${c}/${n} 正解` : "") + (guess ? (n ? "／" : "") + "問3の暗算 " + [guess.okInvest, guess.okWins, guess.okRecover, guess.ok].filter(Boolean).length + "/4" : "") };
 }
 
-function avgScores(list) { const out = {}; AXES.forEach(([k]) => { const v = list.map(e => e.scores[k] && e.scores[k].score).filter(x => x); out[k] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }); return out; }
+function avgScores(list) { const out = {}; [...AXES, ["listening"], ["closing"]].forEach(([k]) => { const v = list.map(e => e.scores[k] && e.scores[k].score).filter(x => x); out[k] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }); return out; }
 
 function polar(cx, cy, r, i, n) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
 
@@ -632,13 +657,13 @@ function renderAxList(ent) {
   AXES.forEach(([k, label]) => { const s = ent.scores[k]; const d = document.createElement("div"); if (k === weakK) d.className = "weak"; const l = document.createElement("span"); l.textContent = label + (k === weakK ? "（弱点）" : ""); const v = document.createElement("span"); const b = document.createElement("b"); b.textContent = s ? s.score : "—"; b.style.color = s && s.score <= 2 ? "var(--bad)" : s && s.score >= 5 ? "#059669" : ""; v.appendChild(b); const a = document.createElement("span"); a.className = "avg"; a.textContent = " / " + (avg[k] !== null ? avg[k].toFixed(1) : "—"); v.appendChild(a); d.appendChild(l); d.appendChild(v); d.title = s ? s.why : ""; box.appendChild(d); });
 }
 
-function drawRadarInto(svg, latest, avg) {
-  const n = AXES.length, cx = 160, cy = 150, R = 100; let h = "";
-  for (let g = 1; g <= 5; g++) { const pts = AXES.map((_, i) => polar(cx, cy, R * g / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); h += `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="${g === 5 ? 1.2 : .6}"/>`; }
-  AXES.forEach(([k, label], i) => { const [x, y] = polar(cx, cy, R, i, n); const [lx, ly] = polar(cx, cy, R + 22, i, n); h += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="11" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">${label}</text>`; });
-  const poly = (sc, fill, stroke, op, dash) => { const pts = AXES.map(([k], i) => polar(cx, cy, R * ((sc[k] && (sc[k].score ?? sc[k])) || 0) / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); return `<polygon points="${pts}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${dash ? 1.5 : 2.2}"${dash ? ' stroke-dasharray="5 4"' : ""}/>`; };
+function drawRadarInto(svg, latest, avg, axes = AXES) {
+  const n = axes.length, cx = 160, cy = 150, R = 100; let h = "";
+  for (let g = 1; g <= 5; g++) { const pts = axes.map((_, i) => polar(cx, cy, R * g / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); h += `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="${g === 5 ? 1.2 : .6}"/>`; }
+  axes.forEach(([k, label], i) => { const [x, y] = polar(cx, cy, R, i, n); const [lx, ly] = polar(cx, cy, R + 22, i, n); h += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width=".6"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="12" font-weight="700" fill="#1A3A5C" text-anchor="middle" dominant-baseline="middle">${label}</text>`; });
+  const poly = (sc, fill, stroke, op, dash) => { const pts = axes.map(([k], i) => polar(cx, cy, R * (scoreVal(sc[k]) || 0) / 5, i, n).map(v => v.toFixed(1)).join(",")).join(" "); return `<polygon points="${pts}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${dash ? 1.5 : 2.2}"${dash ? ' stroke-dasharray="5 4"' : ""}/>`; };
   if (avg) h += poly(avg, "none", "#6B7280", 0, true);
-  if (latest) h += poly(latest.scores, "#05AABA", "#1A3A5C", .28) + AXES.map(([k], i) => { const s = latest.scores[k] ? latest.scores[k].score : 0; const [x, y] = polar(cx, cy, R * s / 5, i, n); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#05AABA"/>`; }).join("");
+  if (latest) h += poly(latest.scores, "#05AABA", "#1A3A5C", .28) + axes.map(([k], i) => { const s = scoreVal(latest.scores[k]) || 0; const [x, y] = polar(cx, cy, R * s / 5, i, n); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#05AABA"/>`; }).join("");
   svg.innerHTML = h;
 }
 
@@ -735,14 +760,15 @@ function renderDash() {
   renderRanking();
   gofastDashSay(gofastVolume(history));
   const tavg = teamAvgScores();
-  if (!n) { $("kpis").innerHTML = ""; $("axes").innerHTML = ""; $("donuts-fb").innerHTML = ""; $("fb-none").hidden = false; $("radar-total").textContent = ""; drawRadar(null, tavg); drawTrend([]); $("hist").textContent = ""; coachSay("まだロープレの記録がありません。1回やると、ここで所見を話します。"); return; }
+  if (!n) { $("kpis").innerHTML = ""; $("axes").innerHTML = ""; $("donuts-fb").innerHTML = ""; $("fb-none").hidden = false; $("radar-total").textContent = ""; drawRadarInto($("radar"), null, tavg ? skillScores(tavg) : null, SKILLS); $("skill-list").textContent = ""; drawTrend([]); $("hist").textContent = ""; coachSay("まだロープレの記録がありません。1回やると、ここで所見を話します。"); return; }
   const latest = history[n - 1], avg = avgScores(history), prev = history.slice(0, -1);
   const avgTotal = history.reduce((s, e) => s + e.total, 0) / n;
   const correct = history.filter(e => e.correct).length;
   const kpi = (k, v, sub) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${sub ? `<small> ${sub}</small>` : ""}</div></div>`;
   $("kpis").innerHTML = kpi("直近の総合", latest.total.toFixed(1), "/5") + kpi("平均", avgTotal.toFixed(1), "/5") + kpi("4分類の正解率", Math.round(correct / n * 100) + "%", `${correct}/${n}`) + kpi("ロープレ回数", n, "回");
   $("radar-total").textContent = `総合 ${latest.total.toFixed(1)} / 5.0`;
-  drawRadar(latest, tavg || (prev.length ? avgScores(prev) : null)); drawTrend(history);
+  const skMine = skillScores(latest.scores), skTeam = tavg ? skillScores(tavg) : (prev.length ? skillScores(avgScores(prev)) : null);
+  drawRadarInto($("radar"), { scores: skMine }, skTeam, SKILLS); renderSkillList($("skill-list"), skMine, tavg ? skTeam : null); drawTrend(history);
   $("hist").textContent = "週ごとの平均総合。点にカーソルを合わせると本数が出ます";
   const weakK = AXES.map(([k]) => k).filter(k => avg[k] !== null).sort((a, b) => avg[a] - avg[b])[0];
   $("axes").innerHTML = `<tr><th>軸</th><th>直近</th><th style="width:30%">平均</th><th>チーム</th><th>直近の根拠</th></tr>` + AXES.map(([k, label]) => { const s = latest.scores[k]; const a = avg[k]; const t = tavg ? tavg[k] : null; return `<tr class="${k === weakK ? "weak" : ""}"><td>${label}${k === weakK ? "（弱点）" : ""}</td><td class="n">${s ? s.score : "—"}</td><td><div class="bar"><i style="width:${a ? a / 5 * 100 : 0}%"></i></div><span class="why">${a ? a.toFixed(1) : "—"}</span></td><td class="n why">${t ? t.toFixed(1) : "—"}</td><td class="why">${s ? s.why : "記録なし"}</td></tr>`; }).join("");
@@ -751,12 +777,14 @@ function renderDash() {
   $("donuts-fb").innerHTML = cu.map(c => donut(c.title, c.score, c.why, c.score === cuWeak && c.score <= 3)).join("");
   $("fb-none").hidden = !!cu.length;
   const weakLabel = (AXES.find(a => a[0] === weakK) || [])[1] || "";
+  const skVals = SKILLS.map(d => [d[1], skMine[d[0]].score]).filter(x => x[1] !== null).sort((x, y) => x[1] - y[1]);
   const trend = prev.length ? (latest.total - prev[prev.length - 1].total) : 0;
   const fbWeak = cu.filter(c => c.score <= 2);
   const teamGap = tavg && weakK && tavg[weakK] ? (avg[weakK] - tavg[weakK]) : null;
   coachSay([
     `直近は ${latest.company} との商談で、総合 ${latest.total.toFixed(1)}／5${prev.length ? `（前回比 ${trend >= 0 ? "+" : ""}${trend.toFixed(1)}）` : ""}。4分類は${latest.correct ? "正解" : "不正解"}でした。`,
-    weakLabel ? `平均で一番低いのは「${weakLabel}」（${avg[weakK].toFixed(1)}${teamGap !== null ? `、チーム平均との差 ${teamGap >= 0 ? "+" : ""}${teamGap.toFixed(1)}` : ""}）。${latest.scores[weakK] ? latest.scores[weakK].why : ""}` : "",
+    skVals.length ? `5スキルで一番の課題は「${skVals[0][0]}」（${skVals[0][1].toFixed(1)}）。` : "",
+    weakLabel ? `教材7軸では「${weakLabel}」が平均で一番低い（${avg[weakK].toFixed(1)}${teamGap !== null ? `、チーム平均との差 ${teamGap >= 0 ? "+" : ""}${teamGap.toFixed(1)}` : ""}）。${latest.scores[weakK] ? latest.scores[weakK].why : ""}` : "",
     fbWeak.length ? `上司のFBの観点では「${fbWeak.map(c => c.title).join("」「")}」ができていません。${fbWeak[0].why}` : (cu.length ? "上司のFBの観点は、おおむね守れています。" : ""),
     latest.next ? `次の一手：${latest.next}` : "",
   ].filter(Boolean).join("\n"));
@@ -795,7 +823,8 @@ function renderTeam() {
   // ヒートマップ
   const col = v => v === null ? "" : v >= 4 ? "background:#C7F0E6" : v >= 3 ? "background:#E0F5EF" : v >= 2 ? "background:#FEF3C7" : "background:#FEE2E2";
   const ta = avgScores(rows.map(r => r.entry));
-  $("team-heat").innerHTML = `<tr><th>軸</th>${mem.map(m => `<th>${m.short || m.name}</th>`).join("")}<th>チーム</th></tr>` + AXES.map(([k, label]) => `<tr><td>${label}</td>${per.map(p => `<td class="h" style="${col(p.a[k])}">${p.a[k] !== null ? p.a[k].toFixed(1) : "—"}</td>`).join("")}<td class="h">${ta[k] !== null ? ta[k].toFixed(1) : "—"}</td></tr>`).join("");
+  const skP = per.map(p => skillScores(p.a)), skT = skillScores(ta);
+  $("team-heat").innerHTML = `<tr><th>スキル</th>${mem.map(m => `<th>${m.short || m.name}</th>`).join("")}<th>チーム</th></tr>` + SKILLS.map(([k, label, parts]) => `<tr><td>${label}<div class="why">${parts.map(x => AX_LABEL[x]).join("・")}</div></td>${skP.map(sp => `<td class="h" style="${col(sp[k].score)}">${sp[k].score !== null ? sp[k].score.toFixed(1) : "—"}</td>`).join("")}<td class="h">${skT[k].score !== null ? skT[k].score.toFixed(1) : "—"}</td></tr>`).join("");
   // 日別の本数（直近14日・積み上げ）
   const colors = ["#1A3A5C", "#05AABA", "#059669", "#F59E0B", "#8B5CF6", "#EF4444"];
   const days = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); days.push(d.getTime()); }
@@ -1073,7 +1102,7 @@ $("grade").addEventListener("click", async () => {
     if (r.calcReview) f.appendChild(document.createTextNode("\n\n【問3 検算】" + r.calcReview));
     if (r.numbersReview) f.appendChild(document.createTextNode("\n\n【数字】" + r.numbersReview));
     const ent = recordHistory(r);
-    if (ent) { const L = ent.total >= 4.5 ? "S" : ent.total >= 4 ? "A" : ent.total >= 3.5 ? "B" : ent.total >= 3 ? "C" : ent.total >= 2.5 ? "D" : "E"; $("res-grade").textContent = L; $("res-total").textContent = ent.total.toFixed(1) + " / 5"; drawRadarInto($("res-radar"), ent, history.length > 1 ? avgScores(history.slice(0, -1)) : null); renderAxList(ent); }
+    if (ent) { const L = ent.total >= 4.5 ? "S" : ent.total >= 4 ? "A" : ent.total >= 3.5 ? "B" : ent.total >= 3 ? "C" : ent.total >= 2.5 ? "D" : "E"; $("res-grade").textContent = L; $("res-total").textContent = ent.total.toFixed(1) + " / 5"; drawRadarInto($("res-radar"), { scores: skillScores(ent.scores) }, history.length > 1 ? skillScores(avgScores(history.slice(0, -1))) : null, SKILLS); renderSkillList($("res-axes"), skillScores(ent.scores), null); }
     rtab("eval"); window.scrollTo(0, 0);
     const strip = $("score-strip"); strip.hidden = !ent; if (ent) { strip.innerHTML = (ent.custom && Object.keys(ent.custom).length ? `<span style="border:0;background:none;padding-left:0;color:var(--ink-2)">上司FBの観点：</span>` + Object.values(ent.custom).map(c => `<span style="background:#E0F5EF;border-color:#B5E3E8" title="${c.why.replace(/"/g, "&quot;")}">${c.title} <b>${c.score}</b></span>`).join("") : ""); strip.hidden = !strip.innerHTML; if (ent.next) f.appendChild(document.createTextNode("\n\n【次の一手】" + ent.next)); }
     status("grade-status", r.saved ? "この回の気づきを知見に追記しました" : ""); $("again").hidden = false; if (r.saved) loadKnow();

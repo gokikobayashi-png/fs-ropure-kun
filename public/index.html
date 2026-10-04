@@ -364,7 +364,11 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 .axlist div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 0}
 .axlist div.weak{background:var(--bad-soft);border-radius:4px;padding:4px 6px;margin:0 -6px}
 .axlist b{font-variant-numeric:tabular-nums}
-.axlist .avg{color:var(--ink-2)}
+.axlist .avg{color:var(--ink-2);font-weight:400;font-size:11px}
+.axlist .sk{display:block}
+.axlist .sk-top{display:flex;justify-content:space-between;border:0;padding:0}
+.axlist .sk-top b{font-size:15px;color:#1A3A5C}
+.axlist .sk-parts{display:block;border:0;padding:0;font-size:11px;color:var(--ink-2)}
 #res-info .kv{display:grid;gap:6px;font-size:13px}
 #res-info .kv b{color:var(--navy)}
 /* 設定 */
@@ -783,7 +787,7 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
         </div>
         <div class="dcol">
           <div class="bcard" id="d-trend"><h3>⭐ スキルスコア（質） <span class="chip">週次推移</span></h3><svg class="radar" id="trend" viewBox="0 0 520 200" role="img" aria-label="推移"></svg><div class="hist" id="hist"></div></div>
-          <div class="bcard"><h3>スキル別スコア詳細（教材7軸） <span class="chip" id="radar-total"></span></h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg><div class="legend"><span><i class="me"></i>あなた（直近）</span><span><i class="team"></i>チーム平均</span></div></div>
+          <div class="bcard"><h3>スキル別スコア詳細 <span class="chip" id="radar-total"></span></h3><svg class="radar" id="radar" viewBox="0 0 320 300" role="img" aria-label="レーダーチャート"></svg><div class="legend"><span><i class="me"></i>あなた（直近）</span><span><i class="team"></i>チーム平均</span></div><div class="axlist" id="skill-list" style="margin-top:8px"></div></div>
         </div>
       </div>
       <div class="bcard" id="d-coach"><div class="coach"><div id="coach-art"><img src="/coach.png" alt="Mr. KOHEI" class="coach-img"></div><div><div class="bubble" id="coach-say"><span class="nm">Mr. KOHEI</span>まだロープレの記録がありません。1回やると、ここで所見を話します。</div><div class="row" style="margin-top:6px"><button class="btn" id="dash-speak" type="button">🔊 読み上げ</button></div></div></div>
