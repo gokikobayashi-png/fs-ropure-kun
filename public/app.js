@@ -244,7 +244,7 @@ $("tpl-save").addEventListener("click", () => {
 
 /* ---------- ① → ② ペルソナ生成 ---------- */
 async function generate() {
-  $("gen").disabled = true; lockStart(true); status("gen-status", "相手を用意しています（10〜20秒）…");
+  $("gen").disabled = true; lockStart(true); status("gen-status", "相手を用意しています（10〜30秒）…");
   try {
     persona = await api("persona", { ...caseSettings(), company: coForApi() }); persona.tpl = currentTpl;
     $("p-company").textContent = persona.company;

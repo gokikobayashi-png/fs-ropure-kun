@@ -20,6 +20,45 @@ const ROLES = {
   is_lead: { role: "インサイドセールスのリーダー", auth: "決裁権なし。上長から外注の比較を任されている。現場の数字（コール数・アポ率）には一番詳しい" },
 };
 
+// 相手の会社の数字が現実的か（営業体制・行動量・売上がつながっているか）を確かめる。
+// 例：IS5名・月45アポなのにFS25名（FS1人あたり月1.8商談）、のような構成を弾く。
+// teamGiven：受講者が営業体制を指定した場合は、人数と比率は指定を優先する。
+const num = v => { const n = Number(v); return isFinite(n) ? n : NaN; };
+export function checkNums(nums, { teamGiven = false, sizeGiven = false } = {}) {
+  if (!nums || typeof nums !== "object") return ["nums（数字の一覧）が無い"];
+  const emp = num(nums.employees), is = num(nums.is_count), fs = num(nums.fs_count), other = num(nums.other_sales) || 0;
+  const calls = num(nums.monthly_calls), meet = num(nums.monthly_meetings), win = num(nums.win_rate_pct);
+  const deal = num(nums.deal_value_man), target = num(nums.annual_target_man), forecast = num(nums.annual_forecast_man);
+  const out = [];
+  if ([emp, is, fs, meet, win, deal, target, forecast].some(isNaN)) return ["nums に数値でない項目がある"];
+  const sales = is + fs + other;
+  if (sales < 1) out.push("営業が0名になっている");
+  if (!teamGiven && !sizeGiven && emp >= 10 && sales > emp * 0.4) out.push(`営業${sales}名は従業員${emp}名に対して多すぎる（4割以下にする）`);
+  if (!teamGiven && is > 0 && fs > is * 3) out.push(`IS${is}名に対してFS${fs}名は多すぎる（FSはISの2倍までが目安。ISが作る商談数でFSの手が埋まる人数にする）`);
+  if (fs > 0) {
+    const per = meet / fs;
+    if ((fs >= 6 && per < 4) || (fs >= 3 && per < 2)) out.push(`FS1人あたりの新規商談が月${per.toFixed(1)}件しかない（月${meet}商談÷FS${fs}名）。FSを減らすか商談数を増やして、1人あたり月5〜25件にする`);
+    if (per > 40) out.push(`FS1人あたりの新規商談が月${per.toFixed(0)}件は多すぎる。1人あたり月5〜25件にする`);
+  }
+  if (is > 0 && calls > 0) {
+    const per = calls / is;
+    if (per < 150 || per > 3000) out.push(`IS1人あたり月${per.toFixed(0)}コールは現実的でない（月300〜1,500コールにする）`);
+  }
+  if (win <= 0 || win > 80) out.push(`受注率${win}%は現実的でない`);
+  if (!(target > forecast)) out.push("売上目標が着地見込みを上回っていない");
+  if (deal > 0 && target > forecast) {
+    const cur = meet * win / 100 * 12;           // 今の年間の新規受注数
+    const need = (target - forecast) / deal;     // ギャップを埋めるのに追加で必要な受注数
+    if (need > Math.max(cur, 6) * 3) out.push(`売上のギャップ${Math.round(target - forecast)}万円を埋めるには追加で${Math.round(need)}件の受注が要るが、今の年間受注は${Math.round(cur)}件（月${meet}商談×受注率${win}%×12）。売上目標・着地見込みを、単価と受注数から積み上がる大きさに直す`);
+    if (cur * deal > target * 1.5) out.push(`今の新規受注だけで年${Math.round(cur * deal)}万円になり、売上目標${target}万円と桁が合わない`);
+  }
+  if (emp > 0 && (forecast / emp < 200 || forecast / emp > 10000)) out.push(`従業員1人あたり売上が${Math.round(forecast / emp)}万円は現実的でない（500万〜5,000万円にする）`);
+  return out;
+}
+
+// 作り直しが入ると時間がかかるので、関数の制限時間を延ばす
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   if (!auth(req, res)) return;
@@ -60,17 +99,39 @@ ${difficulty === "hard" ? `- 難易度「手強い」：この相手は他社と
 - 実在の企業名・人名は使わない。
 - personality は次の文をそのまま使う：${PERSONALITY[difficulty]}
 
+■ 数字の整合性（必ず守る。先に nums を決め、hidden_facts と brief に書く数字は nums と完全に一致させる）
+- 営業人数は会社規模に見合う：営業（IS＋FS＋営業マネージャー）は従業員数の3割以下が目安${b.sales_team ? "（営業体制は上の条件の指定どおりにする）" : ""}。
+- 分業している会社：FSの人数は「月の新規商談数 ÷ FS人数 ＝ 1人あたり月5〜25件」になるように決める（例：月45商談ならFSは2〜9名。月45商談でFS25名のような構成は不可。課題が「量」でFSの手が空いている設定でも、1人あたり月3件以上・FSは5名まで）。ISとFSの比率は IS1名に対しFS1〜2名まで。
+- ISを置かない会社（FSが自分でアポを取る／紹介・問い合わせ中心／社長が1人で売っている）は is_count を0にし、誰がアポを取っているかを事実に書く。
+- IS1名あたりの行動量は月300〜1,500コール、アポは月5〜20件。
+- 売上と件数がつながること：月の新規受注数＝月の新規商談数×受注率。年間の新規売上＝月の新規受注数×12×1受注あたりの今期売上。売上目標と着地見込みは「既存顧客の継続売上＋この新規売上」で説明できる大きさにする。
+- 売上目標と着地見込みの差 ÷ 1受注あたりの今期売上 ＝ 追加で必要な受注数。これが今の年間受注数の3倍以内に収まること（営業代行で現実に埋められる差にする）。
+- 従業員1人あたり売上は500万〜5,000万円。
+
 JSONだけを返す（前後に文章を付けない）：
-{"company":"社名","name":"姓＋さん（例：田中さん。役職を入れない）","role":"${layer.role}","gender":"male"|"female","age":年齢の数値（役職に見合う。例：社長45〜65、課長35〜45、担当28〜38）,"brief":"事前に分かる会社概要。業種・規模・商材・設立年・所在地の県。課題には触れない。80字以内","opening_line":"商談冒頭に本人が言う課題認識のひとこと。50字以内。口語。役職が分かる言い方はしない","hidden_facts":["…"],"answer":"${answer}","exp":"正解の理由。判定順序に沿って、なぜこの分類か、ノイズはなぜ違うか。150字以内","rephrase_example":"課題の言い直しの模範例1文（『〜で積んでいる限り、〜にならない構造ですよね』型）","personality":"${PERSONALITY[difficulty]}"}`;
+{"company":"社名","name":"姓＋さん（例：田中さん。役職を入れない）","role":"${layer.role}","gender":"male"|"female","age":年齢の数値（役職に見合う。例：社長45〜65、課長35〜45、担当28〜38）,"brief":"事前に分かる会社概要。業種・規模・商材・設立年・所在地の県。課題には触れない。80字以内","opening_line":"商談冒頭に本人が言う課題認識のひとこと。50字以内。口語。役職が分かる言い方はしない","nums":{"employees":従業員数,"is_count":IS（アポ取り専任）の人数,"fs_count":FS（商談する営業。兼務の社長も数える）の人数,"other_sales":営業マネージャーなどその他の営業人数,"monthly_calls":月の架電数の合計（架電していなければ0）,"monthly_meetings":月の新規商談数の合計,"win_rate_pct":受注率（%）,"deal_value_man":1受注あたりの今期売上（万円）,"annual_target_man":今期の売上目標（万円）,"annual_forecast_man":今期の着地見込み（万円）},"hidden_facts":["…"],"answer":"${answer}","exp":"正解の理由。判定順序に沿って、なぜこの分類か、ノイズはなぜ違うか。150字以内","rephrase_example":"課題の言い直しの模範例1文（『〜で積んでいる限り、〜にならない構造ですよね』型）","personality":"${PERSONALITY[difficulty]}"}`;
 
     const ai = client();
-    const r = await generate(ai, {
-      contents: prompt,
-      config: { responseMimeType: "application/json", temperature: 1.0 },
-    });
-    const text = r.text || "";
-    const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
-    if (!json.company || !Array.isArray(json.hidden_facts) || !CAT[json.answer]) throw new Error("ペルソナJSONが不完全");
+    const opt = { teamGiven: !!b.sales_team, sizeGiven: !!b.size };
+    // 数字が現実的でなければ、どこがおかしいかを伝えて作り直す（最大2回）。それでも残る場合は一番ましなものを使う
+    let json = null, issues = [], lastErr = null;
+    const t0 = Date.now();
+    for (let i = 0; i < 3; i++) {
+      if (json && Date.now() - t0 > 30000) break; // 時間切れになる前に、手元の案で進める
+      const fix = i && issues.length ? `\n\n■ 前回の案は数字が現実的でなかった。次の点を直して、会社ごと作り直す：\n${issues.map(x => "- " + x).join("\n")}` : "";
+      let cand, candIssues;
+      try {
+        const r = await generate(ai, { contents: prompt + fix, config: { responseMimeType: "application/json", temperature: 1.0 } });
+        const text = r.text || "";
+        cand = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+        if (!cand.company || !Array.isArray(cand.hidden_facts) || !CAT[cand.answer]) throw new Error("ペルソナJSONが不完全");
+        candIssues = checkNums(cand.nums, opt);
+      } catch (e) { lastErr = e; if (json) break; continue; }
+      if (!json || candIssues.length < issues.length) { json = cand; issues = candIssues; }
+      if (!issues.length) break;
+      console.error("persona numbers unrealistic, retry", i + 1, issues.join(" / "));
+    }
+    if (!json) throw lastErr || new Error("相手を作れませんでした");
     json.difficulty = difficulty;
     json.role = layer.role; json.authority = layer.auth;
     json.style = styleKey; json.style_name = style.name; json.style_hidden = styleHidden;
