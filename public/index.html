@@ -70,6 +70,21 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .verdict .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--accent);display:block;margin-bottom:4px}
 .verdict.ng .lab{color:var(--bad)}
 details{font-size:13px;color:var(--ink-2);margin-top:10px}
+.howto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-top:10px;font-size:13px}
+.howto ol{display:flex;flex-wrap:wrap;gap:6px 6px;list-style:none;margin:0;padding:0}
+.howto li{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--navy)}
+.howto li+li::before{content:"→";color:var(--ink-2);font-weight:400;margin-right:6px}
+.howto p{flex-basis:100%;margin:0;color:var(--ink-2);font-size:12px}
+.stepno{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-family:var(--mono);font-size:12px;font-weight:700}
+.stepbox{margin-top:14px}
+.stephead{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-bottom:8px}
+.stephead h3{margin:0;font-size:16px;color:var(--navy)}
+.stephead .hint{margin:0}
+.stephead .stepno{width:26px;height:26px;font-size:14px}
+.pickab{align-items:stretch;gap:10px 14px}
+.pickab .realbox{margin-bottom:0;transition:opacity .15s}
+.pickab .realbox.dim{opacity:.5}
+.pickab .realbox.dim:focus-within{opacity:1}
 details.ficbox{border:1px dashed var(--line);border-radius:8px;padding:0;margin-top:12px;color:var(--ink)}
 details.ficbox[open]{border-style:solid;background:var(--bg)}
 details.ficbox summary{list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:10px 12px;font-size:14px;font-weight:600;color:var(--navy)}
@@ -516,9 +531,52 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 <section class="panel" id="step1">
   <div class="pl">STEP 1</div>
   <h2>どんな相手と練習するか</h2>
-  <p class="hint">空欄なら毎回AIが変えます。相手の本当の課題（戦略・手法・量・質）はAIが決めて、最後の答え合わせまで伏せられます。</p>
+  <div class="howto" id="howto">
+    <b>手順</b>
+    <ol>
+      <li><span class="stepno">1</span>会社を決める</li>
+      <li><span class="stepno">2</span>相手の人を決める</li>
+      <li><span class="stepno">3</span>難しさを決める</li>
+      <li><span class="stepno">4</span>「相手を生成する」を押す</li>
+    </ol>
+    <p>迷ったら、何も触らずに <b>4</b> だけ押せば、おまかせで作ります。相手の本当の課題（戦略・手法・量・質）は最後の答え合わせまで伏せられます。</p>
+  </div>
 
-  <div class="sub" style="border-top:0;padding-top:4px">相手のタイプ（ソーシャルスタイル）<span class="hint" style="margin:0 0 0 10px;display:inline">話し方・反応・決め方が変わる。本番で当たる4タイプ全部と練習する</span></div>
+  <div class="panel stepbox">
+    <div class="stephead"><span class="stepno">1</span><h3>会社を決める</h3><span class="hint">A・B・C のどれか1つ</span></div>
+    <div class="g2 pickab">
+      <div class="realbox" id="box-a">
+        <div class="pl" style="color:var(--teal)">A. 登録済みのシナリオ企業から選ぶ（おすすめ）</div>
+        <label class="f">シナリオ企業<select id="sc-pick"><option value="">選ばない</option></select></label>
+        <p class="realnote" id="sc-pick-note" hidden></p>
+        <p class="hint">会社情報は登録済みなので、選ぶだけです。登録・編集は <a href="#" id="sc-goto">設定 → シナリオ企業</a> から。</p>
+      </div>
+      <div class="realbox" id="box-b">
+        <div class="pl" style="color:var(--teal)">B. 登録していない実在の会社で練習する</div>
+        <label class="f">会社名<input type="text" id="real-name" placeholder="例：株式会社◯◯" autocomplete="off"></label>
+        <label class="f">会社やサービスのURL<input type="text" id="real-url" inputmode="url" placeholder="例：https://example.co.jp/service（3つまで。空白で区切る）" autocomplete="off"></label>
+        <p class="hint">サイトを読んで事業内容・サービス・売り先を確かめます（20〜60秒）。担当者と社内の数字は架空です。</p>
+      </div>
+    </div>
+      <details class="ficbox" id="fic-box">
+        <summary><span>C. 架空の会社で練習する</span><small>何も入れなければ、AIが毎回ちがう会社を作ります。業種・商材・規模・営業体制を指定したいときだけ、ここを開きます</small><span class="ficbadge" id="fic-badge" hidden></span></summary>
+        <div class="ficbody">
+          <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介（空欄なら毎回変える）"></label>
+          <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
+          <div class="g2">
+            <label class="f">規模（従業員数）<input type="text" id="size" placeholder="例：従業員30名、年商5億"></label>
+            <label class="f">営業人数・体制<input type="text" id="sales-team" placeholder="例：営業2名（社長も兼務）、ISなし"></label>
+          </div>
+          <p class="hint" id="fic-hint">シナリオ企業や実在の会社を選んでいるときは、入力不要です（会社情報から決まります）。ここに書くと、その項目だけ上書きされます。</p>
+        </div>
+      </details>
+  </div>
+
+  <div class="panel stepbox">
+    <div class="stephead"><span class="stepno">2</span><h3>相手の人を決める</h3><span class="hint">役職と、話し方のタイプ。どちらもランダムのままで大丈夫です</span></div>
+    <label class="f" style="max-width:420px">相手のレイヤー（役職）
+        <select id="layer"><option value="" selected>ランダム（役職は伏せて出る）</option><option value="ceo">社長</option><option value="director">取締役 営業本部長</option><option value="sales_mgr">営業部長</option><option value="section">営業課長</option><option value="marketing">マーケティング責任者</option><option value="bizdev">新規事業の事業部長</option><option value="planning">経営企画の担当</option><option value="is_lead">インサイドセールスのリーダー</option></select></label>
+    <div class="sub">相手のタイプ（ソーシャルスタイル）<span class="hint" style="margin:0 0 0 10px;display:inline">話し方・反応・決め方が変わる。本番で当たる4タイプ全部と練習する</span></div>
   <div class="styles" id="styles">
     <button type="button" class="stylecard random on" data-style="">
       <span class="sc-ic">?</span>
@@ -531,50 +589,25 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
       <button type="button" class="stylecard ex" data-style="expressive"><span class="sc-head"><i></i><b>エクスプレッシブ</b><small>意見を主張する × 感情を表す</small></span><span>表情が豊かで話し好き／熱中しやすい／明るくて楽観的／周囲から認められたがる。<b>話が脱線する。乗ってくるが数字は曖昧。</b></span></button>
     </div>
   </div>
+  </div>
 
-  <div class="g2" style="margin-top:14px">
-    <div class="panel" style="margin-top:0">
-      <div class="sub" style="border-top:0;padding-top:0;margin-top:0">相手の会社と立場</div>
-      <div class="realbox">
-        <div class="pl" style="color:var(--teal)">実在の会社を想定する（任意）</div>
-        <label class="f">登録済みのシナリオ企業から選ぶ<select id="sc-pick"><option value="">選ばない（下に直接入力）</option></select></label>
-        <p class="realnote" id="sc-pick-note" hidden></p>
-        <label class="f">会社名<input type="text" id="real-name" placeholder="例：株式会社◯◯（空欄なら架空の会社をAIが作る）" autocomplete="off"></label>
-        <label class="f">会社やサービスのURL<input type="text" id="real-url" inputmode="url" placeholder="例：https://example.co.jp/service（3つまで。空白で区切る）" autocomplete="off"></label>
-        <p class="hint">サイトを読んで事業内容・サービス・売り先を確かめ、その会社に合わせます。担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。サービス資料があるとき、何度も使う会社は <a href="#" id="sc-goto">設定 → シナリオ企業</a> に登録しておくと速く正確になります。</p>
-      </div>
-      <details class="ficbox" id="fic-box">
-        <summary><span>架空の会社で練習する場合はこちら</span><small>業種・商材・規模・営業体制を指定できます（空欄ならAIが毎回変えます）</small><span class="ficbadge" id="fic-badge" hidden></span></summary>
-        <div class="ficbody">
-          <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介（空欄なら毎回変える）"></label>
-          <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
-          <div class="g2">
-            <label class="f">規模（従業員数）<input type="text" id="size" placeholder="例：従業員30名、年商5億"></label>
-            <label class="f">営業人数・体制<input type="text" id="sales-team" placeholder="例：営業2名（社長も兼務）、ISなし"></label>
-          </div>
-          <p class="hint" id="fic-hint">シナリオ企業や実在の会社を選んでいるときは、入力不要です（会社情報から決まります）。ここに書くと、その項目だけ上書きされます。</p>
-        </div>
-      </details>
-      <label class="f">相手のレイヤー
-        <select id="layer"><option value="" selected>ランダム（役職は伏せて出る）</option><option value="ceo">社長</option><option value="director">取締役 営業本部長</option><option value="sales_mgr">営業部長</option><option value="section">営業課長</option><option value="marketing">マーケティング責任者</option><option value="bizdev">新規事業の事業部長</option><option value="planning">経営企画の担当</option><option value="is_lead">インサイドセールスのリーダー</option></select></label>
-    </div>
-    <div class="panel" style="margin-top:0">
-      <div class="sub" style="border-top:0;padding-top:0;margin-top:0">難易度・課題</div>
+  <div class="panel stepbox">
+    <div class="stephead"><span class="stepno">3</span><h3>難しさを決める</h3><span class="hint">そのままで大丈夫です</span></div>
+    <div class="g2">
       <label class="f">難易度（数字の出し方・言い直しの認め方）
         <select id="difficulty"><option value="easy">協力的</option><option value="normal" selected>普通</option><option value="hard">手強い（他社と比較検討中：セレブリックス／EmpowerX／カリトル君）</option></select></label>
       <label class="f">本当の課題（4分類）
         <select id="answer"><option value="" selected>ランダム（最後まで伏せる）</option><option value="A">A 戦略</option><option value="B">B 手法</option><option value="C">C 量</option><option value="D">D 質</option></select></label>
-      <p class="hint" style="background:var(--bg);border-radius:6px;padding:8px 12px">タイプ × レイヤー × 難易度 × 課題 の組み合わせで相手を作ります。</p>
     </div>
   </div>
 
-  <div class="panel" style="margin-top:14px">
-    <div class="co-head"><div class="sub" style="border-top:0;padding-top:0;margin-top:0">保存した相手（テンプレート）</div><span class="hint" style="margin:0 0 0 10px">よく当たる相手を保存して、同じ設定で繰り返し練習</span><span class="sp"></span><button class="btn" id="tpl-save" type="button">今の設定を保存</button></div>
-    <div class="tpls" id="tpls"></div>
-  </div>
-
+  <div class="panel stepbox">
+    <div class="stephead"><span class="stepno">4</span><h3>相手を生成する</h3></div>
   <div class="row"><button class="btn primary" id="gen" type="button">この設定で相手を生成する</button><span class="hint" style="margin:0">生成後、会社概要だけ見えます</span></div>
   <div class="status" id="gen-status"></div>
+    <div class="co-head" style="margin-top:14px"><div class="sub" style="border-top:0;padding-top:0;margin-top:0">保存した設定（テンプレート）</div><span class="hint" style="margin:0 0 0 10px">押すと 1〜3 がまとめて入ります。よく当たる相手を保存して、同じ設定で繰り返し練習</span><span class="sp"></span><button class="btn" id="tpl-save" type="button">今の設定を保存</button></div>
+    <div class="tpls" id="tpls"></div>
+  </div>
   <details class="cheat"><summary>カンニング用：FS商談の考え方（教材の要約）</summary>
     <h4>0. 終着点</h4>
     <ul>

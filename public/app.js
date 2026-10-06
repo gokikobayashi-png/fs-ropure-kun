@@ -214,8 +214,8 @@ function status(id, text, err) { const e = $(id); e.textContent = text || ""; e.
 let styleKey = "";
 const STYLE_NAME = { "": "ランダム", analytical: "アナリティカル", driver: "ドライバー", amiable: "エミアブル", expressive: "エクスプレッシブ" };
 document.querySelectorAll("#styles .stylecard").forEach(b => b.addEventListener("click", () => { styleKey = b.dataset.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", x === b)); }));
-function caseSettings() { return { scenario_id: scPicked() ? scenarioPick : "", real_name: $("real-name").value.trim(), real_url: $("real-url").value.trim(), industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), sales_team: $("sales-team").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, answer: $("answer").value, style: styleKey }; }
-function applyCase(c) { $("real-name").value = c.real_name || ""; $("real-url").value = c.real_url || ""; scenarioPick = c.scenario_id && scenarios.some(x => x.id === c.scenario_id) ? c.scenario_id : ""; $("sc-pick").value = scenarioPick; showPickNote(); $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey));  syncFic(true); }
+function caseSettings() { const sp = scPicked(); return { scenario_id: sp ? sp.id : "", real_name: sp ? sp.name : $("real-name").value.trim(), real_url: sp ? (sp.url || "") : $("real-url").value.trim(), industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), sales_team: $("sales-team").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, answer: $("answer").value, style: styleKey }; }
+function applyCase(c) { scenarioPick = c.scenario_id && scenarios.some(x => x.id === c.scenario_id) ? c.scenario_id : ""; $("sc-pick").value = scenarioPick; $("real-name").value = scenarioPick ? "" : (c.real_name || ""); $("real-url").value = scenarioPick ? "" : (c.real_url || ""); showPickNote(); $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey));  syncFic(true); }
 // 業種・商材・規模・営業体制（架空の会社用）は折りたたんでおく。入力があるときは開き、閉じていても件数が分かるようにする
 const FIC_IDS = ["industry", "product", "size", "sales-team"];
 function syncFic(openIfFilled = false) {
@@ -276,7 +276,9 @@ function renderRealNote() {
 /* ---------- シナリオ企業（事前に登録した実在の会社。チームで共有） ---------- */
 const SC_KEY = "ropure-scenarios-v1";
 let scenarios = [], scenarioPick = "", scShared = false, scEditing = "", scCat = "";
-function scPicked() { const it = scenarioPick && scenarios.find(x => x.id === scenarioPick); return it && it.name === $("real-name").value.trim() ? it : null; }
+function scPicked() { return (scenarioPick && scenarios.find(x => x.id === scenarioPick)) || null; }
+// A（シナリオ企業）と B（会社名・URL）はどちらか片方。使っていない方は薄く表示する
+function syncAB() { const a = !!scPicked(), b = !!($("real-name").value.trim() || $("real-url").value.trim()); $("box-a").classList.toggle("dim", !a && b); $("box-b").classList.toggle("dim", a); }
 function scCache() { try { localStorage.setItem(SC_KEY, JSON.stringify(scenarios)); } catch (_) {} }
 async function loadScenarios() {
   try { const v = JSON.parse(localStorage.getItem(SC_KEY) || "[]"); scenarios = Array.isArray(v) ? v : []; } catch (_) { scenarios = []; }
@@ -287,12 +289,13 @@ async function loadScenarios() {
 function showPickNote() {
   const it = scPicked(), n = $("sc-pick-note"); n.hidden = !it; n.textContent = "";
   if (it) { const b = document.createElement("b"); b.textContent = (it.category ? "［" + it.category + "］ " : "") + it.name; n.appendChild(b); n.appendChild(document.createTextNode(" ― " + (it.profile.business || "") + "／" + (it.profile.product || ""))); }
+  syncAB();
 }
 function renderScenarios() {
   const cats = [...new Set(scenarios.map(x => x.category || "未分類"))].sort((a, b) => a.localeCompare(b, "ja"));
   // ケース設定の選択肢（カテゴリーごと）
   const sel = $("sc-pick"); const keep = scenarioPick; sel.textContent = "";
-  const o0 = document.createElement("option"); o0.value = ""; o0.textContent = scenarios.length ? "選ばない（下に直接入力）" : "まだ登録がありません（下に直接入力するか、設定で登録）"; sel.appendChild(o0);
+  const o0 = document.createElement("option"); o0.value = ""; o0.textContent = scenarios.length ? "選ばない" : "まだ登録がありません（設定 → シナリオ企業 で登録）"; sel.appendChild(o0);
   cats.forEach(c => { const g = document.createElement("optgroup"); g.label = c; scenarios.filter(x => (x.category || "未分類") === c).forEach(x => { const o = document.createElement("option"); o.value = x.id; o.textContent = x.name; g.appendChild(o); }); sel.appendChild(g); });
   sel.value = scenarios.some(x => x.id === keep) ? keep : ""; if (!sel.value) scenarioPick = ""; showPickNote();
   // 設定の一覧
@@ -326,11 +329,11 @@ function renderScenarios() {
 }
 function pickScenario(id) {
   const it = scenarios.find(x => x.id === id); scenarioPick = it ? id : ""; $("sc-pick").value = scenarioPick;
-  if (it) { $("real-name").value = it.name; $("real-url").value = it.url || ""; FIC_IDS.forEach(id => { $(id).value = ""; }); syncFic(true); } // 登録済みの会社を選んだら、架空用の指定は消す
+  if (it) { $("real-name").value = ""; $("real-url").value = ""; FIC_IDS.forEach(id => { $(id).value = ""; }); syncFic(true); } // 登録済みの会社を選んだら、B と架空用の指定は消す
   currentTpl = null; showPickNote();
 }
-$("sc-pick").addEventListener("change", () => { const id = $("sc-pick").value; if (id) pickScenario(id); else { scenarioPick = ""; $("real-name").value = ""; $("real-url").value = ""; showPickNote(); } });
-$("real-name").addEventListener("input", () => { if (scenarioPick && !scPicked()) { scenarioPick = ""; $("sc-pick").value = ""; } showPickNote(); });
+$("sc-pick").addEventListener("change", () => { const id = $("sc-pick").value; if (id) pickScenario(id); else { scenarioPick = ""; showPickNote(); } });
+["real-name", "real-url"].forEach(id => $(id).addEventListener("input", () => { if (scenarioPick && $(id).value.trim()) { scenarioPick = ""; $("sc-pick").value = ""; } showPickNote(); })); // B に書いたら A の選択は外す
 $("sc-goto").addEventListener("click", e => { e.preventDefault(); gotoScenarios(); });
 $("sc-q").addEventListener("input", renderScenarios);
 function gotoScenarios() { view("settings"); const b = document.querySelector('#setnav button[data-set="sc"]'); if (b) b.click(); }
