@@ -53,18 +53,11 @@ ${log}
 
 JSONだけを返す。受講者の発言すべてについて1つずつ、番号順に：
 {"turns":[{"n":発言番号,"q":0,"picked":0,"echo":"","could":"","proposal":false,"off":"","note":""}]}`;
-  // 返ってきたJSONが壊れていることがあるので、1回だけやり直す
-  let last;
-  for (let i = 0; i < 2; i++) {
-    try {
-      const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: i ? 0.2 : 0 } });
-      const t = r.text || "";
-      const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
-      if (!Array.isArray(j.turns) || !j.turns.length) throw new Error("turns が空");
-      return tallyCounts(j.turns, transcript);
-    } catch (e) { last = e; console.error("count attempt failed", i + 1, String(e.message || e).slice(0, 200)); }
-  }
-  throw last;
+  const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0 } });
+  const t = r.text || "";
+  const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
+  if (!Array.isArray(j.turns) || !j.turns.length) throw new Error("turns が空");
+  return tallyCounts(j.turns, transcript);
 }
 export function countsLine(c) {
   if (!c) return "";
@@ -134,9 +127,12 @@ JSONだけを返す：
 
     const ai = client();
     // 回数の集計は採点と同時に走らせる（失敗しても採点は返す）
-    const countsP = countTurns(ai, persona, transcript).catch(e => { console.error("count failed", e); return null; });
+    let countsError = "";
+    const countsP = countTurns(ai, persona, transcript).catch(e => { countsError = String(e.message || e).slice(0, 200); console.error("count failed", countsError); return null; });
     const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0.4 } });
-    const counts = await countsP;
+    let counts = await countsP;
+    // 同時に走らせて失敗したとき（混雑・壊れたJSON）は、採点が終わってからもう1回だけ数える
+    if (!counts && countsError) { try { counts = await countTurns(ai, persona, transcript); countsError = ""; } catch (e) { countsError = String(e.message || e).slice(0, 200); console.error("count retry failed", countsError); } }
     const t = r.text || "";
     let feedback = t, learnings = [], overviewReview = "", calcReview = "", numbersReview = "", scores = null, nextAction = "", custom = null, good = [], improve = [], secondOpinion = "";
     try { const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)); feedback = j.feedback || t; learnings = Array.isArray(j.learnings) ? j.learnings.map(String) : []; overviewReview = String(j.overview_review || ""); calcReview = String(j.calc_review || ""); numbersReview = String(j.numbers_review || ""); nextAction = String(j.next_action || ""); secondOpinion = String(j.second_opinion || ""); good = Array.isArray(j.good) ? j.good.map(String) : []; improve = Array.isArray(j.improve) ? j.improve.map(String) : [];
@@ -148,7 +144,7 @@ JSONだけを返す：
     }
     let recordUrl = null, recordError = "";
     if (!dry) try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview, calcText, proposal, overviewReview, calcReview, numbersReview, quizText, scores, nextAction, custom, secondOpinion, counts, countsText: countsLine(counts) }); } catch (e) { console.error(e); recordError = String(e.message || e); }
-    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion, learnings, saved, counts });
+    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion, learnings, saved, counts, countsError });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }

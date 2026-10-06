@@ -697,9 +697,10 @@ function gofastDashSay(text) { const b = $("dash-gofast"); b.textContent = ""; c
 
 /* 会話の回数（質問／拾ってから質問／提案／質問と答えのずれ） */
 function countsText(c) { return c ? "質問" + c.questions + "回（うち相手の言葉を拾ってから" + c.picked + "回）／提案" + c.proposals + "回／質問と答えのずれ" + c.off + "回（相手の答えがずれた" + c.offThem + "・自分の答えがずれた" + c.offMe + "）" : ""; }
-function renderCounts(c) {
-  const panel = $("counts-panel"); panel.hidden = !c; if (!c) return;
-  const box = $("res-counts"); box.textContent = "";
+function renderCounts(c, err) {
+  const panel = $("counts-panel"); panel.hidden = !c && !err;
+  const box = $("res-counts"); box.textContent = ""; $("counts-list").textContent = ""; $("counts-detail").hidden = true;
+  if (!c) { $("counts-hint").textContent = err ? "今回は回数を数えられませんでした（AIが混み合っているか、返事が壊れていました）。採点には影響ありません。" : ""; return; }
   const tile = (label, value, sub, warn) => { const d = document.createElement("div"); d.className = "cnt-tile" + (warn ? " warn" : ""); const l = document.createElement("span"); l.className = "l"; l.textContent = label; const v = document.createElement("span"); v.className = "v"; v.textContent = value; const u = document.createElement("small"); u.textContent = "回"; v.appendChild(u); d.appendChild(l); d.appendChild(v); if (sub) { const s = document.createElement("span"); s.className = "s"; s.textContent = sub; d.appendChild(s); } box.appendChild(d); };
   const rate = c.questions ? Math.round(c.picked / c.questions * 100) : 0;
   tile("質問した", c.questions, "");
@@ -1158,7 +1159,7 @@ $("grade").addEventListener("click", async () => {
     if (r.overviewReview) f.appendChild(document.createTextNode("\n\n【問1 全体像】" + r.overviewReview));
     if (r.calcReview) f.appendChild(document.createTextNode("\n\n【問3 検算】" + r.calcReview));
     if (r.numbersReview) f.appendChild(document.createTextNode("\n\n【数字】" + r.numbersReview));
-    renderCounts(r.counts);
+    renderCounts(r.counts, r.countsError);
     const ent = recordHistory(r);
     if (ent) { const L = ent.total >= 4.5 ? "S" : ent.total >= 4 ? "A" : ent.total >= 3.5 ? "B" : ent.total >= 3 ? "C" : ent.total >= 2.5 ? "D" : "E"; $("res-grade").textContent = L; $("res-total").textContent = ent.total.toFixed(1) + " / 5"; drawRadarInto($("res-radar"), { scores: skillScores(ent.scores) }, history.length > 1 ? skillScores(avgScores(history.slice(0, -1))) : null, SKILLS); renderSkillList($("res-axes"), skillScores(ent.scores), null); }
     rtab("eval"); window.scrollTo(0, 0);
