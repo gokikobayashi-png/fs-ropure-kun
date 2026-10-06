@@ -104,7 +104,8 @@ function cleanProfile(j, fallbackName) {
   if (!p.business || !p.product) p.known = false;
   return p;
 }
-async function companyProfile(ai, { name, urls, siteText }, notes = []) {
+const TOOLSETS = { both: [{ urlContext: {} }, { googleSearch: {} }], url: [{ urlContext: {} }], search: [{ googleSearch: {} }] };
+async function companyProfile(ai, { name, urls, siteText }, notes = [], toolset = "both") {
   const who = `${name ? `会社名：${name}` : "会社名：（サイトから読み取る）"}${urls ? `\nURL：${urls}` : ""}`;
   if (siteText && siteText.length >= 300) {
     try {
@@ -115,11 +116,11 @@ async function companyProfile(ai, { name, urls, siteText }, notes = []) {
     } catch (e) { notes.push("site: " + String(e.message || e).slice(0, 200)); }
   }
   try {
-    const r = await generate(ai, { contents: `次の会社について、Web検索と下のURLのページを使って調べ、プロフィールをまとめる。確かめられた情報だけを書き、分からない項目は空文字にする。同名の別会社と取り違えない（URLがあればそのサイトの会社）。\n${who}\n\nJSONだけを返す（前後に文章を付けない）：${PROFILE_SHAPE}`, config: { tools: [{ urlContext: {} }, { googleSearch: {} }], temperature: 0.1 } }, { budgetMs: 25000, perCallMs: 20000 });
+    const r = await generate(ai, { contents: `次の会社について、Web検索と下のURLのページを使って調べ、プロフィールをまとめる。確かめられた情報だけを書き、分からない項目は空文字にする。同名の別会社と取り違えない（URLがあればそのサイトの会社）。\n${who}\n\nJSONだけを返す（前後に文章を付けない）：${PROFILE_SHAPE}`, config: { tools: TOOLSETS[toolset] || TOOLSETS.both, temperature: 0.1 } }, { budgetMs: 25000, perCallMs: 20000 });
     const p = cleanProfile(parseLoose(r.text || ""), name);
     if (p && p.known) return { ...p, source: "search" };
     notes.push("search: known=false " + String(r.text || "").slice(0, 160));
-  } catch (e) { notes.push("search: " + String(e.message || e).slice(0, 300)); }
+  } catch (e) { notes.push("search: " + String(e.detail || e.message || e).slice(0, 300)); }
   console.error("company profile failed", notes.join(" | "));
   return null;
 }
@@ -153,7 +154,7 @@ export default async function handler(req, res) {
       if (cached && cached.business && cached.product) profile = { ...cached, source: "saved" };
       else {
         if (realUrl) { try { site = await readCompanySite(realUrl); } catch (e) { site.errors.push(String(e.message || e)); } }
-        profile = await companyProfile(ai, { name: realName, urls: realUrl, siteText: site.text }, site.notes = []);
+        profile = await companyProfile(ai, { name: realName, urls: realUrl, siteText: site.text }, site.notes = [], String(b.real_tools || "both"));
       }
       // 確かな情報が無いときは、受講者が業種・商材を入れていればそれを使う。それも無ければ作らない
       if (!profile && b.industry && b.product) profile = { name: realName || "（社名未入力）", business: String(b.industry), product: String(b.product), target: "", value: "", size: String(b.size || ""), known: true, source: "input" };

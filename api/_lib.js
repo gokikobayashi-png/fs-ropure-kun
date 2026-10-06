@@ -77,7 +77,7 @@ export async function generate(ai, params, { budgetMs = 80000, perCallMs = 35000
     const wait = [2000, 5000, 8000][round];
     if (wait && budgetMs - (Date.now() - t0) > wait + 6000) await sleep(wait); else break;
   }
-  if (busy) throw new Error("AIが混み合っています。少し待ってから、もう一度お試しください");
+  if (busy) { const e = new Error("AIが混み合っています。少し待ってから、もう一度お試しください"); e.detail = String(busy.message || busy).slice(0, 300); throw e; }
   throw last;
 }
 
