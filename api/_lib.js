@@ -52,7 +52,7 @@ export async function generate(ai, params, { budgetMs = 80000, perCallMs = 35000
   const t0 = Date.now();
   const models = [TEXT_MODEL, ...FALLBACK_MODELS.filter(m => m !== TEXT_MODEL)];
   let busy = null, last = null;
-  outer: for (let round = 0; round < 2; round++) {
+  outer: for (let round = 0; round < 4; round++) {
     for (const model of models) {
       const left = budgetMs - (Date.now() - t0);
       if (left < 4000) { busy = busy || new Error("TIMEOUT"); break outer; }
@@ -73,7 +73,9 @@ export async function generate(ai, params, { budgetMs = 80000, perCallMs = 35000
       } finally { clearTimeout(timer); }
     }
     if (!busy) break; // 混雑ではない失敗は待っても直らない
-    if (round === 0 && budgetMs - (Date.now() - t0) > 8000) await sleep(2000); else break;
+    // 全モデルが混雑で断られたら、間を空けてもう一巡（2秒→5秒→8秒）。時間予算が残っているときだけ
+    const wait = [2000, 5000, 8000][round];
+    if (wait && budgetMs - (Date.now() - t0) > wait + 6000) await sleep(wait); else break;
   }
   if (busy) throw new Error("AIが混み合っています。少し待ってから、もう一度お試しください");
   throw last;
