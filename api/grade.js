@@ -44,7 +44,7 @@ async function countTurns(ai, persona, transcript) {
   const log = transcript.map((t, i) => `${String(i + 1).padStart(2, "0")} ${t.who === "me" ? "受講者" : persona.name}：${t.text}`).join("\n");
   const prompt = `あなたは営業ロープレの会話ログを数える係。評価やアドバイスはしない。受講者（営業担当）の発言を1つずつ分類する。
 
-【会話ログ】行頭の番号が発言番号。相手は${persona.name}。音声の文字起こしなので誤変換がある。意味の通らない短い発言（「Ja.」など）は誤変換として q=0・off="" で扱う。
+【会話ログ】行頭の番号が発言番号。相手は${persona.name}。音声の文字起こしなので誤変換がある。意味の通らない短い発言（「Ja.」など）や、日本語以外の言語になっている発言は、文字起こしの誤りなので q=0・proposal=false・off=""・gobi=[] で扱う。
 ${log}
 
 ■ 数え方

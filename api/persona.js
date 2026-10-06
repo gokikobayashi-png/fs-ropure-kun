@@ -47,10 +47,19 @@ export function checkNums(nums, { teamGiven = false, sizeGiven = false } = {}) {
   if (win <= 0 || win > 80) out.push(`受注率${win}%は現実的でない`);
   if (!(target > forecast)) out.push("売上目標が着地見込みを上回っていない");
   if (deal > 0 && target > forecast) {
-    const cur = meet * win / 100 * 12;           // 今の年間の新規受注数
-    const need = (target - forecast) / deal;     // ギャップを埋めるのに追加で必要な受注数
-    if (need > Math.max(cur, 6) * 3) out.push(`売上のギャップ${Math.round(target - forecast)}万円を埋めるには追加で${Math.round(need)}件の受注が要るが、今の年間受注は${Math.round(cur)}件（月${meet}商談×受注率${win}%×12）。売上目標・着地見込みを、単価と受注数から積み上がる大きさに直す`);
-    if (cur * deal > target * 1.5) out.push(`今の新規受注だけで年${Math.round(cur * deal)}万円になり、売上目標${target}万円と桁が合わない`);
+    const left = num(nums.months_left), booked = num(nums.booked_man);
+    const perMonth = meet * win / 100;             // 今の月の新規受注数
+    const need = (target - forecast) / deal;       // 今のペースに上乗せで必要な受注数
+    if (left >= 1 && !isNaN(booked)) {
+      // 着地見込み＝確定済みの売上＋今のペースが期末まで続いた分。ここが合わないと「月4件取れているのに、なぜ足りないのか」を説明できない
+      const paceRev = perMonth * deal * left;
+      if (Math.abs(booked + paceRev - forecast) > forecast * 0.2) out.push(`着地見込み${forecast}万円が、確定済み${booked}万円＋今のペース（月${perMonth.toFixed(1)}件×${deal}万円×残り${left}ヶ月＝${Math.round(paceRev)}万円）＝${Math.round(booked + paceRev)}万円と合わない。着地見込みは「確定済み＋今のペースが期末まで続いた分」にする`);
+      const paceWins = perMonth * left;
+      if (need > Math.max(paceWins, 3) * 2) out.push(`売上のギャップ${Math.round(target - forecast)}万円を埋めるには、今のペース（残り${left}ヶ月で${Math.round(paceWins)}件）に上乗せで${Math.round(need)}件の受注が要る。ペースを3倍超にしないと届かない差は現実的でないので、目標を下げる`);
+      if (need < Math.max(paceWins, 3) * 0.1) out.push(`売上のギャップが小さすぎる（上乗せ${need.toFixed(1)}件）。今のペースの1〜2割以上の差にする`);
+    } else {
+      out.push("nums に months_left（期末までの残り月数）と booked_man（確定済みの売上）が無い");
+    }
   }
   if (emp > 0 && (forecast / emp < 200 || forecast / emp > 10000)) out.push(`従業員1人あたり売上が${Math.round(forecast / emp)}万円は現実的でない（500万〜5,000万円にする）`);
   return out;
@@ -72,6 +81,11 @@ export default async function handler(req, res) {
     const styleKey = STYLES[b.style] ? b.style : skeys[Math.floor(Math.random() * skeys.length)];
     const styleHidden = !STYLES[b.style];
     const style = STYLES[styleKey];
+    // 決算月と期末までの残り月数はこちらで決める（相手が「決算月を把握していない」と答える事故を防ぐ）
+    const jst = new Date(Date.now() + 9 * 3600 * 1000);
+    const nowMonth = jst.getUTCMonth() + 1;
+    const monthsLeft = 3 + Math.floor(Math.random() * 7); // 3〜9ヶ月
+    const fiscalEnd = ((nowMonth - 1 + monthsLeft) % 12) + 1;
     const wish = [
       b.industry ? `業種：${b.industry}` : "業種：中小企業のBtoB（ソフトウェア・製造・建設・人材・物流・サービスなどから、毎回変える）",
       b.product ? `商材：${b.product}` : "商材：受講者が事前情報から想像しにくいものを1つ具体的に（単価・課金形態まで）",
@@ -104,12 +118,15 @@ ${difficulty === "hard" ? `- 難易度「手強い」：この相手は他社と
 - 分業している会社：FSの人数は「月の新規商談数 ÷ FS人数 ＝ 1人あたり月5〜25件」になるように決める（例：月45商談ならFSは2〜9名。月45商談でFS25名のような構成は不可。課題が「量」でFSの手が空いている設定でも、1人あたり月3件以上・FSは5名まで）。ISとFSの比率は IS1名に対しFS1〜2名まで。
 - ISを置かない会社（FSが自分でアポを取る／紹介・問い合わせ中心／社長が1人で売っている）は is_count を0にし、誰がアポを取っているかを事実に書く。
 - IS1名あたりの行動量は月300〜1,500コール、アポは月5〜20件。
-- 売上と件数がつながること：月の新規受注数＝月の新規商談数×受注率。年間の新規売上＝月の新規受注数×12×1受注あたりの今期売上。売上目標と着地見込みは「既存顧客の継続売上＋この新規売上」で説明できる大きさにする。
-- 売上目標と着地見込みの差 ÷ 1受注あたりの今期売上 ＝ 追加で必要な受注数。これが今の年間受注数の3倍以内に収まること（営業代行で現実に埋められる差にする）。
+- 今は${jst.getUTCFullYear()}年${nowMonth}月。この会社の決算月は${fiscalEnd}月で、期末まで残り${monthsLeft}ヶ月（nums の fiscal_end_month は ${fiscalEnd}、months_left は ${monthsLeft} にする）。
+- 売上と件数がつながること：月の新規受注数＝月の新規商談数×受注率。
+- 着地見込みの作り方（重要）：着地見込み＝今期すでに確定している売上（booked_man。受注済み＋既存顧客の継続分）＋今の受注ペースが期末まで続いた場合の売上（月の新規受注数×1受注あたりの今期売上×残り月数）。つまり着地見込みには今のペースがもう織り込まれている。
+- 売上目標と着地見込みの差（ギャップ）は「今のペースに上乗せで必要な分」。ギャップ÷1受注あたりの今期売上＝上乗せで必要な受注数。これは、今のペースで期末までに取れる受注数の2割以上・2倍以内にする（例：月4件ペースで残り5ヶ月＝20件なら、上乗せは4〜40件）。
+- hidden_facts に必ず入れる：「決算月は${fiscalEnd}月で、期末まで残り${monthsLeft}ヶ月」「着地見込み○万円の内訳：確定済み○万円＋今のペース（月○件）が期末まで続いた分○万円」「目標との差○万円は、今のペースに上乗せで○件（月あたり○件）必要という意味」。相手役が「月○件取れているなら足りるのでは？」と聞かれたときに、この内訳で説明できるようにする。
 - 従業員1人あたり売上は500万〜5,000万円。
 
 JSONだけを返す（前後に文章を付けない）：
-{"company":"社名","name":"姓＋さん（例：田中さん。役職を入れない）","role":"${layer.role}","gender":"male"|"female","age":年齢の数値（役職に見合う。例：社長45〜65、課長35〜45、担当28〜38）,"brief":"事前に分かる会社概要。業種・規模・商材・設立年・所在地の県。課題には触れない。80字以内","opening_line":"本人が内心思っている課題認識（商談の冒頭に自分から言うセリフではなく、困りごとを聞かれたときに話す内容）。50字以内。口語。役職が分かる言い方はしない","nums":{"employees":従業員数,"is_count":IS（アポ取り専任）の人数,"fs_count":FS（商談する営業。兼務の社長も数える）の人数,"other_sales":営業マネージャーなどその他の営業人数,"monthly_calls":月の架電数の合計（架電していなければ0）,"monthly_meetings":月の新規商談数の合計,"win_rate_pct":受注率（%）,"deal_value_man":1受注あたりの今期売上（万円）,"annual_target_man":今期の売上目標（万円）,"annual_forecast_man":今期の着地見込み（万円）},"hidden_facts":["…"],"answer":"${answer}","exp":"正解の理由。判定順序に沿って、なぜこの分類か、ノイズはなぜ違うか。150字以内","rephrase_example":"課題の言い直しの模範例1文（『〜で積んでいる限り、〜にならない構造ですよね』型）","personality":"${PERSONALITY[difficulty]}"}`;
+{"company":"社名","name":"姓＋さん（例：田中さん。役職を入れない）","role":"${layer.role}","gender":"male"|"female","age":年齢の数値（役職に見合う。例：社長45〜65、課長35〜45、担当28〜38）,"brief":"事前に分かる会社概要。業種・規模・商材・設立年・所在地の県。課題には触れない。80字以内","opening_line":"本人が内心思っている課題認識（商談の冒頭に自分から言うセリフではなく、困りごとを聞かれたときに話す内容）。50字以内。口語。役職が分かる言い方はしない","nums":{"employees":従業員数,"is_count":IS（アポ取り専任）の人数,"fs_count":FS（商談する営業。兼務の社長も数える）の人数,"other_sales":営業マネージャーなどその他の営業人数,"monthly_calls":月の架電数の合計（架電していなければ0）,"monthly_meetings":月の新規商談数の合計,"win_rate_pct":受注率（%）,"deal_value_man":1受注あたりの今期売上（万円）,"annual_target_man":今期の売上目標（万円）,"annual_forecast_man":今期の着地見込み（万円）,"booked_man":今期すでに確定している売上（万円）,"fiscal_end_month":${fiscalEnd},"months_left":${monthsLeft}},"hidden_facts":["…"],"answer":"${answer}","exp":"正解の理由。判定順序に沿って、なぜこの分類か、ノイズはなぜ違うか。150字以内","rephrase_example":"課題の言い直しの模範例1文（『〜で積んでいる限り、〜にならない構造ですよね』型）","personality":"${PERSONALITY[difficulty]}"}`;
 
     const ai = client();
     const opt = { teamGiven: !!b.sales_team, sizeGiven: !!b.size };
@@ -125,6 +142,7 @@ JSONだけを返す（前後に文章を付けない）：
         const text = r.text || "";
         cand = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
         if (!cand.company || !Array.isArray(cand.hidden_facts) || !CAT[cand.answer]) throw new Error("ペルソナJSONが不完全");
+        if (cand.nums && typeof cand.nums === "object") { cand.nums.fiscal_end_month = fiscalEnd; cand.nums.months_left = monthsLeft; }
         candIssues = checkNums(cand.nums, opt);
       } catch (e) { lastErr = e; if (json) break; continue; }
       if (!json || candIssues.length < issues.length) { json = cand; issues = candIssues; }
