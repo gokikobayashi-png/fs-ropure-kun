@@ -53,10 +53,18 @@ ${log}
 
 JSONだけを返す。受講者の発言すべてについて1つずつ、番号順に：
 {"turns":[{"n":発言番号,"q":0,"picked":0,"echo":"","could":"","proposal":false,"off":"","note":""}]}`;
-  const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0 } });
-  const t = r.text || "";
-  const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
-  return tallyCounts(j.turns, transcript);
+  // 返ってきたJSONが壊れていることがあるので、1回だけやり直す
+  let last;
+  for (let i = 0; i < 2; i++) {
+    try {
+      const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: i ? 0.2 : 0 } });
+      const t = r.text || "";
+      const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
+      if (!Array.isArray(j.turns) || !j.turns.length) throw new Error("turns が空");
+      return tallyCounts(j.turns, transcript);
+    } catch (e) { last = e; console.error("count attempt failed", i + 1, String(e.message || e).slice(0, 200)); }
+  }
+  throw last;
 }
 export function countsLine(c) {
   if (!c) return "";
