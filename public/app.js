@@ -213,8 +213,8 @@ function status(id, text, err) { const e = $(id); e.textContent = text || ""; e.
 let styleKey = "";
 const STYLE_NAME = { "": "ランダム", analytical: "アナリティカル", driver: "ドライバー", amiable: "エミアブル", expressive: "エクスプレッシブ" };
 document.querySelectorAll("#styles .stylecard").forEach(b => b.addEventListener("click", () => { styleKey = b.dataset.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", x === b)); }));
-function caseSettings() { return { industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), sales_team: $("sales-team").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, answer: $("answer").value, style: styleKey }; }
-function applyCase(c) { $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey)); }
+function caseSettings() { return { real_name: $("real-name").value.trim(), real_url: $("real-url").value.trim(), industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), sales_team: $("sales-team").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, answer: $("answer").value, style: styleKey }; }
+function applyCase(c) { $("real-name").value = c.real_name || ""; $("real-url").value = c.real_url || ""; $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey)); }
 const TPL_KEY = "ropure-templates-v1";
 let templates = [];
 function loadTemplates() { try { templates = JSON.parse(localStorage.getItem(uk(TPL_KEY)) || "[]"); if (!Array.isArray(templates)) templates = []; } catch (_) { templates = []; } }
@@ -238,10 +238,10 @@ function renderTemplates() {
 let currentTpl = null;
 $("tpl-save").addEventListener("click", () => {
   const c = caseSettings();
-  const name = [c.industry, c.product, c.layer ? LAYER_NAME[c.layer] : ""].filter(Boolean).join("・") || "名前なしの相手";
+  const name = [c.real_name || (c.real_url ? c.real_url.split(/\s+/)[0].replace(/^https?:\/\//, "").split("/")[0] : ""), c.industry, c.product, c.layer ? LAYER_NAME[c.layer] : ""].filter(Boolean).join("・") || "名前なしの相手";
   const t = { id: Date.now().toString(36), name, ...c }; templates.unshift(t); currentTpl = t.id; saveTemplates(); status("gen-status", "保存しました：" + name);
 });
-["industry", "product", "size", "sales-team", "layer", "difficulty", "answer"].forEach(id => $(id).addEventListener("input", () => { currentTpl = null; }));
+["real-name", "real-url", "industry", "product", "size", "sales-team", "layer", "difficulty", "answer"].forEach(id => $(id).addEventListener("input", () => { currentTpl = null; }));
 
 /* ---------- ① → ② ペルソナ生成 ---------- */
 async function generate() {
@@ -250,6 +250,9 @@ async function generate() {
     persona = await api("persona", { ...caseSettings(), company: coForApi() }); persona.tpl = currentTpl;
     $("p-company").textContent = persona.company;
     $("p-brief").textContent = persona.brief;
+    const rn = $("p-real"); rn.textContent = ""; rn.hidden = !persona.real;
+    if (persona.real) { const b = document.createElement("b"); b.textContent = "実在の会社を想定しています。"; rn.appendChild(b); const errs = persona.real.errors || [];
+      rn.appendChild(document.createTextNode(" 担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。" + ((persona.real.pages || []).length ? "読んだページ：" + persona.real.pages.join("、") : persona.real.url ? "サイトは読めなかったので、社名から分かる範囲で作りました。" : "URLなしなので、社名から分かる範囲で作りました。") + (persona.real.thin && (persona.real.pages || []).length ? "（ページから読める文章が少なかったので、サービス紹介のページのURLを足すと精度が上がります）" : "") + (errs.length ? " 読めなかったURL：" + errs.join("／") : ""))); }
     $("p-name").textContent = persona.name + "（役職は商談で確認）";
     renderAvatar($("p-avatar"), persona); renderAvatar($("call-avatar"), persona);
     $("call-name").textContent = persona.name; $("call-company").textContent = persona.company;
@@ -447,7 +450,7 @@ function endCall(note) {
   $("chat-input").disabled = true; $("chat-send").disabled = true;
   if (note) addMsg("sys", note);
   picked = null; document.querySelectorAll("#opts .opt").forEach(b => { b.setAttribute("aria-pressed", "false"); b.classList.remove("correct", "wrong"); b.disabled = false; });
-  $("rephrase").value = ""; $("overview").value = ""; $("proposal").value = ""; resetCalc(); $("verdict").hidden = true; $("feedback").hidden = true; $("again").hidden = true; $("grade").disabled = false; status("grade-status", "");
+  $("rephrase").value = ""; $("overview").value = ""; $("proposal").value = ""; ["premise-value", "premise-target", "premise-person"].forEach(id => { $(id).value = ""; }); resetCalc(); $("verdict").hidden = true; $("feedback").hidden = true; $("again").hidden = true; $("grade").disabled = false; status("grade-status", "");
   resetResult();
   if (mode === "voice" && transcript.length) voiceQuiz().then(() => showResult()); else showResult();
 }
@@ -503,7 +506,8 @@ function renderResInfo(graded) {
   const kv = document.createElement("div"); kv.className = "kv";
   const row = (k, v) => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = k + "："; d.appendChild(b); d.appendChild(document.createTextNode(v || "")); kv.appendChild(d); };
   row("会社", persona.company); row("会社概要", persona.brief); row("相手", persona.name);
-  if (graded) { row("相手の課題認識（本音）", persona.opening_line); row("役職", persona.role); row("決裁権", persona.authority); row("タイプ（ソーシャルスタイル）", (persona.style_name || "—") + (persona.style_hidden ? "（伏せていました）" : "")); row("正解", CAT[persona.answer] + "：" + (persona.exp || "")); row("言い直しの模範例", persona.rephrase_example); }
+  if (persona.real) row("想定", "実在の会社（担当者と社内の数字は架空）" + (persona.real.url ? " " + persona.real.url : ""));
+  if (graded) { if (persona.value) row("誰のどんな課題を解決しているサービスか", persona.value); if (persona.target_why) row("なぜそのターゲットなのか", persona.target_why); if (persona.person_job) row("この人は何をしている人か", persona.person_job); row("相手の課題認識（本音）", persona.opening_line); row("役職", persona.role); row("決裁権", persona.authority); row("タイプ（ソーシャルスタイル）", (persona.style_name || "—") + (persona.style_hidden ? "（伏せていました）" : "")); row("正解", CAT[persona.answer] + "：" + (persona.exp || "")); row("言い直しの模範例", persona.rephrase_example); }
   else row("役職・決裁権・タイプ・課題認識・相手の事実", "判定後に表示");
   box.appendChild(kv);
   if (graded && (persona.hidden_facts || []).length) { const h = document.createElement("h3"); h.textContent = "相手の事実（答え合わせ用）"; h.style.cssText = "font-size:13px;margin:14px 0 4px"; box.appendChild(h); const ul = document.createElement("ul"); ul.className = "pts"; persona.hidden_facts.forEach(f => { const li = document.createElement("li"); li.textContent = f; ul.appendChild(li); }); box.appendChild(ul); }
@@ -1039,12 +1043,15 @@ function logText(r) {
     "会社概要：" + persona.brief,
     "相手の役職：" + persona.role + "（決裁権：" + (persona.authority || "") + "）",
     "判定：" + picked + " " + CAT[picked] + "（" + (r.correct ? "正解" : "不正解") + "）／正解：" + r.answer + " " + r.answerLabel,
+    "前提 誰のどんな課題を解決しているサービスか：" + ($("premise-value").value.trim() || "（なし）"),
+    "前提 なぜそのターゲットなのか：" + ($("premise-target").value.trim() || "（なし）"),
+    "前提 この人は何をしている人か：" + ($("premise-person").value.trim() || "（なし）"),
     "問1 相手の営業の説明：" + ($("overview").value.trim() || "（なし）"),
     "問2 自分の言い直し：" + ($("rephrase").value.trim() || "（なし）"),
     "問3 検算：" + calcLine() + "／こういうやり方なら：" + ($("proposal").value.trim() || "（なし）"),
     "", "■ 会話ログ", ...lines, "", "■ 暗算チェック", ...(quizzes.length ? quizzes.map((q, i) => (i + 1) + ". " + q.question + " → 正解" + q.answer + q.unit + "／自分" + (q.mine === null ? "未回答" : q.mine + q.unit) + "（" + (q.ok ? "○" : "×") + "、" + q.sec.toFixed(1) + "秒）") : ["（なし）"]),
     ...(r.counts ? ["", "■ 会話の回数", countsText(r.counts)] : []),
-    "", "■ コーチ（AI）の振り返り", r.feedback, r.overviewReview ? "【問1 全体像】" + r.overviewReview : "", r.calcReview ? "【問3 検算】" + r.calcReview : "", r.numbersReview ? "【数字】" + r.numbersReview : "",
+    "", "■ コーチ（AI）の振り返り", r.feedback, r.premiseReview ? "【前提のすり合わせ】" + r.premiseReview : "", r.overviewReview ? "【問1 全体像】" + r.overviewReview : "", r.calcReview ? "【問3 検算】" + r.calcReview : "", r.numbersReview ? "【数字】" + r.numbersReview : "",
     "", "田村さん、ズレていたと思う行番号とアドバイスをお願いします。"].join("\n");
 }
 function calcLine() {
@@ -1152,7 +1159,7 @@ $("grade").addEventListener("click", async () => {
   if (!picked) { status("grade-status", "A〜Dを選んでから", true); return; }
   $("grade").disabled = true; status("grade-status", "コーチが会話を振り返っています…");
   try {
-    const r = await api("grade", { persona, transcript, picked, rephrase: $("rephrase").value.trim(), mode, overview: $("overview").value.trim(), calc: calcForGrade(), proposal: $("proposal").value.trim(), company: coForApi(), quizzes, checks: checksForApi() });
+    const r = await api("grade", { persona, transcript, picked, rephrase: $("rephrase").value.trim(), mode, premise: { value: $("premise-value").value.trim(), target: $("premise-target").value.trim(), person: $("premise-person").value.trim() }, overview: $("overview").value.trim(), calc: calcForGrade(), proposal: $("proposal").value.trim(), company: coForApi(), quizzes, checks: checksForApi() });
     document.querySelectorAll("#opts .opt").forEach(b => { b.disabled = true; if (b.dataset.k === r.answer) b.classList.add("correct"); else if (b.dataset.k === picked) b.classList.add("wrong"); });
     const v = $("verdict"); v.hidden = false; v.className = "verdict" + (r.correct ? "" : " ng"); v.textContent = "";
     const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = (r.correct ? "正解" : "不正解") + " ／ 答え：" + r.answer + " " + r.answerLabel; v.appendChild(lab);
@@ -1165,6 +1172,7 @@ $("grade").addEventListener("click", async () => {
     gofastSay(r.secondOpinion || "（指摘なし）");
     $("res-company").textContent = persona.company + " ／ " + persona.name + "（" + persona.role + "）";
     renderResInfo(true);
+    if (r.premiseReview) f.appendChild(document.createTextNode("\n\n【前提のすり合わせ】" + r.premiseReview));
     if (r.overviewReview) f.appendChild(document.createTextNode("\n\n【問1 全体像】" + r.overviewReview));
     if (r.calcReview) f.appendChild(document.createTextNode("\n\n【問3 検算】" + r.calcReview));
     if (r.numbersReview) f.appendChild(document.createTextNode("\n\n【数字】" + r.numbersReview));

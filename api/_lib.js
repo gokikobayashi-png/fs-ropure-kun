@@ -81,6 +81,67 @@ export async function generate(ai, params, { budgetMs = 80000, perCallMs = 35000
   throw last;
 }
 
+/* =========================================================
+   実在の会社を想定するときの、公開サイトの読み取り
+   受講者が入れたURLをサーバーから取りに行くので、社内ネットワークや自分自身を叩かせない（http/https の公開ホストだけ）。
+   ========================================================= */
+import { lookup } from "node:dns/promises";
+import net from "node:net";
+function privateIp(ip) {
+  if (net.isIPv4(ip)) { const [a, b] = ip.split(".").map(Number); return a === 10 || a === 127 || a === 0 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127) || a >= 224; }
+  const x = ip.toLowerCase();
+  return x === "::1" || x === "::" || x.startsWith("fc") || x.startsWith("fd") || x.startsWith("fe80") || x.startsWith("::ffff:");
+}
+export async function safePublicUrl(raw) {
+  let u;
+  try { u = new URL(String(raw || "").trim()); } catch (_) { throw new Error("URLの形が正しくありません"); }
+  if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error("http(s) のURLだけ使えます");
+  const host = u.hostname.replace(/^\[|\]$/g, "");
+  if (u.username || u.password || (u.port && !["80", "443"].includes(u.port))) throw new Error("このURLは使えません");
+  if (net.isIP(host) || !host.includes(".") || /(^|\.)(localhost|local|internal|lan|home|corp)$/i.test(host)) throw new Error("このURLは使えません");
+  const addrs = await lookup(host, { all: true });
+  if (!addrs.length || addrs.some(a => privateIp(a.address))) throw new Error("このURLは使えません");
+  return u;
+}
+export function htmlToText(html) {
+  const pick = re => { const m = html.match(re); return m ? m[1].replace(/\s+/g, " ").trim() : ""; };
+  const ent = s => s.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => { try { return String.fromCodePoint(Number(n)); } catch (_) { return ""; } });
+  const title = ent(pick(/<title[^>]*>([\s\S]*?)<\/title>/i));
+  const desc = ent(pick(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["']/i) || pick(/<meta[^>]+content=["']([^"']*)["'][^>]*name=["']description["']/i) || pick(/<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']*)["']/i));
+  const body = ent(html.replace(/<(script|style|noscript|svg|template|iframe)[\s\S]*?<\/\1>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ").replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/tr|\/section)[^>]*>/gi, "\n").replace(/<[^>]+>/g, " ")).replace(/[ \t\u3000]+/g, " ").replace(/\s*\n\s*/g, "\n").replace(/\n{2,}/g, "\n").trim();
+  return { title, desc, body };
+}
+// 1ページ読む。リダイレクトは3回まで、そのたびに行き先を確かめる。8秒・60万文字で打ち切る
+export async function fetchSite(raw) {
+  let u = await safePublicUrl(raw);
+  for (let hop = 0; hop < 4; hop++) {
+    const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), 8000);
+    let r;
+    try { r = await fetch(u, { redirect: "manual", signal: ac.signal, headers: { "user-agent": "Mozilla/5.0 (compatible; fs-ropure-kun/1.0; sales roleplay practice)", accept: "text/html,application/xhtml+xml", "accept-language": "ja,en;q=0.8" } }); }
+    finally { clearTimeout(timer); }
+    if (r.status >= 300 && r.status < 400 && r.headers.get("location")) { u = await safePublicUrl(new URL(r.headers.get("location"), u).href); continue; }
+    if (!r.ok) throw new Error("サイトを開けませんでした（" + r.status + "）");
+    const type = r.headers.get("content-type") || "";
+    if (type && !/html|text\/plain/i.test(type)) throw new Error("HTMLのページではありません");
+    const buf = new Uint8Array(await r.arrayBuffer()).subarray(0, 1500000);
+    const head = new TextDecoder("latin1").decode(buf.subarray(0, 3000));
+    const cs = ((type.match(/charset=([\w-]+)/i) || head.match(/<meta[^>]+charset=["']?([\w-]+)/i) || [])[1] || "utf-8").toLowerCase();
+    let html; try { html = new TextDecoder(cs).decode(buf); } catch (_) { html = new TextDecoder("utf-8").decode(buf); }
+    const t = htmlToText(html.slice(0, 600000));
+    return { url: u.href, ...t };
+  }
+  throw new Error("リダイレクトが多すぎます");
+}
+// 複数URL（最大3つ）を読んで、相手生成に渡す文章にまとめる。読めなかったURLは理由つきで返す
+export async function readCompanySite(urls) {
+  const list = String(urls || "").split(/[\s,、]+/).map(x => x.trim()).filter(Boolean).slice(0, 3);
+  const pages = [], errors = [];
+  await Promise.all(list.map(async x => { try { pages.push(await fetchSite(/^https?:\/\//i.test(x) ? x : "https://" + x)); } catch (e) { errors.push(x + "：" + String(e.message || e).slice(0, 60)); } }));
+  const per = pages.length ? Math.floor(7000 / pages.length) : 0;
+  const text = pages.map(p => `【${p.url}】\nタイトル：${p.title}\n説明：${p.desc}\n本文：${p.body.slice(0, per)}`).join("\n\n");
+  return { text, chars: pages.reduce((a, p) => a + p.body.length, 0), pages: pages.map(p => p.url), errors };
+}
+
 export const CAT = { A: "戦略", B: "手法", C: "量", D: "質" };
 
 /* =========================================================
@@ -305,18 +366,21 @@ async function findRecordsParent() {
   if (!r.ok) throw new Error("ロープレ記録ページを作れません: " + r.status + " " + (await r.text()).slice(0, 200));
   return (recordsParent = (await r.json()).id);
 }
-export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", overviewReview = "", calcReview = "", numbersReview = "", quizText = "", scores = null, nextAction = "", custom = null, secondOpinion = "", counts = null, countsText = "" }) {
+export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", premise = null, premiseReview = "", overviewReview = "", calcReview = "", numbersReview = "", quizText = "", scores = null, nextAction = "", custom = null, secondOpinion = "", counts = null, countsText = "" }) {
   if (!knowledgeEnabled()) return null;
   const parent = await findRecordsParent();
   const title = `${jstNow()} ${persona.company}（${mode === "chat" ? "チャット" : "音声"}／判定:${CAT[picked]}${correct ? "○" : "×"}）`;
   const blocks = [
     { object: "block", type: "callout", callout: { icon: { type: "emoji", emoji: "🙏" }, rich_text: [{ type: "text", text: { content: "田村さんへ：ズレていたと思う発言の行を選んで、コメントでアドバイスをお願いします。" } }] } },
     h2("相手"),
-    bullet(`${persona.company}／${persona.name}（${persona.role || ""}）／難易度：${persona.difficulty || ""}`),
+    bullet(`${persona.company}／${persona.name}（${persona.role || ""}）／難易度：${persona.difficulty || ""}${persona.real ? `／実在の会社を想定（担当者と社内の数字は架空）${persona.real.url ? " " + persona.real.url : ""}` : ""}`),
     bullet("会社概要：" + (persona.brief || "")),
     bullet("相手の課題認識（本音）：" + (persona.opening_line || "")),
     h2("判定"),
     bullet(`受講者の判定：${picked} ${CAT[picked]}（${correct ? "正解" : "不正解"}）／正解：${persona.answer} ${CAT[persona.answer]}`),
+    bullet("前提 誰のどんな課題を解決しているサービスか：" + ((premise && premise.value) || "（なし）") + "／正解：" + (persona.value || "—")),
+    bullet("前提 なぜそのターゲットなのか：" + ((premise && premise.target) || "（なし）") + "／正解：" + (persona.target_why || "—")),
+    bullet("前提 この人は何をしている人か：" + ((premise && premise.person) || "（なし）") + "／正解：" + (persona.person_job || persona.role || "—")),
     bullet("問1 相手の営業の説明：" + (overview || "（なし）")),
     bullet("問2 受講者の言い直し：" + (rephrase || "（なし）")),
     bullet("問3 検算：" + (calcText || "（なし）")),
@@ -331,6 +395,7 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
     blocks.push(para(`${String(i + 1).padStart(2, "0")}　${who ? who + "：" : ""}${t.text}`, t.who === "me"));
   });
   blocks.push(h2("コーチ（AI）の振り返り"), para(feedback || ""));
+  if (premiseReview) blocks.push(para("前提のすり合わせ：" + premiseReview));
   if (overviewReview) blocks.push(para("問1 全体像：" + overviewReview));
   if (calcReview) blocks.push(para("問3 検算：" + calcReview));
   if (numbersReview) blocks.push(para("数字：" + numbersReview));
