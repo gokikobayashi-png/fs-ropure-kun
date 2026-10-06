@@ -215,7 +215,16 @@ let styleKey = "";
 const STYLE_NAME = { "": "ランダム", analytical: "アナリティカル", driver: "ドライバー", amiable: "エミアブル", expressive: "エクスプレッシブ" };
 document.querySelectorAll("#styles .stylecard").forEach(b => b.addEventListener("click", () => { styleKey = b.dataset.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", x === b)); }));
 function caseSettings() { return { scenario_id: scPicked() ? scenarioPick : "", real_name: $("real-name").value.trim(), real_url: $("real-url").value.trim(), industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), sales_team: $("sales-team").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, answer: $("answer").value, style: styleKey }; }
-function applyCase(c) { $("real-name").value = c.real_name || ""; $("real-url").value = c.real_url || ""; scenarioPick = c.scenario_id && scenarios.some(x => x.id === c.scenario_id) ? c.scenario_id : ""; $("sc-pick").value = scenarioPick; showPickNote(); $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey)); }
+function applyCase(c) { $("real-name").value = c.real_name || ""; $("real-url").value = c.real_url || ""; scenarioPick = c.scenario_id && scenarios.some(x => x.id === c.scenario_id) ? c.scenario_id : ""; $("sc-pick").value = scenarioPick; showPickNote(); $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey));  syncFic(true); }
+// 業種・商材・規模・営業体制（架空の会社用）は折りたたんでおく。入力があるときは開き、閉じていても件数が分かるようにする
+const FIC_IDS = ["industry", "product", "size", "sales-team"];
+function syncFic(openIfFilled = false) {
+  const n = FIC_IDS.filter(id => $(id).value.trim()).length;
+  const b = $("fic-badge"); b.hidden = !n; b.textContent = n ? n + "項目 指定中" : "";
+  if (openIfFilled && n) $("fic-box").open = true;
+  if (openIfFilled && !n) $("fic-box").open = false;
+}
+FIC_IDS.forEach(id => $(id).addEventListener("input", () => syncFic()));
 const TPL_KEY = "ropure-templates-v1";
 let templates = [];
 function loadTemplates() { try { templates = JSON.parse(localStorage.getItem(uk(TPL_KEY)) || "[]"); if (!Array.isArray(templates)) templates = []; } catch (_) { templates = []; } }
@@ -317,7 +326,7 @@ function renderScenarios() {
 }
 function pickScenario(id) {
   const it = scenarios.find(x => x.id === id); scenarioPick = it ? id : ""; $("sc-pick").value = scenarioPick;
-  if (it) { $("real-name").value = it.name; $("real-url").value = it.url || ""; }
+  if (it) { $("real-name").value = it.name; $("real-url").value = it.url || ""; FIC_IDS.forEach(id => { $(id).value = ""; }); syncFic(true); } // 登録済みの会社を選んだら、架空用の指定は消す
   currentTpl = null; showPickNote();
 }
 $("sc-pick").addEventListener("change", () => { const id = $("sc-pick").value; if (id) pickScenario(id); else { scenarioPick = ""; $("real-name").value = ""; $("real-url").value = ""; showPickNote(); } });
@@ -405,7 +414,7 @@ async function generate() {
     $("call-brief").textContent = persona.brief; $("call-role").textContent = "役職は商談で確認";
     status("gen-status", ""); status("call-status", "");
     step(2);
-  } catch (e) { status("gen-status", e.message, true); }
+  } catch (e) { status("gen-status", e.message, true); if (/業種/.test(e.message)) { $("fic-box").open = true; $("fic-box").scrollIntoView({ block: "center" }); } }
   finally { $("gen").disabled = false; lockStart(false); }
 }
 $("gen").addEventListener("click", generate);

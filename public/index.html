@@ -70,6 +70,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .verdict .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--accent);display:block;margin-bottom:4px}
 .verdict.ng .lab{color:var(--bad)}
 details{font-size:13px;color:var(--ink-2);margin-top:10px}
+details.ficbox{border:1px dashed var(--line);border-radius:8px;padding:0;margin-top:12px;color:var(--ink)}
+details.ficbox[open]{border-style:solid;background:var(--bg)}
+details.ficbox summary{list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:10px 12px;font-size:14px;font-weight:600;color:var(--navy)}
+details.ficbox summary::-webkit-details-marker{display:none}
+details.ficbox summary>span:first-child::before{content:"▸ ";color:var(--teal);font-weight:700}
+details.ficbox[open] summary>span:first-child::before{content:"▾ "}
+details.ficbox summary small{font-size:12px;font-weight:400;color:var(--ink-2)}
+.ficbadge{font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E;border-radius:999px;padding:1px 8px}
+.ficbody{padding:0 12px 10px}
+.ficbody label.f:first-child{margin-top:2px}
 details summary{cursor:pointer;color:var(--ink)}
 details ul{margin:6px 0 0;padding-left:18px}
 details.cheat h4{font-size:13px;margin:12px 0 4px;color:var(--ink)}
@@ -533,12 +543,18 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
         <label class="f">会社やサービスのURL<input type="text" id="real-url" inputmode="url" placeholder="例：https://example.co.jp/service（3つまで。空白で区切る）" autocomplete="off"></label>
         <p class="hint">サイトを読んで事業内容・サービス・売り先を確かめ、その会社に合わせます。担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。サービス資料があるとき、何度も使う会社は <a href="#" id="sc-goto">設定 → シナリオ企業</a> に登録しておくと速く正確になります。</p>
       </div>
-      <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介（空欄なら毎回変える）"></label>
-      <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
-      <div class="g2">
-        <label class="f">規模（従業員数）<input type="text" id="size" placeholder="例：従業員30名、年商5億"></label>
-        <label class="f">営業人数・体制<input type="text" id="sales-team" placeholder="例：営業2名（社長も兼務）、ISなし"></label>
-      </div>
+      <details class="ficbox" id="fic-box">
+        <summary><span>架空の会社で練習する場合はこちら</span><small>業種・商材・規模・営業体制を指定できます（空欄ならAIが毎回変えます）</small><span class="ficbadge" id="fic-badge" hidden></span></summary>
+        <div class="ficbody">
+          <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介（空欄なら毎回変える）"></label>
+          <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
+          <div class="g2">
+            <label class="f">規模（従業員数）<input type="text" id="size" placeholder="例：従業員30名、年商5億"></label>
+            <label class="f">営業人数・体制<input type="text" id="sales-team" placeholder="例：営業2名（社長も兼務）、ISなし"></label>
+          </div>
+          <p class="hint" id="fic-hint">シナリオ企業や実在の会社を選んでいるときは、入力不要です（会社情報から決まります）。ここに書くと、その項目だけ上書きされます。</p>
+        </div>
+      </details>
       <label class="f">相手のレイヤー
         <select id="layer"><option value="" selected>ランダム（役職は伏せて出る）</option><option value="ceo">社長</option><option value="director">取締役 営業本部長</option><option value="sales_mgr">営業部長</option><option value="section">営業課長</option><option value="marketing">マーケティング責任者</option><option value="bizdev">新規事業の事業部長</option><option value="planning">経営企画の担当</option><option value="is_lead">インサイドセールスのリーダー</option></select></label>
     </div>

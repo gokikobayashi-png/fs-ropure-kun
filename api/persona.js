@@ -127,7 +127,7 @@ export default async function handler(req, res) {
       }
       // 確かな情報が無いときは、受講者が業種・商材を入れていればそれを使う。それも無ければ作らない
       if (!profile && b.industry && b.product) profile = { ...cleanProfile({ name: realName || "（社名未入力）", business: b.industry, product: b.product, size: b.size, known: true }), source: "input" };
-      if (!profile) return res.status(400).json({ error: `「${realName || realUrl}」の事業内容を確かめられませんでした。サービス紹介のページのURLを入れるか、「業種」と「商材・単価」を入力してから、もう一度お試しください。${site.errors.length ? "（読めなかったURL：" + site.errors.join("／") + "）" : ""}`, detail: (site.notes || []).join(" | ").slice(0, 900) });
+      if (!profile) return res.status(400).json({ error: `「${realName || realUrl}」の事業内容を確かめられませんでした。サービス紹介のページのURLを入れるか、「架空の会社で練習する場合はこちら」を開いて業種と商材・単価を入力してから、もう一度お試しください。${site.errors.length ? "（読めなかったURL：" + site.errors.join("／") + "）" : ""}`, detail: (site.notes || []).join(" | ").slice(0, 900) });
     }
     const real = profile ? { name: realName || profile.name, url: realUrl, pages: site.pages, errors: site.errors, source: profile.source } : null;
     const wish = [
