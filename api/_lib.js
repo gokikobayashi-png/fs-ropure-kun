@@ -330,6 +330,10 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
       if (hit.length) blocks.push(bullet(`${label}：` + hit.map(i => `${String(i.n).padStart(2, "0")}${i.off && label.startsWith("質問と答え") ? (i.off === "them" ? "（相手の答え）" : i.off === "me" ? "（自分の答え）" : "（両方）") : ""}${i.note && (label === "提案した" || label.startsWith("質問と答え")) ? "「" + i.note + "」" : ""}${label === "拾ってから質問できた" && i.echo ? "「" + i.echo + "」" : ""}${label === "拾わずに質問した" && i.could ? "（拾えた言葉：" + i.could + "）" : ""}`).join("、")));
     }
   }
+  if (counts && counts.gobi) {
+    const gs = (counts.items || []).flatMap(i => (i.gobi || []).map(g => `${String(i.n).padStart(2, "0")}「${g.bad}」→「${g.fix}」（${g.type}）`));
+    blocks.push({ object: "block", type: "toggle", toggle: { rich_text: [{ type: "text", text: { content: `おかしい語尾（${counts.gobi}回）` } }], children: gs.slice(0, 90).map(bullet) } });
+  }
   blocks.push({ object: "block", type: "toggle", toggle: { rich_text: [{ type: "text", text: { content: "相手の事実（答え合わせ用）" } }], children: (persona.hidden_facts || []).slice(0, 90).map(bullet) } });
   const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
     parent: { page_id: parent }, properties: { title: { title: [{ type: "text", text: { content: title.slice(0, 1900) } }] } }, children: blocks.slice(0, 100),

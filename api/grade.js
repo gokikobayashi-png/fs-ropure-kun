@@ -5,9 +5,12 @@ import { client, auth, readJson, FRAMEWORK, companyText, companyName, CAT, gener
 // 会話の回数を数える：質問／相手の言葉を拾ってから質問／提案／質問と答えのずれ。
 // AIには「受講者の発言を1つずつ分類」だけさせ、合計はこちらで数える（AIに合計を言わせると数え間違うため）。
 const cut = (s, n) => { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n) + "…" : s; };
+const GOBI_TYPES = ["ぼかし", "敬語の重ねすぎ", "文法の誤り"];
 export function tallyCounts(turns, transcript) {
   const items = [];
-  let questions = 0, picked = 0, proposals = 0, offThem = 0, offMe = 0;
+  let questions = 0, picked = 0, proposals = 0, offThem = 0, offMe = 0, gobi = 0;
+  const gobiTypes = {};
+  const flat = s => String(s || "").replace(/[\s、。,.　]/g, "");
   const seen = new Set();
   for (const t of Array.isArray(turns) ? turns : []) {
     const n = Math.round(Number(t && t.n));
@@ -19,12 +22,22 @@ export function tallyCounts(turns, transcript) {
     const p = echo ? Math.min(q, Math.max(0, Math.round(Number(t.picked)) || 0)) : 0; // 拾った言葉を示せないものは数えない
     const prop = t.proposal === true || t.proposal === "true";
     const off = ["them", "me", "both"].includes(t.off) ? t.off : "";
+    // おかしい語尾：発言に実際にある言い回しだけを数える（AIの作り話を弾く）
+    const body = flat(src.text);
+    const gb = [];
+    for (const g of Array.isArray(t.gobi) ? t.gobi : []) {
+      const bad = String((g && g.bad) || "").trim();
+      if (flat(bad).length < 3 || !body.includes(flat(bad)) || gb.some(x => x.bad === bad) || gb.length >= 4) continue;
+      const type = GOBI_TYPES.includes(g.type) ? g.type : "ぼかし";
+      gb.push({ bad: cut(bad, 24), fix: cut(g.fix, 24), type });
+      gobi++; gobiTypes[type] = (gobiTypes[type] || 0) + 1;
+    }
     questions += q; picked += p; if (prop) proposals++;
     if (off === "them" || off === "both") offThem++;
     if (off === "me" || off === "both") offMe++;
-    if (q || prop || off) items.push({ n, q, picked: p, echo: p ? echo : "", could: q > p ? cut(t.could, 30) : "", proposal: prop, off, note: cut(t.note, 40), text: cut(src.text, 70) });
+    if (q || prop || off || gb.length) items.push({ n, q, picked: p, echo: p ? echo : "", could: q > p ? cut(t.could, 30) : "", proposal: prop, off, note: cut(t.note, 40), text: cut(src.text, 70), gobi: gb });
   }
-  return { questions, picked, proposals, off: offThem + offMe, offThem, offMe, items };
+  return { questions, picked, proposals, off: offThem + offMe, offThem, offMe, gobi, gobiTypes, items };
 }
 async function countTurns(ai, persona, transcript) {
   if (!transcript.some(t => t.who === "me")) return null;
@@ -50,9 +63,15 @@ ${log}
   "me"＝直前の相手の質問や求めに対して、この発言が答えになっていない・話を逸らしている。
   両方なら "both"、どちらでもなければ ""。
 - note：off が空でないとき、または proposal が true のとき、何がずれたか／何を提案したかを25字以内で。それ以外は ""。
+- gobi（おかしい語尾）：その発言の中で、文末・句末の言い回しが不自然なものを抜き出す。bad は発言にそのまま出てくる文字列（20字以内、言い換えない）。fix は同じ意味で自然に言い切った形（20字以内）。type は次の3つのどれか：
+  ・"ぼかし"＝言い切らずにぼかす語尾。「〜という形でしょうか」「〜ような形ですかね」「〜感じですかね」「〜のかなと思っております」「〜あったりしますか」「〜みたいなところは」
+  ・"敬語の重ねすぎ"＝敬語を重ねた、または不要な所で「させていただく」を使った語尾。「あったりされますでしょうか」「お送りさせていただく中で」「ご提案をさせていただければと思っております」
+  ・"文法の誤り"＝さ入れ言葉など。「行わさせていただいている」「入らさせていただきます」
+  例：bad「あったりされますでしょうか」→ fix「ありますか」／bad「そういうような形でしょうか」→ fix「ということですか」／bad「入らさせていただきます」→ fix「入ります」
+  数えないもの：普通の丁寧語（「〜でしょうか」「〜ですか」「〜いただけますか」「ありがとうございます」「よろしくお願いいたします」）、音声の誤変換と思われる意味の通らない単語、語尾以外の言い間違い。1発言につき最大4つ。無ければ []。
 
 JSONだけを返す。受講者の発言すべてについて1つずつ、番号順に：
-{"turns":[{"n":発言番号,"q":0,"picked":0,"echo":"","could":"","proposal":false,"off":"","note":""}]}`;
+{"turns":[{"n":発言番号,"q":0,"picked":0,"echo":"","could":"","proposal":false,"off":"","note":"","gobi":[{"bad":"","fix":"","type":""}]}]}`;
   const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0 } });
   const t = r.text || "";
   const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
@@ -61,7 +80,7 @@ JSONだけを返す。受講者の発言すべてについて1つずつ、番号
 }
 export function countsLine(c) {
   if (!c) return "";
-  return `質問${c.questions}回（うち相手の言葉を拾ってから${c.picked}回）／提案${c.proposals}回／質問と答えのずれ${c.off}回（相手の答えがずれた${c.offThem}・自分の答えがずれた${c.offMe}）`;
+  return `質問${c.questions}回（うち相手の言葉を拾ってから${c.picked}回）／提案${c.proposals}回／質問と答えのずれ${c.off}回（相手の答えがずれた${c.offThem}・自分の答えがずれた${c.offMe}）／おかしい語尾${c.gobi || 0}回${c.gobi ? "（" + GOBI_TYPES.filter(k => c.gobiTypes[k]).map(k => k + c.gobiTypes[k]).join("・") + "）" : ""}`;
 }
 
 export default async function handler(req, res) {

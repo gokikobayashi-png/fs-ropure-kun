@@ -179,8 +179,9 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
 .kpi .v small{font-size:12px;font-weight:400;color:var(--ink-2)}
 .radar{width:100%;height:auto;display:block}
-.cnts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-@media (max-width:640px){.cnts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cnts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.cnts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#counts-list li .fx{color:var(--teal);font-weight:600}
 .cnt-tile{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
 .cnt-tile .l{font-size:12px;color:var(--ink-2);display:block}
 .cnt-tile .v{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--navy);line-height:1.2}

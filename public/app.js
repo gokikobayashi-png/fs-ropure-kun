@@ -696,7 +696,8 @@ function coachSay(text) { const b = $("coach-say"); b.textContent = ""; const n 
 function gofastDashSay(text) { const b = $("dash-gofast"); b.textContent = ""; const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = "Mr. Go fast ／ 量"; b.appendChild(nm); b.appendChild(document.createTextNode(text)); }
 
 /* 会話の回数（質問／拾ってから質問／提案／質問と答えのずれ） */
-function countsText(c) { return c ? "質問" + c.questions + "回（うち相手の言葉を拾ってから" + c.picked + "回）／提案" + c.proposals + "回／質問と答えのずれ" + c.off + "回（相手の答えがずれた" + c.offThem + "・自分の答えがずれた" + c.offMe + "）" : ""; }
+function gobiSub(c) { return ["ぼかし", "敬語の重ねすぎ", "文法の誤り"].filter(k => c.gobiTypes && c.gobiTypes[k]).map(k => k + " " + c.gobiTypes[k]).join("／"); }
+function countsText(c) { return c ? "質問" + c.questions + "回（うち相手の言葉を拾ってから" + c.picked + "回）／提案" + c.proposals + "回／質問と答えのずれ" + c.off + "回（相手の答えがずれた" + c.offThem + "・自分の答えがずれた" + c.offMe + "）／おかしい語尾" + (c.gobi || 0) + "回" + (c.gobi ? "（" + gobiSub(c) + "）" : "") : ""; }
 function renderCounts(c, err) {
   const panel = $("counts-panel"); panel.hidden = !c && !err;
   const box = $("res-counts"); box.textContent = ""; $("counts-list").textContent = ""; $("counts-detail").hidden = true;
@@ -707,6 +708,7 @@ function renderCounts(c, err) {
   tile("相手の言葉を拾ってから質問", c.picked, c.questions ? "質問" + c.questions + "回のうち " + rate + "%" : "", c.questions >= 3 && rate < 30);
   tile("提案した", c.proposals, "");
   tile("質問と答えがずれた", c.off, c.off ? "相手の答えがずれた " + c.offThem + "／自分の答えがずれた " + c.offMe : "", c.off >= 3);
+  tile("語尾がおかしい", c.gobi || 0, c.gobi ? gobiSub(c) : "", (c.gobi || 0) >= 5);
   $("counts-hint").textContent = c.questions >= 3 && rate < 30 ? "質問の前に、相手が直前に言った言葉を一言返す（「〜なんですね」）。まず半分を目標に。" : "AIが会話ログの発言を1つずつ分類して数えています（文字起こしの誤変換で±1〜2回ずれることがあります）。";
   const list = $("counts-list"); list.textContent = "";
   const groups = [["拾ってから質問できた", i => i.picked > 0], ["拾わずに質問した", i => i.q > i.picked], ["提案した", i => i.proposal], ["質問と答えがずれた", i => !!i.off]];
@@ -720,6 +722,13 @@ function renderCounts(c, err) {
       ul.appendChild(li); });
     list.appendChild(ul);
   });
+  const gs = (c.items || []).filter(i => i.gobi && i.gobi.length);
+  if (gs.length) {
+    const h = document.createElement("h4"); h.textContent = "語尾がおかしい（" + (c.gobi || 0) + "回）"; list.appendChild(h);
+    const ul = document.createElement("ul");
+    gs.forEach(i => i.gobi.forEach(g => { const li = document.createElement("li"); const no = document.createElement("span"); no.className = "no"; no.textContent = String(i.n).padStart(2, "0"); li.appendChild(no); li.appendChild(document.createTextNode("「" + g.bad + "」 → ")); const fx = document.createElement("span"); fx.className = "fx"; fx.textContent = "「" + g.fix + "」"; li.appendChild(fx); const nt = document.createElement("span"); nt.className = "nt"; nt.textContent = "（" + g.type + "）"; li.appendChild(nt); ul.appendChild(li); }));
+    list.appendChild(ul);
+  }
   $("counts-detail").hidden = !list.childNodes.length; $("counts-detail").open = false;
 }
 
@@ -728,7 +737,7 @@ function recordHistory(r) {
   const sc = { ...r.scores }; const ns = numbersScore(); if (ns) sc.numbers = ns;
   const keys = AXES.map(a => a[0]).filter(k => sc[k]);
   const total = keys.reduce((s, k) => s + sc[k].score, 0) / keys.length;
-  const e = { at: Date.now(), company: persona.company, role: persona.role, mode, correct: !!r.correct, answer: r.answer, picked, scores: sc, custom: r.custom || null, tpl: persona.tpl || null, style: persona.style || "", quiz: quizzes.map(q => ({ kind: q.kind, ok: q.ok })), total: Math.round(total * 10) / 10, counts: r.counts ? { q: r.counts.questions, picked: r.counts.picked, prop: r.counts.proposals, off: r.counts.off } : null, next: r.nextAction || "", feedback: String(r.feedback || "").slice(0, 600), sec: Math.round((Date.now() - startedAt) / 1000) };
+  const e = { at: Date.now(), company: persona.company, role: persona.role, mode, correct: !!r.correct, answer: r.answer, picked, scores: sc, custom: r.custom || null, tpl: persona.tpl || null, style: persona.style || "", quiz: quizzes.map(q => ({ kind: q.kind, ok: q.ok })), total: Math.round(total * 10) / 10, counts: r.counts ? { q: r.counts.questions, picked: r.counts.picked, prop: r.counts.proposals, off: r.counts.off, gobi: r.counts.gobi || 0 } : null, next: r.nextAction || "", feedback: String(r.feedback || "").slice(0, 600), sec: Math.round((Date.now() - startedAt) / 1000) };
   history.push(e); saveHistory(); lastEntry = e;
   if (shared) api("history", { action: "add", entry: e }).then(j => { e.id = j.id; saveHistory(); if (e.video) api("history", { action: "update", id: e.id, patch: { video: e.video } }).catch(() => {}); syncHistory(); }).catch(() => { e.pending = true; saveHistory(); });
   return e;
@@ -763,7 +772,7 @@ function drawTrend(list) {
 function drawRadar(latest, avg) { drawRadarInto($("radar"), latest, avg); }
 function renderHistory() {
   const esc = v => String(v || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-  const t = $("hist-table"); t.innerHTML = `<tr><th>日時</th><th>相手</th><th>方式</th><th>動画</th><th>4分類</th><th>総合</th><th title="質問した回数／相手の言葉を拾ってから質問した回数／提案した回数／質問と答えがずれた回数">質問/拾い/提案/ずれ</th><th>次の一手</th></tr>` + (history.length ? history.slice().reverse().map(e => `<tr><td class="n">${new Date(e.at).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td><td>${esc(e.company)}<span class="why">（${esc(e.role)}）</span></td><td>${e.mode === "chat" ? "チャット" : "音声"}</td><td>${/^https?:\/\//.test(e.video || "") ? `<a class="vid" href="${esc(e.video)}" target="_blank" rel="noopener">▶ 動画</a>` : '<span class="why">—</span>'}</td><td class="n">${e.correct ? "○" : "×"}</td><td class="n"><b>${e.total.toFixed(1)}</b></td><td class="n">${e.counts ? `${Number(e.counts.q) || 0} / ${Number(e.counts.picked) || 0} / ${Number(e.counts.prop) || 0} / ${Number(e.counts.off) || 0}` : '<span class="why">—</span>'}</td><td class="why">${esc(e.next)}</td></tr>`).join("") : `<tr><td colspan="8" class="why">まだありません。</td></tr>`);
+  const t = $("hist-table"); t.innerHTML = `<tr><th>日時</th><th>相手</th><th>方式</th><th>動画</th><th>4分類</th><th>総合</th><th title="質問した回数／相手の言葉を拾ってから質問した回数／提案した回数／質問と答えがずれた回数／語尾がおかしかった回数">質問/拾い/提案/ずれ/語尾</th><th>次の一手</th></tr>` + (history.length ? history.slice().reverse().map(e => `<tr><td class="n">${new Date(e.at).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</td><td>${esc(e.company)}<span class="why">（${esc(e.role)}）</span></td><td>${e.mode === "chat" ? "チャット" : "音声"}</td><td>${/^https?:\/\//.test(e.video || "") ? `<a class="vid" href="${esc(e.video)}" target="_blank" rel="noopener">▶ 動画</a>` : '<span class="why">—</span>'}</td><td class="n">${e.correct ? "○" : "×"}</td><td class="n"><b>${e.total.toFixed(1)}</b></td><td class="n">${e.counts ? `${Number(e.counts.q) || 0} / ${Number(e.counts.picked) || 0} / ${Number(e.counts.prop) || 0} / ${Number(e.counts.off) || 0} / ${e.counts.gobi === undefined ? "—" : Number(e.counts.gobi) || 0}` : '<span class="why">—</span>'}</td><td class="why">${esc(e.next)}</td></tr>`).join("") : `<tr><td colspan="8" class="why">まだありません。</td></tr>`);
 }
 function gofastVolume(list, who = "") {
   const now = Date.now(), day = 86400000;
