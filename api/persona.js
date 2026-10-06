@@ -115,12 +115,23 @@ async function companyProfile(ai, { name, urls, siteText }, notes = [], toolset 
       notes.push("site: known=false");
     } catch (e) { notes.push("site: " + String(e.message || e).slice(0, 200)); }
   }
-  try {
-    const r = await generate(ai, { contents: `次の会社について、Web検索と下のURLのページを使って調べ、プロフィールをまとめる。確かめられた情報だけを書き、分からない項目は空文字にする。同名の別会社と取り違えない（URLがあればそのサイトの会社）。\n${who}\n\nJSONだけを返す（前後に文章を付けない）：${PROFILE_SHAPE}`, config: { tools: TOOLSETS[toolset] || TOOLSETS.both, temperature: 0.1 } }, { budgetMs: 25000, perCallMs: 20000 });
-    const p = cleanProfile(parseLoose(r.text || ""), name);
-    if (p && p.known) return { ...p, source: "search" };
-    notes.push("search: known=false " + String(r.text || "").slice(0, 160));
-  } catch (e) { notes.push("search: " + String(e.detail || e.message || e).slice(0, 300)); }
+  // サイト本文が読めない（JavaScriptで描画される等）ときは、GeminiのURL読み取りに任せる
+  const ask = async (label, tools, budgetMs, how) => {
+    try {
+      const r = await generate(ai, { contents: `次の会社について、${how}プロフィールをまとめる。確かめられた情報だけを書き、分からない項目は空文字にする。同名の別会社と取り違えない（URLがあればそのサイトの会社）。確かな情報が無ければ known を false にする。\n${who}\n\nJSONだけを返す（前後に文章を付けない）：${PROFILE_SHAPE}`, config: { ...(tools ? { tools } : { responseMimeType: "application/json" }), temperature: 0.1 } }, { budgetMs, perCallMs: Math.min(20000, budgetMs) });
+      const p = cleanProfile(parseLoose(r.text || ""), name);
+      if (p && p.known) return { ...p, source: label };
+      notes.push(label + ": known=false");
+    } catch (e) { notes.push(label + ": " + String(e.detail || e.message || e).slice(0, 200)); }
+    return null;
+  };
+  let p = null;
+  if (urls && toolset !== "search") p = await ask("url", TOOLSETS.url, 22000, "下のURLのページを読んで");
+  // Web検索はAPIの契約によっては使えない（429）。短く1回だけ試す
+  if (!p && toolset !== "url") p = await ask("search", TOOLSETS.search, 7000, "Web検索で調べて");
+  // 最後の手段：AI自身の知識。よく知られた会社だけ（確かに知っている場合だけ known:true）
+  if (!p && name) p = await ask("memory", null, 12000, "あなたが確かに知っている範囲で（上場企業や広く知られたサービスの会社のように、事業内容を確実に知っている場合だけ known を true にする。少しでも怪しければ false）");
+  if (p) return p;
   console.error("company profile failed", notes.join(" | "));
   return null;
 }

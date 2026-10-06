@@ -254,7 +254,7 @@ function renderRealNote() {
   const rn = $("p-real"); rn.textContent = ""; rn.hidden = !persona || !persona.real; if (rn.hidden) return;
   const r = persona.real, pf = r.profile || {};
   const b = document.createElement("b"); b.textContent = "実在の会社を想定しています。"; rn.appendChild(b);
-  const how = { site: "サイトを読んで作りました" + ((r.pages || []).length ? "（" + r.pages.join("、") + "）" : ""), search: "Web検索で確かめて作りました", saved: "前に読み取った会社情報を使いました", input: "入力された業種・商材から作りました（サイトは読めませんでした）" }[r.source] || "";
+  const how = { site: "サイトを読んで作りました" + ((r.pages || []).length ? "（" + r.pages.join("、") + "）" : ""), url: "サイトを読んで作りました", search: "Web検索で確かめて作りました", memory: "AIが知っている範囲で作りました（URLを入れると、サイトの内容に合わせられます）", saved: "前に読み取った会社情報を使いました", input: "入力された業種・商材から作りました（サイトは読めませんでした）" }[r.source] || "";
   rn.appendChild(document.createTextNode(" 担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。" + how + "。"));
   const d = document.createElement("span"); d.style.display = "block"; d.style.marginTop = "4px"; d.textContent = "読み取った内容 ― 事業：" + (pf.business || "—") + "／商材：" + (pf.product || "—") + (pf.target ? "／売り先：" + pf.target : ""); rn.appendChild(d);
   if ((r.errors || []).length) { const e = document.createElement("span"); e.style.display = "block"; e.textContent = "読めなかったURL：" + r.errors.join("／"); rn.appendChild(e); }
