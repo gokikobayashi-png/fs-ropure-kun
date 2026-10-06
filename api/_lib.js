@@ -285,7 +285,7 @@ async function findRecordsParent() {
   if (!r.ok) throw new Error("ロープレ記録ページを作れません: " + r.status + " " + (await r.text()).slice(0, 200));
   return (recordsParent = (await r.json()).id);
 }
-export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", overviewReview = "", calcReview = "", numbersReview = "", quizText = "", scores = null, nextAction = "", custom = null, secondOpinion = "" }) {
+export async function saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview = "", calcText = "", proposal = "", overviewReview = "", calcReview = "", numbersReview = "", quizText = "", scores = null, nextAction = "", custom = null, secondOpinion = "", counts = null, countsText = "" }) {
   if (!knowledgeEnabled()) return null;
   const parent = await findRecordsParent();
   const title = `${jstNow()} ${persona.company}（${mode === "chat" ? "チャット" : "音声"}／判定:${CAT[picked]}${correct ? "○" : "×"}）`;
@@ -321,6 +321,14 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
     for (const k of Object.keys(L)) if (scores[k]) blocks.push(bullet(`${L[k]}：${scores[k].score}／${scores[k].why}`));
     if (custom) for (const k of Object.keys(custom)) blocks.push(bullet(`上司FBの観点「${custom[k].title}」：${custom[k].score}／${custom[k].why}`));
     if (nextAction) blocks.push(bullet("次の一手：" + nextAction));
+  }
+  if (counts) {
+    blocks.push(h2("会話の回数"), bullet(countsText));
+    const K = [["拾ってから質問できた", i => i.picked > 0], ["拾わずに質問した", i => i.q > i.picked], ["提案した", i => i.proposal], ["質問と答えがずれた", i => !!i.off]];
+    for (const [label, f] of K) {
+      const hit = (counts.items || []).filter(f);
+      if (hit.length) blocks.push(bullet(`${label}：` + hit.map(i => `${String(i.n).padStart(2, "0")}${i.off && label.startsWith("質問と答え") ? (i.off === "them" ? "（相手の答え）" : i.off === "me" ? "（自分の答え）" : "（両方）") : ""}${i.note && (label === "提案した" || label.startsWith("質問と答え")) ? "「" + i.note + "」" : ""}`).join("、")));
+    }
   }
   blocks.push({ object: "block", type: "toggle", toggle: { rich_text: [{ type: "text", text: { content: "相手の事実（答え合わせ用）" } }], children: (persona.hidden_facts || []).slice(0, 90).map(bullet) } });
   const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({

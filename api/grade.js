@@ -2,11 +2,64 @@
 // → { correct, answer, feedback }
 import { client, auth, readJson, FRAMEWORK, companyText, companyName, CAT, generate, knowledgeEnabled, appendKnowledge, jstNow, saveRecord } from "./_lib.js";
 
+// 会話の回数を数える：質問／相手の言葉を拾ってから質問／提案／質問と答えのずれ。
+// AIには「受講者の発言を1つずつ分類」だけさせ、合計はこちらで数える（AIに合計を言わせると数え間違うため）。
+const cut = (s, n) => { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n) + "…" : s; };
+export function tallyCounts(turns, transcript) {
+  const items = [];
+  let questions = 0, picked = 0, proposals = 0, offThem = 0, offMe = 0;
+  const seen = new Set();
+  for (const t of Array.isArray(turns) ? turns : []) {
+    const n = Math.round(Number(t && t.n));
+    const src = transcript[n - 1];
+    if (!src || src.who !== "me" || seen.has(n)) continue; // 受講者の発言だけ、1回ずつ
+    seen.add(n);
+    const q = Math.min(5, Math.max(0, Math.round(Number(t.q)) || 0));
+    const p = Math.min(q, Math.max(0, Math.round(Number(t.picked)) || 0));
+    const prop = t.proposal === true || t.proposal === "true";
+    const off = ["them", "me", "both"].includes(t.off) ? t.off : "";
+    questions += q; picked += p; if (prop) proposals++;
+    if (off === "them" || off === "both") offThem++;
+    if (off === "me" || off === "both") offMe++;
+    if (q || prop || off) items.push({ n, q, picked: p, proposal: prop, off, note: cut(t.note, 40), text: cut(src.text, 70) });
+  }
+  return { questions, picked, proposals, off: offThem + offMe, offThem, offMe, items };
+}
+async function countTurns(ai, persona, transcript) {
+  if (!transcript.some(t => t.who === "me")) return null;
+  const log = transcript.map((t, i) => `${String(i + 1).padStart(2, "0")} ${t.who === "me" ? "受講者" : persona.name}：${t.text}`).join("\n");
+  const prompt = `あなたは営業ロープレの会話ログを数える係。評価やアドバイスはしない。受講者（営業担当）の発言を1つずつ分類する。
+
+【会話ログ】行頭の番号が発言番号。相手は${persona.name}。音声の文字起こしなので誤変換がある。意味の通らない短い発言（「Ja.」など）は誤変換として q=0・off="" で扱う。
+${log}
+
+■ 数え方
+- q（質問の数）：その発言の中で、受講者が相手に情報や考えを尋ねた質問の数。挨拶・音声の確認（「聞こえていますか」）・相づち・「よろしいでしょうか」のような進行の確認は数えない。同じ質問の言い換えは1つと数える。
+- picked（拾ってから質問できた数）：q のうち、質問の前に「相手の直前の発言の言葉や中身」を自分の口で返してから聞いた質問の数。例：「役員の方から急かされているんですね。未達というのはどのくらいですか」「先ほど45件とおっしゃいましたが、目標は何件ですか」。次は拾いに数えない：「ありがとうございます」「承知しました」「なるほど」だけで次の質問に行った／相手の言葉に触れずに自分の解釈や仮説を述べてから聞いた。picked は q 以下。
+- proposal（提案したか）：その発言で、受講者が解決策・進め方・自社サービスのやり方・料金やプランを自分から出したら true。例：「〜がいいのかなと思います」「弊社では〜を行っています」「月額90万円でご支援します」。次回の日程や「提案書を作ります」という段取りだけなら false。
+- off（質問と答えのずれ）：
+  "them"＝この発言の質問に対して、直後の相手の答えが聞いたことに答えていない・別の話になっている。
+  "me"＝直前の相手の質問や求めに対して、この発言が答えになっていない・話を逸らしている。
+  両方なら "both"、どちらでもなければ ""。
+- note：off が空でないとき、または proposal が true のとき、何がずれたか／何を提案したかを25字以内で。それ以外は ""。
+
+JSONだけを返す。受講者の発言すべてについて1つずつ、番号順に：
+{"turns":[{"n":発言番号,"q":0,"picked":0,"proposal":false,"off":"","note":""}]}`;
+  const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0 } });
+  const t = r.text || "";
+  const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
+  return tallyCounts(j.turns, transcript);
+}
+export function countsLine(c) {
+  if (!c) return "";
+  return `質問${c.questions}回（うち相手の言葉を拾ってから${c.picked}回）／提案${c.proposals}回／質問と答えのずれ${c.off}回（相手の答えがずれた${c.offThem}・自分の答えがずれた${c.offMe}）`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   if (!auth(req, res)) return;
   try {
-    const { persona, transcript = [], picked, rephrase = "", mode = "voice", overview = "", calc = null, proposal = "", company = null, quizzes = [], checks = [] } = await readJson(req);
+    const { persona, transcript = [], picked, rephrase = "", mode = "voice", overview = "", calc = null, proposal = "", company = null, quizzes = [], checks = [], dry = false } = await readJson(req);
     const cks = (Array.isArray(checks) ? checks : []).filter(c => c && c.key && c.title).slice(0, 12);
     const me = companyName(company);
     const calcText = calc ? `チャネル：${calc.channel || "アウトバウンド"}／プラン：${calc.plan}（月${calc.monthly}万）／期間${calc.months}ヶ月／準備費${calc.prep}万／月の稼働${calc.calls}コール／アポ率${calc.apo_rate}%／受注率${calc.win_rate}%／1受注の売上${calc.revenue}万
@@ -64,19 +117,22 @@ JSONだけを返す：
  "learnings":["このロープレから次回以降の練習に活かせる気づきを1〜3行、各80字以内。受講者の癖（例：数字を聞く前に提案した）、効いた質問、相手役の反応で不自然だった点など。無ければ空配列"]}`;
 
     const ai = client();
+    // 回数の集計は採点と同時に走らせる（失敗しても採点は返す）
+    const countsP = countTurns(ai, persona, transcript).catch(e => { console.error("count failed", e); return null; });
     const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0.4 } });
+    const counts = await countsP;
     const t = r.text || "";
     let feedback = t, learnings = [], overviewReview = "", calcReview = "", numbersReview = "", scores = null, nextAction = "", custom = null, good = [], improve = [], secondOpinion = "";
     try { const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)); feedback = j.feedback || t; learnings = Array.isArray(j.learnings) ? j.learnings.map(String) : []; overviewReview = String(j.overview_review || ""); calcReview = String(j.calc_review || ""); numbersReview = String(j.numbers_review || ""); nextAction = String(j.next_action || ""); secondOpinion = String(j.second_opinion || ""); good = Array.isArray(j.good) ? j.good.map(String) : []; improve = Array.isArray(j.improve) ? j.improve.map(String) : [];
       if (j.scores && typeof j.scores === "object") { scores = {}; for (const k of ["counterpart", "widen", "classify", "rephrase", "converge", "roi", "listening", "closing"]) { const v = j.scores[k] || {}; const n = Math.round(Number(v.score)); scores[k] = { score: isFinite(n) ? Math.min(5, Math.max(1, n)) : 1, why: String(v.why || "") }; } }
       if (cks.length && j.custom && typeof j.custom === "object") { custom = {}; for (const c of cks) { const v = j.custom[c.key] || {}; const n = Math.round(Number(v.score)); custom[c.key] = { score: isFinite(n) ? Math.min(5, Math.max(1, n)) : 1, why: String(v.why || ""), title: c.title }; } } } catch (_) {}
     let saved = false;
-    if (knowledgeEnabled() && learnings.length) {
+    if (!dry && knowledgeEnabled() && learnings.length) {
       try { await appendKnowledge(learnings, `[ロープレ] ${jstNow()} ${persona.company}（正解:${CAT[persona.answer]}／判定:${CAT[picked]}${correct ? "○" : "×"}）`); saved = true; } catch (e) { console.error(e); }
     }
     let recordUrl = null, recordError = "";
-    try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview, calcText, proposal, overviewReview, calcReview, numbersReview, quizText, scores, nextAction, custom, secondOpinion }); } catch (e) { console.error(e); recordError = String(e.message || e); }
-    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion, learnings, saved });
+    if (!dry) try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview, calcText, proposal, overviewReview, calcReview, numbersReview, quizText, scores, nextAction, custom, secondOpinion, counts, countsText: countsLine(counts) }); } catch (e) { console.error(e); recordError = String(e.message || e); }
+    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion, learnings, saved, counts });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }
