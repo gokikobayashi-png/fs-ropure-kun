@@ -117,7 +117,7 @@ JSONだけを返す（前後に文章を付けない）：
     let json = null, issues = [], lastErr = null;
     const t0 = Date.now();
     for (let i = 0; i < 3; i++) {
-      if (json && Date.now() - t0 > 30000) break; // 時間切れになる前に、手元の案で進める
+      if (json && Date.now() - t0 > 20000) break; // 時間切れになる前に、手元の案で進める
       const fix = i && issues.length ? `\n\n■ 前回の案は数字が現実的でなかった。次の点を直して、会社ごと作り直す：\n${issues.map(x => "- " + x).join("\n")}` : "";
       let cand, candIssues;
       try {
