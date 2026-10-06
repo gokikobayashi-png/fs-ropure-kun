@@ -1,22 +1,11 @@
 // POST /api/grade  { persona, transcript:[{who:"me"|"them", text}], picked:"A"|"B"|"C"|"D", rephrase }
 // → { correct, answer, feedback }
-import { client, auth, readJson, FRAMEWORK, companyText, companyName, CAT, generate, knowledgeEnabled, appendKnowledge, jstNow, saveRecord } from "./_lib.js";
+import { client, auth, readJson, FRAMEWORK, companyText, companyName, CAT, generate, knowledgeEnabled, appendKnowledge, jstNow, saveRecord, parseLoose } from "./_lib.js";
+export { parseLoose };
 
 // 会話の回数を数える：質問／相手の言葉を拾ってから質問／提案／質問と答えのずれ。
 // AIには「受講者の発言を1つずつ分類」だけさせ、合計はこちらで数える（AIに合計を言わせると数え間違うため）。
 const cut = (s, n) => { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n) + "…" : s; };
-// AIの返事からJSONを取り出す。全体→{…}→[…] の順に試す（配列だけで返ってくることがある）
-export function parseLoose(text) {
-  const t = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
-  const tries = [t];
-  const o1 = t.indexOf("{"), o2 = t.lastIndexOf("}"), a1 = t.indexOf("["), a2 = t.lastIndexOf("]");
-  if (a1 >= 0 && a2 > a1 && (o1 < 0 || a1 < o1)) tries.push(t.slice(a1, a2 + 1));
-  if (o1 >= 0 && o2 > o1) tries.push(t.slice(o1, o2 + 1));
-  if (a1 >= 0 && a2 > a1) tries.push(t.slice(a1, a2 + 1));
-  let last;
-  for (const x of tries) { try { return JSON.parse(x); } catch (e) { last = e; } }
-  throw last || new Error("JSONが空");
-}
 // スコア1つを読む：{"score":3,"why":"…"} のほか、数字だけ・文字の数字・別名のキーでも受ける
 function readScore(v) {
   if (v === null || v === undefined) return null;

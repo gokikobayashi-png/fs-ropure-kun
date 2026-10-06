@@ -146,6 +146,19 @@ export async function readCompanySite(urls) {
   return { text, chars: pages.reduce((a, p) => a + p.body.length, 0), pages: pages.map(p => p.url), errors };
 }
 
+// AIの返事からJSONを取り出す。全体→{…}→[…] の順に試す（配列だけで返ってくることがある）
+export function parseLoose(text) {
+  const t = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+  const tries = [t];
+  const o1 = t.indexOf("{"), o2 = t.lastIndexOf("}"), a1 = t.indexOf("["), a2 = t.lastIndexOf("]");
+  if (a1 >= 0 && a2 > a1 && (o1 < 0 || a1 < o1)) tries.push(t.slice(a1, a2 + 1));
+  if (o1 >= 0 && o2 > o1) tries.push(t.slice(o1, o2 + 1));
+  if (a1 >= 0 && a2 > a1) tries.push(t.slice(a1, a2 + 1));
+  let last;
+  for (const x of tries) { try { return JSON.parse(x); } catch (e) { last = e; } }
+  throw last || new Error("JSONが空");
+}
+
 export const CAT = { A: "戦略", B: "手法", C: "量", D: "質" };
 
 /* =========================================================

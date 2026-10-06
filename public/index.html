@@ -179,6 +179,23 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
 .kpi .v small{font-size:12px;font-weight:400;color:var(--ink-2)}
 .radar{width:100%;height:auto;display:block}
+.sc-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.sc-tools input{flex:0 1 240px;margin-top:0}
+.sc-cats{display:flex;gap:6px;flex-wrap:wrap}
+.sc-cats button{font-family:var(--sans);font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;padding:4px 12px;cursor:pointer}
+.sc-cats button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:12px}
+.sc-card{display:grid;grid-template-columns:72px minmax(0,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.sc-card .ini{display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff;background:var(--navy)}
+.sc-card .bd{padding:10px 12px;min-width:0;display:flex;flex-direction:column;gap:4px}
+.sc-card .cat{align-self:flex-start;font-size:11px;background:var(--case-soft);color:var(--navy);border-radius:4px;padding:1px 8px}
+.sc-card .nm{font-weight:700;font-size:15px;overflow-wrap:anywhere}
+.sc-card .ds{font-size:12px;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sc-card .mt{font-size:11px;color:var(--ink-2)}
+.sc-card .ac{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.sc-card .ac .btn{font-size:12px;padding:4px 10px}
+.sc-empty{font-size:13px;color:var(--ink-2);margin-top:12px}
+.sc-form{border:1px solid #B5E3E8;background:#F7FCFC;border-radius:10px;padding:14px 16px;margin-top:12px}
 .realbox{background:var(--case-soft);border:1px solid #B5E3E8;border-radius:8px;padding:10px 12px 6px;margin-bottom:6px}
 .realbox label.f:first-of-type{margin-top:6px}
 .realnote{font-size:12px;color:var(--ink-2);margin:8px 0 0;overflow-wrap:anywhere}
@@ -509,9 +526,11 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
       <div class="sub" style="border-top:0;padding-top:0;margin-top:0">相手の会社と立場</div>
       <div class="realbox">
         <div class="pl" style="color:var(--teal)">実在の会社を想定する（任意）</div>
+        <label class="f">登録済みのシナリオ企業から選ぶ<select id="sc-pick"><option value="">選ばない（下に直接入力）</option></select></label>
+        <p class="realnote" id="sc-pick-note" hidden></p>
         <label class="f">会社名<input type="text" id="real-name" placeholder="例：株式会社◯◯（空欄なら架空の会社をAIが作る）" autocomplete="off"></label>
         <label class="f">会社やサービスのURL<input type="text" id="real-url" inputmode="url" placeholder="例：https://example.co.jp/service（3つまで。空白で区切る）" autocomplete="off"></label>
-        <p class="hint">サイトやWeb検索で事業内容・サービス・売り先を確かめて、その会社に合わせます。担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。一度読み取った会社は端末に覚えるので、2回目からは速くなります。「今の設定を保存」で登録しておけば、ワンクリックで呼び出せます。</p>
+        <p class="hint">サイトを読んで事業内容・サービス・売り先を確かめ、その会社に合わせます。担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。サービス資料があるとき、何度も使う会社は <a href="#" id="sc-goto">設定 → シナリオ企業</a> に登録しておくと速く正確になります。</p>
       </div>
       <label class="f">業種<input type="text" id="industry" placeholder="例：食品工場向け設備、SaaS、建設、人材紹介（空欄なら毎回変える）"></label>
       <label class="f">商材・単価<input type="text" id="product" placeholder="例：買い切り4.4万のインカム、月額5万のSaaS"></label>
@@ -886,6 +905,7 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 <div class="setgrid">
   <nav class="setnav" id="setnav">
     <button type="button" data-set="co" class="on">自社情報</button>
+    <button type="button" data-set="sc">シナリオ企業 <span class="cnt" id="sc-cnt"></span></button>
     <button type="button" data-set="fb">上司FBの観点 <span class="cnt" id="fb-cnt"></span></button>
     <button type="button" data-set="missed">間違えた暗算 <span class="cnt bad" id="miss-cnt"></span></button>
     <button type="button" data-set="know">知見（Notion）</button>
@@ -944,6 +964,37 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
     </div>
     <div class="status" id="co-status"></div>
   </div>
+</section>
+    <section class="panel" id="sc">
+  <div class="co-head"><div><div class="pl" style="color:var(--teal)"><span id="sc-state"></span></div><h2>シナリオ企業</h2></div><span style="flex:1"></span><button class="btn primary" id="sc-new" type="button">新規作成</button></div>
+  <p class="hint">実在の会社を想定してロープレするための登録先です。会社名・URL・サービス資料から会社情報を読み取って保存しておくと、ケース設定でワンクリックで選べて、毎回サイトを読みに行かないので速くなります。担当者と社内の数字（営業体制・商談数・売上目標など）は、ロープレのたびに架空で作ります。</p>
+  <div class="sc-form" id="sc-form" hidden>
+    <div class="sub" style="border-top:0;padding-top:0;margin-top:0" id="sc-form-title">シナリオ企業を登録する</div>
+    <div class="g2">
+      <label class="f">会社名<input type="text" id="sc-name" placeholder="例：i Smart Technologies 株式会社" autocomplete="off"></label>
+      <label class="f">会社やサービスのURL（3つまで。空白で区切る）<input type="text" id="sc-url" inputmode="url" placeholder="例：https://example.co.jp/service" autocomplete="off"></label>
+    </div>
+    <label class="f">サービス資料（PDF。あれば。3つまで）<input type="file" id="sc-pdf" accept="application/pdf,.pdf" multiple></label>
+    <label class="f">資料の文章を貼り付け（任意）<textarea id="sc-text" rows="3" placeholder="提案資料・会社紹介・商談メモの文章を貼り付け…"></textarea></label>
+    <div class="row"><button class="btn primary" id="sc-read" type="button">AIで読み取る</button><span class="hint" style="margin:0">URL・資料から会社情報を抜き出して、下の欄に入れます。読み取らずに手で入力しても保存できます。</span></div>
+    <div class="status" id="sc-read-status"></div>
+    <div class="sub">会社情報（確認して、違うところは直す）</div>
+    <label class="f">カテゴリー（一覧の絞り込みに使う）<input type="text" id="sc-cat" list="sc-catlist" placeholder="例：製造業向けSaaS、現場向けSaaS、物流向けSaaS" autocomplete="off"><datalist id="sc-catlist"></datalist></label>
+    <label class="f">事業内容<textarea id="sc-business" rows="2"></textarea></label>
+    <label class="f">サービス・商材（何を・どうやって）<textarea id="sc-product" rows="2"></textarea></label>
+    <div class="g2">
+      <label class="f">料金・課金形態<textarea id="sc-price" rows="2"></textarea></label>
+      <label class="f">規模（従業員数・設立・所在地）<textarea id="sc-size" rows="2"></textarea></label>
+    </div>
+    <label class="f">売り先（業種・規模・部署や役職）<textarea id="sc-target" rows="2"></textarea></label>
+    <label class="f">だれの・どんな課題を解決しているか<textarea id="sc-value" rows="2"></textarea></label>
+    <label class="f">導入実績・事例<textarea id="sc-proof" rows="2"></textarea></label>
+    <label class="f">メモ（任意。実際の商談で聞いた事情など。相手役の反応に反映されます）<textarea id="sc-notes" rows="2" placeholder="例：展示会リードが中心。経営者に刺さるが現場の抵抗で止まりやすい"></textarea></label>
+    <div class="row"><button class="btn primary" id="sc-save" type="button">保存</button><button class="btn" id="sc-cancel" type="button">やめる</button></div>
+    <div class="status" id="sc-status"></div>
+  </div>
+  <div class="sc-tools"><input type="text" id="sc-q" placeholder="会社名・カテゴリーで検索" autocomplete="off"><div class="sc-cats" id="sc-cats"></div></div>
+  <div class="sc-grid" id="sc-list"></div>
 </section>
     <section class="panel" id="fb">
   <div class="co-head"><div><div class="pl" style="color:var(--teal)"><span id="fb-state"></span></div><h2>録画を見てもらったFBを、次回からの採点に入れる</h2></div></div>

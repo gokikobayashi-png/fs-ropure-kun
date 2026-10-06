@@ -165,7 +165,7 @@ $("know-add").addEventListener("click", async () => {
 });
 async function afterLogin() {
   renderUserChip();
-  loadTemplates(); renderTemplates(); loadChecks(); renderChecks(); loadMissed(); renderMissed(); loadHistory();
+  loadTemplates(); renderTemplates(); loadChecks(); renderChecks(); loadMissed(); renderMissed(); loadHistory(); loadScenarios();
   $("dash-seg").hidden = !(user && user.admin);
   loadKnow();
   if (shared) {
@@ -181,15 +181,15 @@ function view(name) {
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.view === name));
   if (name === "dash") { renderDash(); if (dashScope === "team") renderTeam(); }
   if (name === "history") renderHistory();
-  if (name === "settings") { renderChecks(); renderMissed(); }
+  if (name === "settings") { renderChecks(); renderMissed(); renderScenarios(); }
   window.scrollTo(0, 0);
 }
 document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => view(b.dataset.view)));
 document.querySelectorAll("#setnav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("#setnav button").forEach(x => x.classList.toggle("on", x === b));
-  ["co", "fb", "missed", "know", "data"].forEach(id => { $(id).hidden = id !== b.dataset.set; });
+  ["co", "sc", "fb", "missed", "know", "data"].forEach(id => { $(id).hidden = id !== b.dataset.set; });
 }));
-["fb", "missed", "know", "data"].forEach(id => { $(id).hidden = true; });
+["sc", "fb", "missed", "know", "data"].forEach(id => { $(id).hidden = true; });
 try { $("rec-default").checked = localStorage.getItem("ropure-rec-default") === "1"; $("rec-on").checked = $("rec-default").checked; } catch (_) {}
 $("rec-default").addEventListener("change", () => { try { localStorage.setItem("ropure-rec-default", $("rec-default").checked ? "1" : "0"); } catch (_) {} $("rec-on").checked = $("rec-default").checked; });
 $("export-btn").addEventListener("click", () => {
@@ -213,8 +213,8 @@ function status(id, text, err) { const e = $(id); e.textContent = text || ""; e.
 let styleKey = "";
 const STYLE_NAME = { "": "ランダム", analytical: "アナリティカル", driver: "ドライバー", amiable: "エミアブル", expressive: "エクスプレッシブ" };
 document.querySelectorAll("#styles .stylecard").forEach(b => b.addEventListener("click", () => { styleKey = b.dataset.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", x === b)); }));
-function caseSettings() { return { real_name: $("real-name").value.trim(), real_url: $("real-url").value.trim(), industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), sales_team: $("sales-team").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, answer: $("answer").value, style: styleKey }; }
-function applyCase(c) { $("real-name").value = c.real_name || ""; $("real-url").value = c.real_url || ""; $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey)); }
+function caseSettings() { return { scenario_id: scPicked() ? scenarioPick : "", real_name: $("real-name").value.trim(), real_url: $("real-url").value.trim(), industry: $("industry").value.trim(), product: $("product").value.trim(), size: $("size").value.trim(), sales_team: $("sales-team").value.trim(), difficulty: $("difficulty").value, layer: $("layer").value, answer: $("answer").value, style: styleKey }; }
+function applyCase(c) { $("real-name").value = c.real_name || ""; $("real-url").value = c.real_url || ""; scenarioPick = c.scenario_id && scenarios.some(x => x.id === c.scenario_id) ? c.scenario_id : ""; $("sc-pick").value = scenarioPick; showPickNote(); $("industry").value = c.industry || ""; $("product").value = c.product || ""; $("size").value = c.size || ""; $("sales-team").value = c.sales_team || ""; $("difficulty").value = c.difficulty || "normal"; $("layer").value = c.layer || ""; $("answer").value = c.answer || ""; styleKey = c.style || ""; document.querySelectorAll("#styles .stylecard").forEach(x => x.classList.toggle("on", (x.dataset.style || "") === styleKey)); }
 const TPL_KEY = "ropure-templates-v1";
 let templates = [];
 function loadTemplates() { try { templates = JSON.parse(localStorage.getItem(uk(TPL_KEY)) || "[]"); if (!Array.isArray(templates)) templates = []; } catch (_) { templates = []; } }
@@ -254,22 +254,150 @@ function renderRealNote() {
   const rn = $("p-real"); rn.textContent = ""; rn.hidden = !persona || !persona.real; if (rn.hidden) return;
   const r = persona.real, pf = r.profile || {};
   const b = document.createElement("b"); b.textContent = "実在の会社を想定しています。"; rn.appendChild(b);
-  const how = { site: "サイトを読んで作りました" + ((r.pages || []).length ? "（" + r.pages.join("、") + "）" : ""), url: "サイトを読んで作りました", search: "Web検索で確かめて作りました", memory: "AIが知っている範囲で作りました（URLを入れると、サイトの内容に合わせられます）", saved: "前に読み取った会社情報を使いました", input: "入力された業種・商材から作りました（サイトは読めませんでした）" }[r.source] || "";
-  rn.appendChild(document.createTextNode(" 担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。" + how + "。"));
+  const how = { site: "サイトを読んで作りました" + ((r.pages || []).length ? "（" + r.pages.join("、") + "）" : ""), url: "サイトを読んで作りました", doc: "サービス資料を読んで作りました", search: "Web検索で確かめて作りました", memory: "AIが知っている範囲で作りました（URLを入れると、サイトの内容に合わせられます）", saved: "前に読み取った会社情報を使いました", input: "入力された業種・商材から作りました（サイトは読めませんでした）" }[r.source] || "";
+  rn.appendChild(document.createTextNode(" 担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。" + (r.scenario ? "登録済みのシナリオ企業の情報を使いました" : how) + "。"));
   const d = document.createElement("span"); d.style.display = "block"; d.style.marginTop = "4px"; d.textContent = "読み取った内容 ― 事業：" + (pf.business || "—") + "／商材：" + (pf.product || "—") + (pf.target ? "／売り先：" + pf.target : ""); rn.appendChild(d);
   if ((r.errors || []).length) { const e = document.createElement("span"); e.style.display = "block"; e.textContent = "読めなかったURL：" + r.errors.join("／"); rn.appendChild(e); }
-  const again = document.createElement("button"); again.type = "button"; again.className = "btn"; again.style.cssText = "margin-top:6px;font-size:12px;padding:4px 10px"; again.textContent = "内容が違う → 会社情報を読み直す";
-  again.addEventListener("click", () => { dropRealProfile(caseSettings()); generate(); }); rn.appendChild(again);
+  const mk = (label, fn) => { const x = document.createElement("button"); x.type = "button"; x.className = "btn"; x.style.cssText = "margin:6px 6px 0 0;font-size:12px;padding:4px 10px"; x.textContent = label; x.addEventListener("click", fn); rn.appendChild(x); };
+  if (r.scenario) { mk("会社情報を直す（設定 → シナリオ企業）", () => { const it = scenarios.find(x => x.id === r.scenario); if (it) openScForm(it); }); }
+  else { mk("内容が違う → 会社情報を読み直す", () => { dropRealProfile(caseSettings()); generate(); }); mk("シナリオ企業に保存する", () => openScForm({ id: "", name: persona.company, url: r.url || "", category: pf.category || "", profile: pf })); }
 }
+
+/* ---------- シナリオ企業（事前に登録した実在の会社。チームで共有） ---------- */
+const SC_KEY = "ropure-scenarios-v1";
+let scenarios = [], scenarioPick = "", scShared = false, scEditing = "", scCat = "";
+function scPicked() { const it = scenarioPick && scenarios.find(x => x.id === scenarioPick); return it && it.name === $("real-name").value.trim() ? it : null; }
+function scCache() { try { localStorage.setItem(SC_KEY, JSON.stringify(scenarios)); } catch (_) {} }
+async function loadScenarios() {
+  try { const v = JSON.parse(localStorage.getItem(SC_KEY) || "[]"); scenarios = Array.isArray(v) ? v : []; } catch (_) { scenarios = []; }
+  renderScenarios();
+  try { const j = await api("scenario", { action: "list" }); scShared = !!j.shared; if (scShared) { scenarios = j.items || []; scCache(); } } catch (_) {}
+  renderScenarios();
+}
+const SC_COLORS = ["#1A3A5C", "#05AABA", "#7C3AED", "#B45309", "#0F766E", "#BE185D", "#4D7C0F", "#1D4ED8"];
+function scColor(cat) { let h = 0; for (const c of String(cat || "")) h = (h * 31 + c.codePointAt(0)) >>> 0; return SC_COLORS[h % SC_COLORS.length]; }
+function scInitial(name) { const n = String(name || "").replace(/株式会社|有限会社|合同会社|\(株\)|（株）|\s/g, ""); return (Array.from(n)[0] || "？").toUpperCase(); }
+function showPickNote() {
+  const it = scPicked(), n = $("sc-pick-note"); n.hidden = !it; n.textContent = "";
+  if (it) { const b = document.createElement("b"); b.textContent = (it.category ? "［" + it.category + "］ " : "") + it.name; n.appendChild(b); n.appendChild(document.createTextNode(" ― " + (it.profile.business || "") + "／" + (it.profile.product || ""))); }
+}
+function renderScenarios() {
+  const cats = [...new Set(scenarios.map(x => x.category || "未分類"))].sort((a, b) => a.localeCompare(b, "ja"));
+  // ケース設定の選択肢（カテゴリーごと）
+  const sel = $("sc-pick"); const keep = scenarioPick; sel.textContent = "";
+  const o0 = document.createElement("option"); o0.value = ""; o0.textContent = scenarios.length ? "選ばない（下に直接入力）" : "まだ登録がありません（下に直接入力するか、設定で登録）"; sel.appendChild(o0);
+  cats.forEach(c => { const g = document.createElement("optgroup"); g.label = c; scenarios.filter(x => (x.category || "未分類") === c).forEach(x => { const o = document.createElement("option"); o.value = x.id; o.textContent = x.name; g.appendChild(o); }); sel.appendChild(g); });
+  sel.value = scenarios.some(x => x.id === keep) ? keep : ""; if (!sel.value) scenarioPick = ""; showPickNote();
+  // 設定の一覧
+  $("sc-cnt").textContent = scenarios.length ? scenarios.length : "";
+  $("sc-state").textContent = scShared ? "チームで共有" : "この端末に保存";
+  const dl = $("sc-catlist"); dl.textContent = ""; [...new Set([...cats.filter(c => c !== "未分類"), "製造業向けSaaS", "現場向けSaaS", "物流向けSaaS", "建設業向けSaaS", "人事・労務向けSaaS", "営業・マーケ支援", "製造業（メーカー）", "人材サービス"])].forEach(c => { const o = document.createElement("option"); o.value = c; dl.appendChild(o); });
+  const cb = $("sc-cats"); cb.textContent = "";
+  if (cats.length > 1) ["", ...cats].forEach(c => { const b = document.createElement("button"); b.type = "button"; b.textContent = c || "すべて"; b.className = c === scCat ? "on" : ""; b.addEventListener("click", () => { scCat = c; renderScenarios(); }); cb.appendChild(b); });
+  else scCat = "";
+  const q = $("sc-q").value.trim().toLowerCase();
+  const list = scenarios.filter(x => (!scCat || (x.category || "未分類") === scCat) && (!q || (x.name + " " + (x.category || "") + " " + (x.profile.business || "") + " " + (x.profile.product || "")).toLowerCase().includes(q)));
+  const box = $("sc-list"); box.textContent = "";
+  if (!list.length) { const p = document.createElement("p"); p.className = "sc-empty"; p.textContent = scenarios.length ? "条件に合う会社がありません。" : "まだ登録がありません。「新規作成」から、会社名・URL・サービス資料を入れて登録してください。"; box.appendChild(p); return; }
+  list.forEach(x => {
+    const card = document.createElement("div"); card.className = "sc-card";
+    const ini = document.createElement("div"); ini.className = "ini"; ini.style.background = scColor(x.category); ini.textContent = scInitial(x.name); card.appendChild(ini);
+    const bd = document.createElement("div"); bd.className = "bd";
+    const add = (cls, text) => { const d = document.createElement("div"); d.className = cls; d.textContent = text; bd.appendChild(d); return d; };
+    add("cat", x.category || "未分類"); add("nm", x.name); add("ds", x.profile.business || x.profile.product || "");
+    const used = history.filter(h => h.company === x.name).length;
+    add("mt", "練習 " + used + "回" + (x.by ? " ・ 登録 " + x.by : ""));
+    const ac = document.createElement("div"); ac.className = "ac";
+    const btn = (label, fn, primary) => { const b = document.createElement("button"); b.type = "button"; b.className = "btn" + (primary ? " primary" : ""); b.textContent = label; b.addEventListener("click", fn); ac.appendChild(b); return b; };
+    btn("この会社で練習", () => { pickScenario(x.id); view("play"); step(1); window.scrollTo(0, 0); }, true);
+    btn("編集", () => openScForm(x));
+    const del = btn("削除", async () => { if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "もう一度押すと削除"; setTimeout(() => { del.dataset.sure = ""; del.textContent = "削除"; }, 4000); return; }
+      scenarios = scenarios.filter(y => y.id !== x.id); scCache(); renderScenarios();
+      if (scShared) { try { const j = await api("scenario", { action: "delete", id: x.id }); scenarios = j.items || scenarios; scCache(); renderScenarios(); } catch (e) { status("sc-status", e.message, true); loadScenarios(); } } });
+    bd.appendChild(ac); card.appendChild(bd); box.appendChild(card);
+  });
+}
+function pickScenario(id) {
+  const it = scenarios.find(x => x.id === id); scenarioPick = it ? id : ""; $("sc-pick").value = scenarioPick;
+  if (it) { $("real-name").value = it.name; $("real-url").value = it.url || ""; }
+  currentTpl = null; showPickNote();
+}
+$("sc-pick").addEventListener("change", () => { const id = $("sc-pick").value; if (id) pickScenario(id); else { scenarioPick = ""; $("real-name").value = ""; $("real-url").value = ""; showPickNote(); } });
+$("real-name").addEventListener("input", () => { if (scenarioPick && !scPicked()) { scenarioPick = ""; $("sc-pick").value = ""; } showPickNote(); });
+$("sc-goto").addEventListener("click", e => { e.preventDefault(); gotoScenarios(); });
+$("sc-q").addEventListener("input", renderScenarios);
+function gotoScenarios() { view("settings"); const b = document.querySelector('#setnav button[data-set="sc"]'); if (b) b.click(); }
+const SC_FIELDS = ["business", "product", "price", "size", "target", "value", "proof", "notes"];
+function openScForm(it) {
+  gotoScenarios();
+  scEditing = (it && it.id) || "";
+  $("sc-form").hidden = false; $("sc-form-title").textContent = scEditing ? "シナリオ企業を編集する" : "シナリオ企業を登録する";
+  const pf = (it && it.profile) || {};
+  $("sc-name").value = (it && it.name) || ""; $("sc-url").value = (it && it.url) || ""; $("sc-cat").value = (it && it.category) || pf.category || ""; $("sc-text").value = ""; $("sc-pdf").value = "";
+  SC_FIELDS.forEach(k => { $("sc-" + k).value = pf[k] || ""; });
+  status("sc-read-status", ""); status("sc-status", "");
+  $("sc-form").scrollIntoView({ block: "start" }); $("sc-name").focus();
+}
+$("sc-new").addEventListener("click", () => openScForm(null));
+$("sc-cancel").addEventListener("click", () => { $("sc-form").hidden = true; scEditing = ""; });
+// PDFの文字は端末側で取り出して、文字だけ送る（資料が大きくても送れるように）
+async function pdfText(file, maxPages = 80) {
+  const pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/", cMapPacked: true }).promise;
+  let out = "";
+  for (let i = 1; i <= Math.min(doc.numPages, maxPages) && out.length < 70000; i++) { const page = await doc.getPage(i); const tc = await page.getTextContent(); out += "\n［" + i + "ページ］" + tc.items.map(x => x.str + (x.hasEOL ? "\n" : "")).join(" ").replace(/[ \t]+/g, " "); }
+  return { text: out.trim(), pages: doc.numPages };
+}
+$("sc-read").addEventListener("click", async () => {
+  const files = [...$("sc-pdf").files].slice(0, 3);
+  const name = $("sc-name").value.trim(), url = $("sc-url").value.trim(), pasted = $("sc-text").value.trim();
+  if (!name && !url && !pasted && !files.length) { status("sc-read-status", "会社名・URL・資料のどれかを入れてください", true); return; }
+  $("sc-read").disabled = true;
+  try {
+    let text = pasted ? "【貼り付けテキスト】\n" + pasted : "", pdfs = [];
+    for (const f of files) {
+      status("sc-read-status", "資料を読んでいます：" + f.name + "…");
+      let got = { text: "", pages: 0 };
+      try { got = await pdfText(f); } catch (e) { console.error(e); }
+      if (got.text.replace(/［\d+ページ］|\s/g, "").length >= 200) text += "\n\n【資料：" + f.name + "（" + got.pages + "ページ）】\n" + got.text;
+      else if (f.size <= 3 * 1024 * 1024) pdfs.push({ name: f.name, data: await fileB64(f) }); // 文字を取り出せないPDF（画像）は、小さければそのまま送る
+      else throw new Error("「" + f.name + "」は文字を取り出せないPDF（画像）で、3MBを超えています。ページを絞るか、本文をテキストで貼ってください");
+    }
+    status("sc-read-status", "AIが会社情報を読み取っています（10〜40秒）…");
+    const j = await api("scenario", { action: "read", name, url, text: text.slice(0, 60000), pdfs });
+    const pf = j.profile || {};
+    if (!name && pf.name) $("sc-name").value = pf.name;
+    if (!$("sc-cat").value.trim()) $("sc-cat").value = pf.category || "";
+    SC_FIELDS.filter(k => k !== "notes").forEach(k => { $("sc-" + k).value = pf[k] || ""; });
+    const how = { doc: "サービス資料", site: "サイト", url: "サイト", search: "Web検索", memory: "AIの知識（URLや資料を足すと正確になります）" }[j.source] || "";
+    status("sc-read-status", "読み取りました（元：" + how + "）。内容を確認して「保存」を押してください。" + ((j.errors || []).length ? " 読めなかったURL：" + j.errors.join("／") : ""));
+  } catch (e) { status("sc-read-status", e.message, true); }
+  finally { $("sc-read").disabled = false; }
+});
+$("sc-save").addEventListener("click", async () => {
+  const profile = { name: $("sc-name").value.trim(), category: $("sc-cat").value.trim() }; SC_FIELDS.forEach(k => { profile[k] = $("sc-" + k).value.trim(); });
+  if (!profile.name || !profile.business || !profile.product) { status("sc-status", "会社名・事業内容・サービス（商材）は必須です。「AIで読み取る」か、手で入力してください", true); return; }
+  const item = { id: scEditing || Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: profile.name, url: $("sc-url").value.trim(), category: profile.category, profile, by: user ? (user.short || user.name) : "", at: Date.now() };
+  $("sc-save").disabled = true; status("sc-status", "保存しています…");
+  try {
+    if (scShared) { const j = await api("scenario", { action: "save", item }); scenarios = j.items || scenarios; }
+    else { const i = scenarios.findIndex(x => x.id === item.id); if (i >= 0) scenarios[i] = item; else scenarios.unshift(item); }
+    scCache(); $("sc-form").hidden = true; scEditing = ""; renderScenarios(); status("sc-status", "");
+  } catch (e) { status("sc-status", e.message, true); }
+  finally { $("sc-save").disabled = false; }
+});
 
 /* ---------- ① → ② ペルソナ生成 ---------- */
 async function generate() {
   $("gen").disabled = true; lockStart(true); status("gen-status", "相手を用意しています（10〜40秒）…");
   try {
     const cs = caseSettings(), isReal = !!(cs.real_name || cs.real_url);
-    if (isReal) status("gen-status", realProfileFor(cs) ? "相手を用意しています（10〜40秒）…" : "会社の情報を確かめてから、相手を用意しています（20〜60秒）…");
-    persona = await api("persona", { ...cs, real_profile: realProfileFor(cs), company: coForApi() }); persona.tpl = currentTpl;
-    if (persona.real && persona.real.profile && persona.real.source !== "input") saveRealProfile(cs, persona.real.profile);
+    if (isReal) status("gen-status", scPicked() || realProfileFor(cs) ? "相手を用意しています（10〜40秒）…" : "会社の情報を確かめてから、相手を用意しています（20〜60秒）…");
+    const picked = scPicked();
+    persona = await api("persona", { ...cs, real_profile: picked ? picked.profile : realProfileFor(cs), company: coForApi() }); persona.tpl = currentTpl;
+    if (persona.real) persona.real.scenario = picked ? picked.id : "";
+    if (!picked && persona.real && persona.real.profile && persona.real.source !== "input") saveRealProfile(cs, persona.real.profile);
     $("p-company").textContent = persona.company;
     $("p-brief").textContent = persona.brief;
     renderRealNote();
