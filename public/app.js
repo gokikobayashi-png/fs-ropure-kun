@@ -243,16 +243,36 @@ $("tpl-save").addEventListener("click", () => {
 });
 ["real-name", "real-url", "industry", "product", "size", "sales-team", "layer", "difficulty", "answer"].forEach(id => $(id).addEventListener("input", () => { currentTpl = null; }));
 
+/* ---------- 実在の会社：読み取った会社情報を端末に残し、次回は読みに行かない ---------- */
+const REAL_KEY = "ropure-real-profiles-v1";
+function realKey(c) { return (c.real_name || "").trim() + "|" + (c.real_url || "").trim(); }
+function realProfiles() { try { const v = JSON.parse(localStorage.getItem(REAL_KEY) || "{}"); return v && typeof v === "object" ? v : {}; } catch (_) { return {}; } }
+function realProfileFor(c) { if (!c.real_name && !c.real_url) return null; const v = realProfiles()[realKey(c)]; return v && v.profile ? v.profile : null; }
+function saveRealProfile(c, profile) { try { const all = realProfiles(); all[realKey(c)] = { profile, at: Date.now() }; const keys = Object.keys(all).sort((a, b) => all[b].at - all[a].at).slice(0, 40); localStorage.setItem(REAL_KEY, JSON.stringify(Object.fromEntries(keys.map(k => [k, all[k]])))); } catch (_) {} }
+function dropRealProfile(c) { try { const all = realProfiles(); delete all[realKey(c)]; localStorage.setItem(REAL_KEY, JSON.stringify(all)); } catch (_) {} }
+function renderRealNote() {
+  const rn = $("p-real"); rn.textContent = ""; rn.hidden = !persona || !persona.real; if (rn.hidden) return;
+  const r = persona.real, pf = r.profile || {};
+  const b = document.createElement("b"); b.textContent = "実在の会社を想定しています。"; rn.appendChild(b);
+  const how = { site: "サイトを読んで作りました" + ((r.pages || []).length ? "（" + r.pages.join("、") + "）" : ""), search: "Web検索で確かめて作りました", saved: "前に読み取った会社情報を使いました", input: "入力された業種・商材から作りました（サイトは読めませんでした）" }[r.source] || "";
+  rn.appendChild(document.createTextNode(" 担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。" + how + "。"));
+  const d = document.createElement("span"); d.style.display = "block"; d.style.marginTop = "4px"; d.textContent = "読み取った内容 ― 事業：" + (pf.business || "—") + "／商材：" + (pf.product || "—") + (pf.target ? "／売り先：" + pf.target : ""); rn.appendChild(d);
+  if ((r.errors || []).length) { const e = document.createElement("span"); e.style.display = "block"; e.textContent = "読めなかったURL：" + r.errors.join("／"); rn.appendChild(e); }
+  const again = document.createElement("button"); again.type = "button"; again.className = "btn"; again.style.cssText = "margin-top:6px;font-size:12px;padding:4px 10px"; again.textContent = "内容が違う → 会社情報を読み直す";
+  again.addEventListener("click", () => { dropRealProfile(caseSettings()); generate(); }); rn.appendChild(again);
+}
+
 /* ---------- ① → ② ペルソナ生成 ---------- */
 async function generate() {
   $("gen").disabled = true; lockStart(true); status("gen-status", "相手を用意しています（10〜40秒）…");
   try {
-    persona = await api("persona", { ...caseSettings(), company: coForApi() }); persona.tpl = currentTpl;
+    const cs = caseSettings(), isReal = !!(cs.real_name || cs.real_url);
+    if (isReal) status("gen-status", realProfileFor(cs) ? "相手を用意しています（10〜40秒）…" : "会社の情報を確かめてから、相手を用意しています（20〜60秒）…");
+    persona = await api("persona", { ...cs, real_profile: realProfileFor(cs), company: coForApi() }); persona.tpl = currentTpl;
+    if (persona.real && persona.real.profile && persona.real.source !== "input") saveRealProfile(cs, persona.real.profile);
     $("p-company").textContent = persona.company;
     $("p-brief").textContent = persona.brief;
-    const rn = $("p-real"); rn.textContent = ""; rn.hidden = !persona.real;
-    if (persona.real) { const b = document.createElement("b"); b.textContent = "実在の会社を想定しています。"; rn.appendChild(b); const errs = persona.real.errors || [];
-      rn.appendChild(document.createTextNode(" 担当者と社内の数字（営業体制・商談数・売上目標など）は架空です。" + ((persona.real.pages || []).length ? "読んだページ：" + persona.real.pages.join("、") : persona.real.url ? "サイトは読めなかったので、社名から分かる範囲で作りました。" : "URLなしなので、社名から分かる範囲で作りました。") + (persona.real.thin && (persona.real.pages || []).length ? "（ページから読める文章が少なかったので、サービス紹介のページのURLを足すと精度が上がります）" : "") + (errs.length ? " 読めなかったURL：" + errs.join("／") : ""))); }
+    renderRealNote();
     $("p-name").textContent = persona.name + "（役職は商談で確認）";
     renderAvatar($("p-avatar"), persona); renderAvatar($("call-avatar"), persona);
     $("call-name").textContent = persona.name; $("call-company").textContent = persona.company;
