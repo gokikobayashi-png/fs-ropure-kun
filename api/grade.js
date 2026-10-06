@@ -5,6 +5,54 @@ import { client, auth, readJson, FRAMEWORK, companyText, companyName, CAT, gener
 // 会話の回数を数える：質問／相手の言葉を拾ってから質問／提案／質問と答えのずれ。
 // AIには「受講者の発言を1つずつ分類」だけさせ、合計はこちらで数える（AIに合計を言わせると数え間違うため）。
 const cut = (s, n) => { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n) + "…" : s; };
+// AIの返事からJSONを取り出す。全体→{…}→[…] の順に試す（配列だけで返ってくることがある）
+export function parseLoose(text) {
+  const t = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+  const tries = [t];
+  const o1 = t.indexOf("{"), o2 = t.lastIndexOf("}"), a1 = t.indexOf("["), a2 = t.lastIndexOf("]");
+  if (a1 >= 0 && a2 > a1 && (o1 < 0 || a1 < o1)) tries.push(t.slice(a1, a2 + 1));
+  if (o1 >= 0 && o2 > o1) tries.push(t.slice(o1, o2 + 1));
+  if (a1 >= 0 && a2 > a1) tries.push(t.slice(a1, a2 + 1));
+  let last;
+  for (const x of tries) { try { return JSON.parse(x); } catch (e) { last = e; } }
+  throw last || new Error("JSONが空");
+}
+// スコア1つを読む：{"score":3,"why":"…"} のほか、数字だけ・文字の数字・別名のキーでも受ける
+function readScore(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number" || typeof v === "string") { const n = Math.round(Number(v)); return isFinite(n) && n >= 1 && n <= 5 ? { score: n, why: "" } : null; }
+  if (typeof v !== "object") return null;
+  const n = Math.round(Number(v.score ?? v.point ?? v.points ?? v.value ?? v["スコア"] ?? v["点"]));
+  if (!isFinite(n)) return null;
+  return { score: Math.min(5, Math.max(1, n)), why: String(v.why ?? v.reason ?? v.comment ?? v["根拠"] ?? v["理由"] ?? "") };
+}
+// scores が配列（[{"key":"widen","score":3}]）で返ってきたらキー引きに直す
+function byKey(x) {
+  if (!Array.isArray(x)) return x && typeof x === "object" ? x : {};
+  const o = {}; for (const it of x) if (it && typeof it === "object") { const k = it.key ?? it.axis ?? it.name ?? it.id; if (k) o[String(k)] = it; } return o;
+}
+const SCORE_KEYS = ["counterpart", "widen", "classify", "rephrase", "converge", "roi", "listening", "closing"];
+export function parseGrade(t, cks = []) {
+  const out = { feedback: t, learnings: [], overviewReview: "", calcReview: "", numbersReview: "", scores: null, nextAction: "", custom: null, good: [], improve: [], secondOpinion: "", valid: 0, raw: "" };
+  let j;
+  try { j = parseLoose(t); } catch (_) { return out; }
+  if (Array.isArray(j)) j = j[0] || {};
+  const str = v => (typeof v === "string" ? v : v === null || v === undefined ? "" : Array.isArray(v) ? v.map(String).join("\n") : typeof v === "object" ? Object.values(v).map(String).join("\n") : String(v));
+  out.feedback = str(j.feedback) || t; out.learnings = Array.isArray(j.learnings) ? j.learnings.map(String) : [];
+  out.overviewReview = str(j.overview_review); out.calcReview = str(j.calc_review); out.numbersReview = str(j.numbers_review); out.nextAction = str(j.next_action); out.secondOpinion = str(j.second_opinion);
+  out.good = Array.isArray(j.good) ? j.good.map(String) : []; out.improve = Array.isArray(j.improve) ? j.improve.map(String) : [];
+  out.raw = JSON.stringify(j.scores || null).slice(0, 400);
+  if (j.scores && typeof j.scores === "object") {
+    const src = byKey(j.scores); out.scores = {};
+    for (const k of SCORE_KEYS) { const r = readScore(src[k]); if (r) out.valid++; out.scores[k] = r || { score: 1, why: "（採点を読み取れませんでした）" }; }
+  }
+  if (cks.length && j.custom && typeof j.custom === "object") {
+    const src = byKey(j.custom); out.custom = {};
+    for (const c of cks) { const r = readScore(src[c.key]) || { score: 1, why: "（採点を読み取れませんでした）" }; out.custom[c.key] = { ...r, title: c.title }; }
+  }
+  return out;
+}
+
 const GOBI_TYPES = ["ぼかし", "敬語の重ねすぎ", "文法の誤り"];
 export function tallyCounts(turns, transcript) {
   const items = [];
@@ -74,9 +122,10 @@ JSONだけを返す。受講者の発言すべてについて1つずつ、番号
 {"turns":[{"n":発言番号,"q":0,"picked":0,"echo":"","could":"","proposal":false,"off":"","note":"","gobi":[{"bad":"","fix":"","type":""}]}]}`;
   const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0 } });
   const t = r.text || "";
-  const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
-  if (!Array.isArray(j.turns) || !j.turns.length) throw new Error("turns が空");
-  return tallyCounts(j.turns, transcript);
+  const j = parseLoose(t);
+  const turns = Array.isArray(j) ? j : Array.isArray(j.turns) ? j.turns : Array.isArray(j.items) ? j.items : null;
+  if (!turns || !turns.length) throw new Error("turns が空：" + t.slice(0, 80));
+  return tallyCounts(turns, transcript);
 }
 export function countsLine(c) {
   if (!c) return "";
@@ -152,18 +201,20 @@ JSONだけを返す：
     let counts = await countsP;
     // 同時に走らせて失敗したとき（混雑・壊れたJSON）は、採点が終わってからもう1回だけ数える
     if (!counts && countsError) { try { counts = await countTurns(ai, persona, transcript); countsError = ""; } catch (e) { countsError = String(e.message || e).slice(0, 200); console.error("count retry failed", countsError); } }
-    const t = r.text || "";
-    let feedback = t, learnings = [], overviewReview = "", calcReview = "", numbersReview = "", scores = null, nextAction = "", custom = null, good = [], improve = [], secondOpinion = "";
-    try { const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1)); feedback = j.feedback || t; learnings = Array.isArray(j.learnings) ? j.learnings.map(String) : []; overviewReview = String(j.overview_review || ""); calcReview = String(j.calc_review || ""); numbersReview = String(j.numbers_review || ""); nextAction = String(j.next_action || ""); secondOpinion = String(j.second_opinion || ""); good = Array.isArray(j.good) ? j.good.map(String) : []; improve = Array.isArray(j.improve) ? j.improve.map(String) : [];
-      if (j.scores && typeof j.scores === "object") { scores = {}; for (const k of ["counterpart", "widen", "classify", "rephrase", "converge", "roi", "listening", "closing"]) { const v = j.scores[k] || {}; const n = Math.round(Number(v.score)); scores[k] = { score: isFinite(n) ? Math.min(5, Math.max(1, n)) : 1, why: String(v.why || "") }; } }
-      if (cks.length && j.custom && typeof j.custom === "object") { custom = {}; for (const c of cks) { const v = j.custom[c.key] || {}; const n = Math.round(Number(v.score)); custom[c.key] = { score: isFinite(n) ? Math.min(5, Math.max(1, n)) : 1, why: String(v.why || ""), title: c.title }; } } } catch (_) {}
+    let g = parseGrade(r.text || "", cks);
+    // スコアの形が崩れていたら（8軸のうち読めたのが5つ以下）、採点を1回だけやり直して、ましな方を使う
+    if (g.valid < 6) {
+      console.error("grade scores malformed, retrying. valid=", g.valid, g.raw.slice(0, 200));
+      try { const r2 = await generate(ai, { contents: prompt + "\n\n■ 重要：scores は必ず上の形（軸ごとに {\"score\":整数,\"why\":\"根拠\"}）で、8軸すべてを返す。", config: { responseMimeType: "application/json", temperature: 0.2 } }); const g2 = parseGrade(r2.text || "", cks); if (g2.valid > g.valid) g = g2; } catch (e) { console.error("grade retry failed", e); }
+    }
+    const { feedback, learnings, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion } = g;
     let saved = false;
     if (!dry && knowledgeEnabled() && learnings.length) {
       try { await appendKnowledge(learnings, `[ロープレ] ${jstNow()} ${persona.company}（正解:${CAT[persona.answer]}／判定:${CAT[picked]}${correct ? "○" : "×"}）`); saved = true; } catch (e) { console.error(e); }
     }
     let recordUrl = null, recordError = "";
     if (!dry) try { recordUrl = await saveRecord({ persona, transcript, picked, correct, rephrase, feedback, mode, overview, calcText, proposal, overviewReview, calcReview, numbersReview, quizText, scores, nextAction, custom, secondOpinion, counts, countsText: countsLine(counts) }); } catch (e) { console.error(e); recordError = String(e.message || e); }
-    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion, learnings, saved, counts, countsError });
+    res.status(200).json({ recordUrl, recordError, recordEnabled: knowledgeEnabled(), correct, answer: persona.answer, answerLabel: CAT[persona.answer], exp: persona.exp, rephrase_example: persona.rephrase_example, feedback, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion, learnings, saved, counts, countsError, ...(dry ? { debug: { scoresValid: g.valid, scoresRaw: g.raw } } : {}) });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }

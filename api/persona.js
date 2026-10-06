@@ -175,8 +175,12 @@ JSONだけを返す（前後に文章を付けない）：
     if (!json) throw lastErr || new Error("相手を作れませんでした");
     if (json.nums) {
       // AIが書いた事実のうち、売上目標・着地見込み・決算月の金額や月が入ったものは外し（経緯の3つは残す）、計算済みの数字を足す
-      const moneyish = f => /(売上目標|着地見込み|着地|ギャップ|決算月|期末まで)/.test(f) && /[0-9０-９][0-9０-９,，.]*\s*(万|億|ヶ月|か月|カ月|月)/.test(f);
-      json.hidden_facts = json.hidden_facts.map(String).filter((f, i) => i < 3 || !moneyish(f)).filter(f => !f.includes(CANON)).concat(canonFacts(json.nums));
+      const hasAmount = f => /[0-9０-９][0-9０-９,，.]*\s*(万|億|ヶ月|か月|カ月|月)/.test(f);
+      const moneyish = f => /(売上目標|受注目標|今期目標|今期の目標|着地|見込み|ギャップ|決算月|期末まで)/.test(f) && hasAmount(f) && !/(懸念|料金|報酬|比較|提案|決裁)/.test(f);
+      const storyish = f => /(目標|見込み|着地|未達|不足|ギャップ)/.test(f) && hasAmount(f);
+      // 経緯の3つは残すが、そこに書かれた金額・月数は消す（計算済みの数字と食い違うため）
+      const strip = f => f.replace(/(約|およそ)?[0-9０-９][0-9０-９,，.]*\s*(億|万)\s*[0-9０-９,，.]*\s*(万)?\s*円?(ほど|程度|前後)?/g, "").replace(/(残り|あと)\s*[0-9０-９]+\s*(ヶ月|か月|カ月)/g, "").replace(/（\s*）|\(\s*\)/g, "").replace(/\s{2,}/g, " ").replace(/。\s*。/g, "。");
+      json.hidden_facts = json.hidden_facts.map(String).map((f, i) => (i < 3 && storyish(f) ? strip(f) : f)).filter((f, i) => i < 3 || !moneyish(f)).filter(f => !f.includes(CANON)).concat(canonFacts(json.nums));
     }
     json.difficulty = difficulty;
     json.role = layer.role; json.authority = layer.auth;
