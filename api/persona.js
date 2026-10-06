@@ -46,23 +46,51 @@ export function checkNums(nums, { teamGiven = false, sizeGiven = false } = {}) {
   }
   if (win <= 0 || win > 80) out.push(`受注率${win}%は現実的でない`);
   if (!(target > forecast)) out.push("売上目標が着地見込みを上回っていない");
-  if (deal > 0 && target > forecast) {
-    const left = num(nums.months_left), booked = num(nums.booked_man);
-    const perMonth = meet * win / 100;             // 今の月の新規受注数
-    const need = (target - forecast) / deal;       // 今のペースに上乗せで必要な受注数
-    if (left >= 1 && !isNaN(booked)) {
-      // 着地見込み＝確定済みの売上＋今のペースが期末まで続いた分。ここが合わないと「月4件取れているのに、なぜ足りないのか」を説明できない
-      const paceRev = perMonth * deal * left;
-      if (Math.abs(booked + paceRev - forecast) > forecast * 0.2) out.push(`着地見込み${forecast}万円が、確定済み${booked}万円＋今のペース（月${perMonth.toFixed(1)}件×${deal}万円×残り${left}ヶ月＝${Math.round(paceRev)}万円）＝${Math.round(booked + paceRev)}万円と合わない。着地見込みは「確定済み＋今のペースが期末まで続いた分」にする`);
-      const paceWins = perMonth * left;
-      if (need > Math.max(paceWins, 3) * 2) out.push(`売上のギャップ${Math.round(target - forecast)}万円を埋めるには、今のペース（残り${left}ヶ月で${Math.round(paceWins)}件）に上乗せで${Math.round(need)}件の受注が要る。ペースを3倍超にしないと届かない差は現実的でないので、目標を下げる`);
-      if (need < Math.max(paceWins, 3) * 0.1) out.push(`売上のギャップが小さすぎる（上乗せ${need.toFixed(1)}件）。今のペースの1〜2割以上の差にする`);
-    } else {
-      out.push("nums に months_left（期末までの残り月数）と booked_man（確定済みの売上）が無い");
-    }
-  }
-  if (emp > 0 && (forecast / emp < 200 || forecast / emp > 10000)) out.push(`従業員1人あたり売上が${Math.round(forecast / emp)}万円は現実的でない（500万〜5,000万円にする）`);
   return out;
+}
+
+// 売上まわりの数字はAIに計算させず、ここで計算する（AIは掛け算・足し算を間違えるため）。
+// 着地見込み＝確定済み＋今のペースが期末まで続いた分。目標＝着地見込み＋上乗せで必要な受注×単価。
+export function normalizeNums(nums, { monthsLeft, fiscalEnd, nowMonth }) {
+  if (!nums || typeof nums !== "object") return null;
+  const n = { ...nums };
+  const int = (v, d = 0) => { const x = Math.round(num(v)); return isFinite(x) && x >= 0 ? x : d; };
+  n.employees = int(n.employees, 30); n.is_count = int(n.is_count); n.fs_count = int(n.fs_count, 1); n.other_sales = int(n.other_sales);
+  n.monthly_calls = int(n.monthly_calls); n.monthly_meetings = int(n.monthly_meetings, 5);
+  n.win_rate_pct = Math.min(80, Math.max(1, Math.round(num(n.win_rate_pct) * 10) / 10 || 10));
+  n.deal_value_man = Math.max(1, int(n.deal_value_man, 100));
+  n.months_left = monthsLeft; n.fiscal_end_month = fiscalEnd; n.now_month = nowMonth;
+  const exact = n.monthly_meetings * n.win_rate_pct / 100;
+  n.wins_per_month = Math.round(exact * 10) / 10;
+  n.pace_rev_man = Math.round(n.wins_per_month * n.deal_value_man * monthsLeft);
+  // 売上は「今期の新規受注の売上」（営業部の目標）で考える。受注済み＝これまでのペース×経過月数（AIの値が近ければその比率を使う）
+  const modelForecast = num(nums.annual_forecast_man), modelTarget = num(nums.annual_target_man);
+  const elapsed = Math.max(1, 12 - monthsLeft);
+  const base = n.wins_per_month * n.deal_value_man * elapsed;
+  const ratio = base > 0 && isFinite(num(nums.booked_man)) ? Math.min(1.25, Math.max(0.75, num(nums.booked_man) / base)) : 1;
+  n.booked_man = Math.round(base * ratio / 10) * 10;
+  n.annual_forecast_man = n.booked_man + n.pace_rev_man;
+  // 上乗せで必要な受注数：AIの目安を、今のペースの2割〜2倍に収める
+  const paceWins = Math.max(n.wins_per_month * monthsLeft, 3);
+  let need = isFinite(modelTarget) && isFinite(modelForecast) ? (modelTarget - modelForecast) / n.deal_value_man : paceWins * 0.5;
+  need = Math.max(1, Math.round(Math.min(paceWins * 2, Math.max(paceWins * 0.2, need))));
+  n.need_wins = need;
+  n.need_per_month = Math.round(need / monthsLeft * 10) / 10;
+  n.gap_man = need * n.deal_value_man;
+  n.annual_target_man = n.annual_forecast_man + n.gap_man;
+  return n;
+}
+const man = v => Number(v).toLocaleString("ja-JP") + "万円";
+export const CANON = "【数字の正】";
+export function canonFacts(n) {
+  const sales = n.is_count + n.fs_count + n.other_sales;
+  return [
+    `${CANON}営業体制：${n.is_count ? `IS（アポ取り専任）${n.is_count}名、` : "IS（アポ取り専任）はいない。"}FS（商談する営業）${n.fs_count}名${n.other_sales ? `、営業マネージャーなど${n.other_sales}名` : ""}（営業は計${sales}名）。従業員は${n.employees}名。`,
+    `${CANON}行動量と実績：${n.monthly_calls ? `月の架電は合計${n.monthly_calls.toLocaleString("ja-JP")}件、` : ""}月の新規商談は${n.monthly_meetings}件、受注率は${n.win_rate_pct}%、月の新規受注は約${n.wins_per_month}件。1受注あたりの今期売上は${man(n.deal_value_man)}。`,
+    `${CANON}決算月は${n.fiscal_end_month}月。今は${n.now_month}月で、期末まで残り${n.months_left}ヶ月。`,
+    `${CANON}今期の新規受注の売上目標（営業部の目標）は${man(n.annual_target_man)}、着地見込みは${man(n.annual_forecast_man)}。着地見込みの内訳：期首から今日までに受注済みの${man(n.booked_man)}＋今のペースが期末まで続いた分${man(n.pace_rev_man)}（月${n.wins_per_month}件×${man(n.deal_value_man)}×残り${n.months_left}ヶ月）。今のペースは見込みに織り込み済み。`,
+    `${CANON}目標との差は${man(n.gap_man)}。今のペースに上乗せで${n.need_wins}件（月あたり約${n.need_per_month}件）の受注が必要。`,
+  ];
 }
 
 // 作り直しが入ると時間がかかるので、関数の制限時間を延ばす
@@ -107,7 +135,7 @@ ${wish}
 - 商談相手のタイプ（ソーシャルスタイル）は「${style.name}」（${style.axis}：${style.traits}）。opening_line の言い回しと、hidden_facts の「数字を取っているか」「過去にやってやめた施策」はこのタイプらしくする。brief にはタイプを書かない。
 - hidden_facts の最初の3つは必ず：①役職と経歴（前職・社歴）②決裁権の範囲と社内の承認の流れ ③今回時間を取った経緯と、この人が社内で負っているミッション（誰から何を期待されているか）。この役職の人が知っていること・知らないこと（例：経営企画なら現場の率は曖昧、ISリーダーなら単価や粗利は曖昧）を事実に反映する。
 - 本当の課題は ${answer}（${CAT[answer]}）。ただし本人はそう認識しておらず、別の言い方（「営業が弱い」「人が足りない」「もっと数を打ちたい」「いい人が採れない」など）で語る。
-- hidden_facts に、聞かれれば答える事実を12個程度、数字入りで書く（今期の売上目標と現状の着地見込み〔商材単価に見合う数字をランダムに。目標と見込みの差から必要な受注数・商談数が逆算できるように〕・誰に売っているか・何を・単価と課金形態・営業人数と経歴・使っている手法・月の行動量・アポ率・受注率・受注先に共通点があるか・数字を取っているか・過去にやってやめた施策・社長の本業の忙しさ 等）。正解に至る手がかりと、別の分類に見えるノイズを両方入れる。判定順序（戦略→手法→量→質）を踏まないと間違えるように。
+- hidden_facts に、聞かれれば答える事実を12個程度、数字入りで書く（誰に売っているか・何を・単価と課金形態・営業人数と経歴・使っている手法・月の行動量・アポ率・受注率・受注先に共通点があるか・数字を取っているか・過去にやってやめた施策・社長の本業の忙しさ 等）。正解に至る手がかりと、別の分類に見えるノイズを両方入れる。判定順序（戦略→手法→量→質）を踏まないと間違えるように。
 ${difficulty === "hard" ? `- 難易度「手強い」：この相手は他社と比較検討中。hidden_facts に「EmpowerX／セレブリックス／カリトル君（StockSun）のどれから、どんな提案（料金・体制）を受けているか」を2つ入れる（下の競合情報の数字を使う）。opening_line にも「何社か話を聞いている」ニュアンスを入れる。\n${COMPETITORS}\n` : ""}- hidden_facts に「報酬形態の希望」を1つ入れる：成果報酬（アポ課金）を希望／固定報酬でも可／まだ決めていない、のどれかと、その理由（例：「前に固定で払って成果ゼロだったので成果報酬しか稟議が通らない」「成果報酬だとアポの質が落ちると聞いたので固定で質を担保したい」「予算の枠が月○万と決まっている」）。本人からは言わず、聞かれたら答える。
 - hidden_facts の最後に、${companyName(b.company)}の料金（上の商材情報の価格）を聞いたときにこの役職の人が言いそうな懸念を1つ入れる（決裁権がなければ「上にどう説明するか」の視点も）（自社の粗利・受注単価と照らした具体的な言い方で）。
 - 実在の企業名・人名は使わない。
@@ -118,15 +146,12 @@ ${difficulty === "hard" ? `- 難易度「手強い」：この相手は他社と
 - 分業している会社：FSの人数は「月の新規商談数 ÷ FS人数 ＝ 1人あたり月5〜25件」になるように決める（例：月45商談ならFSは2〜9名。月45商談でFS25名のような構成は不可。課題が「量」でFSの手が空いている設定でも、1人あたり月3件以上・FSは5名まで）。ISとFSの比率は IS1名に対しFS1〜2名まで。
 - ISを置かない会社（FSが自分でアポを取る／紹介・問い合わせ中心／社長が1人で売っている）は is_count を0にし、誰がアポを取っているかを事実に書く。
 - IS1名あたりの行動量は月300〜1,500コール、アポは月5〜20件。
-- 今は${jst.getUTCFullYear()}年${nowMonth}月。この会社の決算月は${fiscalEnd}月で、期末まで残り${monthsLeft}ヶ月（nums の fiscal_end_month は ${fiscalEnd}、months_left は ${monthsLeft} にする）。
-- 売上と件数がつながること：月の新規受注数＝月の新規商談数×受注率。
-- 着地見込みの作り方（重要）：着地見込み＝今期すでに確定している売上（booked_man。受注済み＋既存顧客の継続分）＋今の受注ペースが期末まで続いた場合の売上（月の新規受注数×1受注あたりの今期売上×残り月数）。つまり着地見込みには今のペースがもう織り込まれている。
-- 売上目標と着地見込みの差（ギャップ）は「今のペースに上乗せで必要な分」。ギャップ÷1受注あたりの今期売上＝上乗せで必要な受注数。これは、今のペースで期末までに取れる受注数の2割以上・2倍以内にする（例：月4件ペースで残り5ヶ月＝20件なら、上乗せは4〜40件）。
-- hidden_facts に必ず入れる：「決算月は${fiscalEnd}月で、期末まで残り${monthsLeft}ヶ月」「着地見込み○万円の内訳：確定済み○万円＋今のペース（月○件）が期末まで続いた分○万円」「目標との差○万円は、今のペースに上乗せで○件（月あたり○件）必要という意味」。相手役が「月○件取れているなら足りるのでは？」と聞かれたときに、この内訳で説明できるようにする。
-- 従業員1人あたり売上は500万〜5,000万円。
+- 月の新規受注数＝月の新規商談数×受注率。行動量・商談数・受注率・月の受注数は、この式で食い違わないように書く（nums と hidden_facts で同じ数字にする）。
+- 売上目標・着地見込み・目標との差・決算月は、こちらで nums から計算して事実に足す。だから hidden_facts・exp・rephrase_example・opening_line・brief には、売上目標や着地見込みの金額、目標との差の金額、決算月、期末までの月数を書かない。今回の経緯には金額なしで「今期の目標に届かない見込みで、上から改善を求められている」のように書く。
+- 売上目標は「今期の新規受注の売上目標（営業部の目標）」として扱う。nums の booked_man は、今期の期首から今日までに新規で受注した売上の合計。annual_target_man と annual_forecast_man は目安でよい（こちらで計算し直す）。
 
 JSONだけを返す（前後に文章を付けない）：
-{"company":"社名","name":"姓＋さん（例：田中さん。役職を入れない）","role":"${layer.role}","gender":"male"|"female","age":年齢の数値（役職に見合う。例：社長45〜65、課長35〜45、担当28〜38）,"brief":"事前に分かる会社概要。業種・規模・商材・設立年・所在地の県。課題には触れない。80字以内","opening_line":"本人が内心思っている課題認識（商談の冒頭に自分から言うセリフではなく、困りごとを聞かれたときに話す内容）。50字以内。口語。役職が分かる言い方はしない","nums":{"employees":従業員数,"is_count":IS（アポ取り専任）の人数,"fs_count":FS（商談する営業。兼務の社長も数える）の人数,"other_sales":営業マネージャーなどその他の営業人数,"monthly_calls":月の架電数の合計（架電していなければ0）,"monthly_meetings":月の新規商談数の合計,"win_rate_pct":受注率（%）,"deal_value_man":1受注あたりの今期売上（万円）,"annual_target_man":今期の売上目標（万円）,"annual_forecast_man":今期の着地見込み（万円）,"booked_man":今期すでに確定している売上（万円）,"fiscal_end_month":${fiscalEnd},"months_left":${monthsLeft}},"hidden_facts":["…"],"answer":"${answer}","exp":"正解の理由。判定順序に沿って、なぜこの分類か、ノイズはなぜ違うか。150字以内","rephrase_example":"課題の言い直しの模範例1文（『〜で積んでいる限り、〜にならない構造ですよね』型）","personality":"${PERSONALITY[difficulty]}"}`;
+{"company":"社名","name":"姓＋さん（例：田中さん。役職を入れない）","role":"${layer.role}","gender":"male"|"female","age":年齢の数値（役職に見合う。例：社長45〜65、課長35〜45、担当28〜38）,"brief":"事前に分かる会社概要。業種・規模・商材・設立年・所在地の県。課題には触れない。80字以内","opening_line":"本人が内心思っている課題認識（商談の冒頭に自分から言うセリフではなく、困りごとを聞かれたときに話す内容）。50字以内。口語。役職が分かる言い方はしない","nums":{"employees":従業員数,"is_count":IS（アポ取り専任）の人数,"fs_count":FS（商談する営業。兼務の社長も数える）の人数,"other_sales":営業マネージャーなどその他の営業人数,"monthly_calls":月の架電数の合計（架電していなければ0）,"monthly_meetings":月の新規商談数の合計,"win_rate_pct":受注率（%）,"deal_value_man":1受注あたりの今期売上（万円）,"booked_man":今期の期首から今日までに新規で受注した売上（万円）,"annual_forecast_man":今期の新規受注の着地見込みの目安（万円）,"annual_target_man":今期の新規受注の売上目標の目安（万円）},"hidden_facts":["…"],"answer":"${answer}","exp":"正解の理由。判定順序に沿って、なぜこの分類か、ノイズはなぜ違うか。150字以内","rephrase_example":"課題の言い直しの模範例1文（『〜で積んでいる限り、〜にならない構造ですよね』型）","personality":"${PERSONALITY[difficulty]}"}`;
 
     const ai = client();
     const opt = { teamGiven: !!b.sales_team, sizeGiven: !!b.size };
@@ -142,7 +167,7 @@ JSONだけを返す（前後に文章を付けない）：
         const text = r.text || "";
         cand = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
         if (!cand.company || !Array.isArray(cand.hidden_facts) || !CAT[cand.answer]) throw new Error("ペルソナJSONが不完全");
-        if (cand.nums && typeof cand.nums === "object") { cand.nums.fiscal_end_month = fiscalEnd; cand.nums.months_left = monthsLeft; }
+        cand.nums = normalizeNums(cand.nums, { monthsLeft, fiscalEnd, nowMonth });
         candIssues = checkNums(cand.nums, opt);
       } catch (e) { lastErr = e; if (json) break; continue; }
       if (!json || candIssues.length < issues.length) { json = cand; issues = candIssues; }
@@ -150,6 +175,11 @@ JSONだけを返す（前後に文章を付けない）：
       console.error("persona numbers unrealistic, retry", i + 1, issues.join(" / "));
     }
     if (!json) throw lastErr || new Error("相手を作れませんでした");
+    if (json.nums) {
+      // AIが書いた事実のうち、売上目標・着地見込み・決算月の金額や月が入ったものは外し（経緯の3つは残す）、計算済みの数字を足す
+      const moneyish = f => /(売上目標|着地見込み|着地|ギャップ|決算月|期末まで)/.test(f) && /[0-9０-９][0-9０-９,，.]*\s*(万|億|ヶ月|か月|カ月|月)/.test(f);
+      json.hidden_facts = json.hidden_facts.map(String).filter((f, i) => i < 3 || !moneyish(f)).filter(f => !f.includes(CANON)).concat(canonFacts(json.nums));
+    }
     json.difficulty = difficulty;
     json.role = layer.role; json.authority = layer.auth;
     json.style = styleKey; json.style_name = style.name; json.style_hidden = styleHidden;
