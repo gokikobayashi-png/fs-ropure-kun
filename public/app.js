@@ -18,6 +18,7 @@ async function api(path, body) {
   const r = await fetch("/api/" + path, { method: "POST", headers: { "content-type": "application/json", "x-app-password": pw(), "x-app-user": user ? user.email : "" }, body: JSON.stringify(body || {}) });
   const j = await r.json().catch(() => ({}));
   if (r.status === 401) { status("pw-status", j.error || "パスワードが違います"); showLogin(); throw new Error(j.error || "ログインが必要"); }
+  if (r.status === 504 || r.status === 502 || r.status === 503) throw new Error("AIの返事に時間がかかりすぎました。もう一度押してください（混み合っていると起きます）");
   if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
   return j;
 }

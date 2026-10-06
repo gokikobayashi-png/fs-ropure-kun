@@ -93,9 +93,6 @@ export function canonFacts(n) {
   ];
 }
 
-// 作り直しが入ると時間がかかるので、関数の制限時間を延ばす
-export const config = { maxDuration: 60 };
-
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   if (!auth(req, res)) return;
@@ -158,12 +155,13 @@ JSONだけを返す（前後に文章を付けない）：
     // 数字が現実的でなければ、どこがおかしいかを伝えて作り直す（最大2回）。それでも残る場合は一番ましなものを使う
     let json = null, issues = [], lastErr = null;
     const t0 = Date.now();
-    for (let i = 0; i < 3; i++) {
-      if (json && Date.now() - t0 > 20000) break; // 時間切れになる前に、手元の案で進める
+    for (let i = 0; i < 2; i++) {
+      if (json && Date.now() - t0 > 15000) break; // 1案目に時間がかかったら、作り直さず手元の案で進める
+      if (Date.now() - t0 > 45000) break;           // 全体で50秒前後に収める
       const fix = i && issues.length ? `\n\n■ 前回の案は数字が現実的でなかった。次の点を直して、会社ごと作り直す：\n${issues.map(x => "- " + x).join("\n")}` : "";
       let cand, candIssues;
       try {
-        const r = await generate(ai, { contents: prompt + fix, config: { responseMimeType: "application/json", temperature: 1.0 } });
+        const r = await generate(ai, { contents: prompt + fix, config: { responseMimeType: "application/json", temperature: 1.0 } }, { budgetMs: Math.max(8000, 50000 - (Date.now() - t0)), perCallMs: 28000 });
         const text = r.text || "";
         cand = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
         if (!cand.company || !Array.isArray(cand.hidden_facts) || !CAT[cand.answer]) throw new Error("ペルソナJSONが不完全");

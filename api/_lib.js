@@ -44,26 +44,36 @@ export async function readJson(req) {
   return raw ? JSON.parse(raw) : {};
 }
 
-// テキスト生成：既定モデルが混雑（503/429）や提供終了（404）のときは順に別モデルへ逃がす。全部だめなら少し待ってもう一巡する
+// テキスト生成：既定モデルが混雑（503/429）・提供終了（404）・返事が遅すぎるときは順に別モデルへ逃がす。
+// 1回の呼び出しは perCallMs で打ち切り、全体は budgetMs 以内に必ず終える（サーバーの制限時間で 504 になるのを防ぐ）。
 const FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-export async function generate(ai, params) {
+export async function generate(ai, params, { budgetMs = 80000, perCallMs = 35000 } = {}) {
+  const t0 = Date.now();
   const models = [TEXT_MODEL, ...FALLBACK_MODELS.filter(m => m !== TEXT_MODEL)];
   let busy = null, last = null;
-  for (let round = 0; round < 2; round++) {
+  outer: for (let round = 0; round < 2; round++) {
     for (const model of models) {
+      const left = budgetMs - (Date.now() - t0);
+      if (left < 4000) { busy = busy || new Error("TIMEOUT"); break outer; }
+      const ac = new AbortController();
+      let timer;
+      const timeout = new Promise((_, rej) => { timer = setTimeout(() => { try { ac.abort(); } catch (_) {} rej(new Error("TIMEOUT")); }, Math.min(perCallMs, left)); });
       try {
-        return await ai.models.generateContent({ ...params, model });
+        const call = ai.models.generateContent({ ...params, model, config: { ...(params.config || {}), abortSignal: ac.signal } });
+        call.catch(() => {}); // 打ち切ったあとに遅れて失敗しても落とさない
+        return await Promise.race([call, timeout]);
       } catch (e) {
         last = e;
         const s = String(e.message || e);
+        if (/TIMEOUT|abort/i.test(s)) { busy = e; console.error("generate timeout", model); continue; }
         if (/503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|overloaded/i.test(s)) { busy = e; continue; }
         if (/404|NOT_FOUND|no longer available|not found/i.test(s)) continue; // そのモデルが使えないだけ。次へ
         throw e;
-      }
+      } finally { clearTimeout(timer); }
     }
     if (!busy) break; // 混雑ではない失敗は待っても直らない
-    if (round === 0) await sleep(2500);
+    if (round === 0 && budgetMs - (Date.now() - t0) > 8000) await sleep(2000); else break;
   }
   if (busy) throw new Error("AIが混み合っています。少し待ってから、もう一度お試しください");
   throw last;
