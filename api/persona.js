@@ -109,7 +109,7 @@ ${difficulty === "hard" ? `- 難易度「手強い」：この相手は他社と
 - 従業員1人あたり売上は500万〜5,000万円。
 
 JSONだけを返す（前後に文章を付けない）：
-{"company":"社名","name":"姓＋さん（例：田中さん。役職を入れない）","role":"${layer.role}","gender":"male"|"female","age":年齢の数値（役職に見合う。例：社長45〜65、課長35〜45、担当28〜38）,"brief":"事前に分かる会社概要。業種・規模・商材・設立年・所在地の県。課題には触れない。80字以内","opening_line":"商談冒頭に本人が言う課題認識のひとこと。50字以内。口語。役職が分かる言い方はしない","nums":{"employees":従業員数,"is_count":IS（アポ取り専任）の人数,"fs_count":FS（商談する営業。兼務の社長も数える）の人数,"other_sales":営業マネージャーなどその他の営業人数,"monthly_calls":月の架電数の合計（架電していなければ0）,"monthly_meetings":月の新規商談数の合計,"win_rate_pct":受注率（%）,"deal_value_man":1受注あたりの今期売上（万円）,"annual_target_man":今期の売上目標（万円）,"annual_forecast_man":今期の着地見込み（万円）},"hidden_facts":["…"],"answer":"${answer}","exp":"正解の理由。判定順序に沿って、なぜこの分類か、ノイズはなぜ違うか。150字以内","rephrase_example":"課題の言い直しの模範例1文（『〜で積んでいる限り、〜にならない構造ですよね』型）","personality":"${PERSONALITY[difficulty]}"}`;
+{"company":"社名","name":"姓＋さん（例：田中さん。役職を入れない）","role":"${layer.role}","gender":"male"|"female","age":年齢の数値（役職に見合う。例：社長45〜65、課長35〜45、担当28〜38）,"brief":"事前に分かる会社概要。業種・規模・商材・設立年・所在地の県。課題には触れない。80字以内","opening_line":"本人が内心思っている課題認識（商談の冒頭に自分から言うセリフではなく、困りごとを聞かれたときに話す内容）。50字以内。口語。役職が分かる言い方はしない","nums":{"employees":従業員数,"is_count":IS（アポ取り専任）の人数,"fs_count":FS（商談する営業。兼務の社長も数える）の人数,"other_sales":営業マネージャーなどその他の営業人数,"monthly_calls":月の架電数の合計（架電していなければ0）,"monthly_meetings":月の新規商談数の合計,"win_rate_pct":受注率（%）,"deal_value_man":1受注あたりの今期売上（万円）,"annual_target_man":今期の売上目標（万円）,"annual_forecast_man":今期の着地見込み（万円）},"hidden_facts":["…"],"answer":"${answer}","exp":"正解の理由。判定順序に沿って、なぜこの分類か、ノイズはなぜ違うか。150字以内","rephrase_example":"課題の言い直しの模範例1文（『〜で積んでいる限り、〜にならない構造ですよね』型）","personality":"${PERSONALITY[difficulty]}"}`;
 
     const ai = client();
     const opt = { teamGiven: !!b.sales_team, sizeGiven: !!b.size };

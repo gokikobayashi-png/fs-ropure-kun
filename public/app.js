@@ -250,10 +250,9 @@ async function generate() {
     $("p-company").textContent = persona.company;
     $("p-brief").textContent = persona.brief;
     $("p-name").textContent = persona.name + "（役職は商談で確認）";
-    $("p-opening").textContent = persona.opening_line;
     renderAvatar($("p-avatar"), persona); renderAvatar($("call-avatar"), persona);
     $("call-name").textContent = persona.name; $("call-company").textContent = persona.company;
-    $("call-brief").textContent = persona.brief; $("call-opening").textContent = "冒頭のひとこと「" + persona.opening_line + "」"; $("call-role").textContent = "役職は商談で確認";
+    $("call-brief").textContent = persona.brief; $("call-role").textContent = "役職は商談で確認";
     status("gen-status", ""); status("call-status", "");
     step(2);
   } catch (e) { status("gen-status", e.message, true); }
@@ -502,9 +501,9 @@ function renderResInfo(graded) {
   const box = $("res-info"); box.textContent = "";
   const kv = document.createElement("div"); kv.className = "kv";
   const row = (k, v) => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = k + "："; d.appendChild(b); d.appendChild(document.createTextNode(v || "")); kv.appendChild(d); };
-  row("会社", persona.company); row("会社概要", persona.brief); row("相手", persona.name); row("冒頭のひとこと", persona.opening_line);
-  if (graded) { row("役職", persona.role); row("決裁権", persona.authority); row("タイプ（ソーシャルスタイル）", (persona.style_name || "—") + (persona.style_hidden ? "（伏せていました）" : "")); row("正解", CAT[persona.answer] + "：" + (persona.exp || "")); row("言い直しの模範例", persona.rephrase_example); }
-  else row("役職・決裁権・タイプ・相手の事実", "判定後に表示");
+  row("会社", persona.company); row("会社概要", persona.brief); row("相手", persona.name);
+  if (graded) { row("相手の課題認識（本音）", persona.opening_line); row("役職", persona.role); row("決裁権", persona.authority); row("タイプ（ソーシャルスタイル）", (persona.style_name || "—") + (persona.style_hidden ? "（伏せていました）" : "")); row("正解", CAT[persona.answer] + "：" + (persona.exp || "")); row("言い直しの模範例", persona.rephrase_example); }
+  else row("役職・決裁権・タイプ・課題認識・相手の事実", "判定後に表示");
   box.appendChild(kv);
   if (graded && (persona.hidden_facts || []).length) { const h = document.createElement("h3"); h.textContent = "相手の事実（答え合わせ用）"; h.style.cssText = "font-size:13px;margin:14px 0 4px"; box.appendChild(h); const ul = document.createElement("ul"); ul.className = "pts"; persona.hidden_facts.forEach(f => { const li = document.createElement("li"); li.textContent = f; ul.appendChild(li); }); box.appendChild(ul); }
   if (quizzes.length) { const h = document.createElement("h3"); h.textContent = "暗算チェック " + quizzes.filter(q => q.ok).length + "/" + quizzes.length; h.style.cssText = "font-size:13px;margin:14px 0 4px"; box.appendChild(h); const ul = document.createElement("ul"); ul.className = "pts"; quizzes.forEach(q => { const li = document.createElement("li"); li.textContent = q.question + " → 正解" + q.answer + q.unit + "／自分" + (q.mine === null ? "未回答" : q.mine + q.unit) + "（" + (q.ok ? "○" : "×") + "、" + q.sec.toFixed(1) + "秒）"; ul.appendChild(li); }); box.appendChild(ul); }
