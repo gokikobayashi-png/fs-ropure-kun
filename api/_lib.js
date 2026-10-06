@@ -44,20 +44,28 @@ export async function readJson(req) {
   return raw ? JSON.parse(raw) : {};
 }
 
-// テキスト生成：既定モデルが混雑（503/429）のときは順に別モデルへ逃がす
-const FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
+// テキスト生成：既定モデルが混雑（503/429）や提供終了（404）のときは順に別モデルへ逃がす。全部だめなら少し待ってもう一巡する
+const FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 export async function generate(ai, params) {
   const models = [TEXT_MODEL, ...FALLBACK_MODELS.filter(m => m !== TEXT_MODEL)];
-  let last;
-  for (const model of models) {
-    try {
-      return await ai.models.generateContent({ ...params, model });
-    } catch (e) {
-      last = e;
-      const s = String(e.message || e);
-      if (!/503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|overloaded/i.test(s)) throw e;
+  let busy = null, last = null;
+  for (let round = 0; round < 2; round++) {
+    for (const model of models) {
+      try {
+        return await ai.models.generateContent({ ...params, model });
+      } catch (e) {
+        last = e;
+        const s = String(e.message || e);
+        if (/503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|overloaded/i.test(s)) { busy = e; continue; }
+        if (/404|NOT_FOUND|no longer available|not found/i.test(s)) continue; // そのモデルが使えないだけ。次へ
+        throw e;
+      }
     }
+    if (!busy) break; // 混雑ではない失敗は待っても直らない
+    if (round === 0) await sleep(2500);
   }
+  if (busy) throw new Error("AIが混み合っています。少し待ってから、もう一度お試しください");
   throw last;
 }
 
