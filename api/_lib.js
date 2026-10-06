@@ -85,7 +85,7 @@ export async function generate(ai, params, { budgetMs = 80000, perCallMs = 35000
    実在の会社を想定するときの、公開サイトの読み取り
    受講者が入れたURLをサーバーから取りに行くので、社内ネットワークや自分自身を叩かせない（http/https の公開ホストだけ）。
    ========================================================= */
-import { lookup } from "node:dns/promises";
+import { lookup, resolve4, resolve6 } from "node:dns/promises";
 import net from "node:net";
 function privateIp(ip) {
   if (net.isIPv4(ip)) { const [a, b] = ip.split(".").map(Number); return a === 10 || a === 127 || a === 0 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127) || a >= 224; }
@@ -99,8 +99,12 @@ export async function safePublicUrl(raw) {
   const host = u.hostname.replace(/^\[|\]$/g, "");
   if (u.username || u.password || (u.port && !["80", "443"].includes(u.port))) throw new Error("このURLは使えません");
   if (net.isIP(host) || !host.includes(".") || /(^|\.)(localhost|local|internal|lan|home|corp)$/i.test(host)) throw new Error("このURLは使えません");
-  const addrs = await lookup(host, { all: true });
-  if (!addrs.length || addrs.some(a => privateIp(a.address))) throw new Error("このURLは使えません");
+  // 名前解決：まずDNSに直接聞き、だめなら OS の解決に任せる（サーバーレス環境で片方が失敗することがある）
+  let ips = [];
+  for (const f of [resolve4, resolve6]) { try { ips.push(...await f(host)); } catch (_) {} }
+  if (!ips.length) { try { ips = (await lookup(host, { all: true })).map(a => a.address); } catch (_) {} }
+  if (!ips.length) throw new Error("サイトが見つかりません");
+  if (ips.some(privateIp)) throw new Error("このURLは使えません");
   return u;
 }
 export function htmlToText(html) {
