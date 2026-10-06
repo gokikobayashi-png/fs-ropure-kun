@@ -270,7 +270,26 @@ function addMsg(who, text) {
 }
 function setMsg(d, text) { const w = d.querySelector(".who"); d.textContent = ""; if (w) d.appendChild(w); d.appendChild(document.createTextNode(text)); $("transcript").scrollTop = 1e9; }
 function flushIn() { if (curIn.trim()) transcript.push({ who: "me", text: curIn.trim() }); curIn = ""; inEl = null; }
-function flushOut() { if (curOut.trim()) transcript.push({ who: "them", text: curOut.trim() }); curOut = ""; outEl = null; }
+function flushOut(guard = true) { const t = curOut.trim(); if (t) transcript.push({ who: "them", text: t }); curOut = ""; outEl = null; if (t && guard) guardLanguage(t); }
+
+// 相手役が日本語以外で話し出したら、日本語に戻す（Gemini Live は聞き取りにくい音声を別の言語と誤認すると、その言語で返すことがある）
+function looksJapanese(text) {
+  const letters = String(text || "").match(/\p{L}/gu) || [];
+  if (letters.length < 12) return true;
+  const kana = letters.filter(c => /[\u3040-\u30ff]/.test(c)).length;
+  return kana / letters.length >= 0.1;
+}
+let langFixAt = 0;
+function guardLanguage(text) {
+  if (mode !== "voice" || !session || looksJapanese(text)) return;
+  if (Date.now() - langFixAt < 8000) return; // 連続で割り込まない
+  langFixAt = Date.now();
+  stopPlayback();
+  addMsg("sys", "相手が日本語以外で話したので、日本語で言い直させています");
+  try {
+    session.sendClientContent({ turns: [{ role: "user", parts: [{ text: "（注意：今の発言は日本語ではなかった。この商談は日本語だけで行う。営業担当は日本語で話している。直前の発言を、同じ人物のまま日本語で短く言い直す。以後も必ず日本語だけで話す）" }] }], turnComplete: true });
+  } catch (e) { console.error(e); }
+}
 
 function b64ToPcm(b64) {
   const bin = atob(b64), n = bin.length / 2, out = new Float32Array(n);
@@ -421,7 +440,7 @@ function cleanupAudio() {
 }
 function endCall(note) {
   clearInterval(timerId); timerId = null;
-  flushIn(); flushOut();
+  flushIn(); flushOut(false);
   try { session && session.close(); } catch (_) {} session = null;
   cleanupAudio();
   $("dot").classList.remove("live"); $("hangup").disabled = true;

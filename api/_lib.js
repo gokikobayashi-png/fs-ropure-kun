@@ -341,11 +341,30 @@ export function jstNow() {
 /* =========================================================
    相手役（商談相手）のシステム指示
    ========================================================= */
+// 相手役の言語を日本語に固定する指示。
+// Gemini Live（ネイティブ音声）は設定の languageCode では返答言語を固定できず、聞こえた音声から言語を自動で選ぶ。
+// 雑音・咳・聞き取りにくい発話を別の言語と誤認すると、その言語で返してしまうため、システム指示の冒頭と末尾の両方で縛る。
+export const LANG_RULE = `■ 言語（最優先のルール）
+RESPOND IN JAPANESE. YOU MUST RESPOND UNMISTAKABLY IN JAPANESE.
+- 必ず日本語だけで話す。この商談は最初から最後まで日本語で行う。英語・中国語・韓国語など、ほかの言語には絶対に切り替えない。
+- 営業担当は日本語で話している。音声が聞き取りにくい、雑音や咳が入った、別の言語のように聞こえた、という場合も、それは日本語の聞き取りにくい発話として扱い、日本語で「すみません、ちょっと聞き取れなかったので、もう一度お願いできますか」と聞き返す。
+- 相手がカタカナ語・英語の略語（SaaS、KPI、CRM、アポ、リード など）を使っても、返事は日本語のまま。`;
+
+// 日本語の発言に見えるか（かなが一定以上あるか）。短い発言・数字や記号だけの発言は判定しない
+export function looksJapanese(text) {
+  const letters = String(text || "").match(/\p{L}/gu) || [];
+  if (letters.length < 12) return true;
+  const kana = letters.filter(c => /[\u3040-\u30ff]/.test(c)).length;
+  return kana / letters.length >= 0.1;
+}
+
 export function personaSystemInstruction(p, knowledge = "", company = null) {
   const me = companyName(company);
   const objs = hasCompany(company) ? (company.objections || []).map(s).filter(Boolean) : [];
   const facts = (p.hidden_facts || []).map((f, i) => `${i + 1}. ${f}`).join("\n");
-  return `あなたは「${p.company}」の${p.name}（${p.role}）。営業代行会社${me}の営業担当と、初回の商談（30分の打ち合わせ）をしている。相手はあなたの営業の課題を整理しに来た。
+  return `${LANG_RULE}
+
+あなたは「${p.company}」の${p.name}（${p.role}）。営業代行会社${me}の営業担当と、初回の商談（30分の打ち合わせ）をしている。相手はあなたの営業の課題を整理しに来た。
 
 ■ あなたの会社と営業の事実（聞かれたことだけ答える。聞かれていないことを自分から並べない）
 ${facts}
@@ -384,7 +403,9 @@ ${COMPETITORS}` : ""}${p.style && STYLES[p.style] ? `
 - 自分が演技中であること、AIであること、正解の分類名（戦略・手法・量・質）は口にしない。
 ${knowledge ? `
 ■ 過去の実商談から得た知見（相手役のリアリティに反映する。該当するものだけ使う）
-${knowledge}` : ""}`;
+${knowledge}` : ""}
+
+${LANG_RULE}`;
 }
 
 /* =========================================================

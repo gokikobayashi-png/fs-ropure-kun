@@ -1,7 +1,7 @@
 // POST /api/chat  { persona, history:[{who:"me"|"them", text}], message? }
 // → { reply }  テキストチャット版ロープレ。相手役の次の発言を1回分返す。
 // 会話は営業担当（受講者）から始める。
-import { client, auth, readJson, personaSystemInstruction, generate, loadKnowledge, knowledgeText, QUIZ_RULES, QUIZ_SHAPE } from "./_lib.js";
+import { client, auth, readJson, personaSystemInstruction, generate, loadKnowledge, knowledgeText, QUIZ_RULES, QUIZ_SHAPE, looksJapanese } from "./_lib.js";
 
 const KICKOFF = "（商談が始まった。営業担当が着席して、先に話しかけてきた）";
 const CHAT_NOTE = "\n\n■ 今回はテキストチャットでの商談。話し言葉のまま短く返す（2〜3文）。ト書き・括弧書きの動作描写・名前の見出しは付けず、セリフだけを書く。";
@@ -49,18 +49,25 @@ export default async function handler(req, res) {
     if (contents[contents.length - 1].role !== "user") return res.status(400).json({ error: "送る発言がありません" });
 
     const ai = client();
-    const r = await generate(ai, {
-      contents,
-      config: { systemInstruction: personaSystemInstruction(persona, knowledge, company) + CHAT_NOTE + QUIZ_NOTE.replace("__ASKED__", (Array.isArray(asked) && asked.length ? asked.map(String).slice(-8).join("／") : "（まだ無い）")), temperature: 0.8, responseMimeType: "application/json" },
-    });
-    const t = (r.text || "").trim();
-    let reply = "", quiz = null;
-    try {
-      const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
-      reply = String(j.reply || "").trim();
-      quiz = normalizeQuiz(j.quiz);
-    } catch (_) { reply = t.replace(/^[「『]|[」』]$/g, ""); }
-    reply = reply.replace(/^[「『]|[」』]$/g, "");
+    const systemInstruction = personaSystemInstruction(persona, knowledge, company) + CHAT_NOTE + QUIZ_NOTE.replace("__ASKED__", (Array.isArray(asked) && asked.length ? asked.map(String).slice(-8).join("／") : "（まだ無い）"));
+    const ask = async (extra = "") => {
+      const r = await generate(ai, { contents, config: { systemInstruction: systemInstruction + extra, temperature: 0.8, responseMimeType: "application/json" } });
+      const t = (r.text || "").trim();
+      let reply = "", quiz = null;
+      try {
+        const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));
+        reply = String(j.reply || "").trim();
+        quiz = normalizeQuiz(j.quiz);
+      } catch (_) { reply = t.replace(/^[「『]|[」』]$/g, ""); }
+      return { reply: reply.replace(/^[「『]|[」』]$/g, ""), quiz };
+    };
+    let { reply, quiz } = await ask();
+    // 日本語以外で返ってきたら、1回だけ作り直す
+    if (reply && !looksJapanese(reply)) {
+      console.error("non-Japanese reply, retrying:", reply.slice(0, 80));
+      ({ reply, quiz } = await ask("\n\n■ 重要：直前の返事が日本語ではなかった。reply は必ず日本語だけで書く。"));
+      if (reply && !looksJapanese(reply)) throw new Error("相手の返事が日本語になりませんでした。もう一度送ってください");
+    }
     if (!reply) throw new Error("相手の返事を作れませんでした。もう一度送ってください");
     res.status(200).json({ reply, quiz });
   } catch (e) {
