@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "https://esm.sh/@google/genai";
+import { scenarioArt, scenarioArtKey, SCENARIO_ART_BG } from "./scenario-art.js";
 import { renderAvatar } from "/avatar.js";
 
 const $ = id => document.getElementById(id);
@@ -274,9 +275,6 @@ async function loadScenarios() {
   try { const j = await api("scenario", { action: "list" }); scShared = !!j.shared; if (scShared) { scenarios = j.items || []; scCache(); } } catch (_) {}
   renderScenarios();
 }
-const SC_COLORS = ["#1A3A5C", "#05AABA", "#7C3AED", "#B45309", "#0F766E", "#BE185D", "#4D7C0F", "#1D4ED8"];
-function scColor(cat) { let h = 0; for (const c of String(cat || "")) h = (h * 31 + c.codePointAt(0)) >>> 0; return SC_COLORS[h % SC_COLORS.length]; }
-function scInitial(name) { const n = String(name || "").replace(/株式会社|有限会社|合同会社|\(株\)|（株）|\s/g, ""); return (Array.from(n)[0] || "？").toUpperCase(); }
 function showPickNote() {
   const it = scPicked(), n = $("sc-pick-note"); n.hidden = !it; n.textContent = "";
   if (it) { const b = document.createElement("b"); b.textContent = (it.category ? "［" + it.category + "］ " : "") + it.name; n.appendChild(b); n.appendChild(document.createTextNode(" ― " + (it.profile.business || "") + "／" + (it.profile.product || ""))); }
@@ -301,7 +299,7 @@ function renderScenarios() {
   if (!list.length) { const p = document.createElement("p"); p.className = "sc-empty"; p.textContent = scenarios.length ? "条件に合う会社がありません。" : "まだ登録がありません。「新規作成」から、会社名・URL・サービス資料を入れて登録してください。"; box.appendChild(p); return; }
   list.forEach(x => {
     const card = document.createElement("div"); card.className = "sc-card";
-    const ini = document.createElement("div"); ini.className = "ini"; ini.style.background = scColor(x.category); ini.textContent = scInitial(x.name); card.appendChild(ini);
+    const ini = document.createElement("div"); ini.className = "ini"; ini.style.background = SCENARIO_ART_BG[scenarioArtKey(x)] || "#E9EEF5"; ini.innerHTML = scenarioArt(x); card.appendChild(ini); // 自作の固定SVG（入力値は入らない）
     const bd = document.createElement("div"); bd.className = "bd";
     const add = (cls, text) => { const d = document.createElement("div"); d.className = cls; d.textContent = text; bd.appendChild(d); return d; };
     add("cat", x.category || "未分類"); add("nm", x.name); add("ds", x.profile.business || x.profile.product || "");
