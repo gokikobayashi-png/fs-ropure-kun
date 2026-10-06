@@ -327,7 +327,7 @@ export async function saveRecord({ persona, transcript, picked, correct, rephras
     const K = [["拾ってから質問できた", i => i.picked > 0], ["拾わずに質問した", i => i.q > i.picked], ["提案した", i => i.proposal], ["質問と答えがずれた", i => !!i.off]];
     for (const [label, f] of K) {
       const hit = (counts.items || []).filter(f);
-      if (hit.length) blocks.push(bullet(`${label}：` + hit.map(i => `${String(i.n).padStart(2, "0")}${i.off && label.startsWith("質問と答え") ? (i.off === "them" ? "（相手の答え）" : i.off === "me" ? "（自分の答え）" : "（両方）") : ""}${i.note && (label === "提案した" || label.startsWith("質問と答え")) ? "「" + i.note + "」" : ""}`).join("、")));
+      if (hit.length) blocks.push(bullet(`${label}：` + hit.map(i => `${String(i.n).padStart(2, "0")}${i.off && label.startsWith("質問と答え") ? (i.off === "them" ? "（相手の答え）" : i.off === "me" ? "（自分の答え）" : "（両方）") : ""}${i.note && (label === "提案した" || label.startsWith("質問と答え")) ? "「" + i.note + "」" : ""}${label === "拾ってから質問できた" && i.echo ? "「" + i.echo + "」" : ""}${label === "拾わずに質問した" && i.could ? "（拾えた言葉：" + i.could + "）" : ""}`).join("、")));
     }
   }
   blocks.push({ object: "block", type: "toggle", toggle: { rich_text: [{ type: "text", text: { content: "相手の事実（答え合わせ用）" } }], children: (persona.hidden_facts || []).slice(0, 90).map(bullet) } });

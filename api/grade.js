@@ -15,13 +15,14 @@ export function tallyCounts(turns, transcript) {
     if (!src || src.who !== "me" || seen.has(n)) continue; // 受講者の発言だけ、1回ずつ
     seen.add(n);
     const q = Math.min(5, Math.max(0, Math.round(Number(t.q)) || 0));
-    const p = Math.min(q, Math.max(0, Math.round(Number(t.picked)) || 0));
+    const echo = cut(t.echo, 30);
+    const p = echo ? Math.min(q, Math.max(0, Math.round(Number(t.picked)) || 0)) : 0; // 拾った言葉を示せないものは数えない
     const prop = t.proposal === true || t.proposal === "true";
     const off = ["them", "me", "both"].includes(t.off) ? t.off : "";
     questions += q; picked += p; if (prop) proposals++;
     if (off === "them" || off === "both") offThem++;
     if (off === "me" || off === "both") offMe++;
-    if (q || prop || off) items.push({ n, q, picked: p, proposal: prop, off, note: cut(t.note, 40), text: cut(src.text, 70) });
+    if (q || prop || off) items.push({ n, q, picked: p, echo: p ? echo : "", could: q > p ? cut(t.could, 30) : "", proposal: prop, off, note: cut(t.note, 40), text: cut(src.text, 70) });
   }
   return { questions, picked, proposals, off: offThem + offMe, offThem, offMe, items };
 }
@@ -35,7 +36,14 @@ ${log}
 
 ■ 数え方
 - q（質問の数）：その発言の中で、受講者が相手に情報や考えを尋ねた質問の数。挨拶・音声の確認（「聞こえていますか」）・相づち・「よろしいでしょうか」のような進行の確認は数えない。同じ質問の言い換えは1つと数える。
-- picked（拾ってから質問できた数）：q のうち、質問の前に「相手の直前の発言の言葉や中身」を自分の口で返してから聞いた質問の数。例：「役員の方から急かされているんですね。未達というのはどのくらいですか」「先ほど45件とおっしゃいましたが、目標は何件ですか」。次は拾いに数えない：「ありがとうございます」「承知しました」「なるほど」だけで次の質問に行った／相手の言葉に触れずに自分の解釈や仮説を述べてから聞いた。picked は q 以下。
+- picked（拾ってから質問できた数）：q のうち、質問の前に「相手が直前の発言で新しく出した情報（数字・事実・事情・気持ち）」を受け止める一言を置いてから聞いた質問の数。受け止めの一言とは、相手の言葉を引用または言い換えた文（「〜なんですね」「〜とおっしゃいましたが」「先ほどの〜ですが」）。例：「役員の方から急かされているんですね。未達というのはどのくらいですか」「先ほど45件とおっしゃいましたが、目標は何件ですか」。厳しく数える。次はどれも拾いに数えない：
+  ・「ありがとうございます」「承知しました」「なるほど」「それで言うと」「ちなみに」だけで次の質問に行った
+  ・話題の単語（インバウンド、アウトバウンド、新規、商談 など）が重なっているだけで、相手が出した情報そのものには触れていない
+  ・相手の言葉に触れずに、自分の解釈・仮説・提案を述べてから聞いた
+  ・相手の発言を確認するだけの質問（「〜ということですかね」「〜という形でしょうか」）で、受け止めの一言が無い
+  picked は q 以下。
+- echo：picked が1以上のとき、受講者が拾った「相手の言葉」を20字以内で書く（相手の発言に実際にある言葉）。書けないなら picked は0。picked が0なら ""。
+- could：q が1以上で picked が q より少ないとき、相手の直前の発言の中で拾えたはずの言葉を20字以内で書く（相手の発言に実際にある言葉）。それ以外は ""。
 - proposal（提案したか）：その発言で、受講者が解決策・進め方・自社サービスのやり方・料金やプランを自分から出したら true。例：「〜がいいのかなと思います」「弊社では〜を行っています」「月額90万円でご支援します」。次回の日程や「提案書を作ります」という段取りだけなら false。
 - off（質問と答えのずれ）：
   "them"＝この発言の質問に対して、直後の相手の答えが聞いたことに答えていない・別の話になっている。
@@ -44,7 +52,7 @@ ${log}
 - note：off が空でないとき、または proposal が true のとき、何がずれたか／何を提案したかを25字以内で。それ以外は ""。
 
 JSONだけを返す。受講者の発言すべてについて1つずつ、番号順に：
-{"turns":[{"n":発言番号,"q":0,"picked":0,"proposal":false,"off":"","note":""}]}`;
+{"turns":[{"n":発言番号,"q":0,"picked":0,"echo":"","could":"","proposal":false,"off":"","note":""}]}`;
   const r = await generate(ai, { contents: prompt, config: { responseMimeType: "application/json", temperature: 0 } });
   const t = r.text || "";
   const j = JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1));

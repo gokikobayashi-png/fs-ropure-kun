@@ -714,7 +714,7 @@ function renderCounts(c) {
     const h = document.createElement("h4"); h.textContent = label + "（" + hit.length + "発言）"; list.appendChild(h);
     const ul = document.createElement("ul");
     hit.forEach(i => { const li = document.createElement("li"); const no = document.createElement("span"); no.className = "no"; no.textContent = String(i.n).padStart(2, "0"); li.appendChild(no); li.appendChild(document.createTextNode("「" + i.text + "」"));
-      const extra = gi === 3 ? (i.off === "them" ? "相手の答えがずれた" : i.off === "me" ? "自分の答えがずれた" : "両方ずれた") + (i.note ? "：" + i.note : "") : gi === 2 ? i.note : "";
+      const extra = gi === 3 ? (i.off === "them" ? "相手の答えがずれた" : i.off === "me" ? "自分の答えがずれた" : "両方ずれた") + (i.note ? "：" + i.note : "") : gi === 2 ? i.note : gi === 0 ? (i.echo ? "拾った言葉：「" + i.echo + "」" : "") : (i.could ? "拾えた言葉：「" + i.could + "」" : "");
       if (extra) { const nt = document.createElement("span"); nt.className = "nt"; nt.textContent = " ← " + extra; li.appendChild(nt); }
       ul.appendChild(li); });
     list.appendChild(ul);
