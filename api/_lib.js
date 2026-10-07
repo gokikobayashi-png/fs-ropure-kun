@@ -626,7 +626,9 @@ export async function addOpinion(user, item) {
   return (await r.json()).id;
 }
 export async function listOpinions() {
-  const pages = await queryResults({ property: "種別", select: { equals: "意見" } }, [{ property: "日時", direction: "descending" }]);
+  let pages;
+  try { pages = await queryResults({ property: "種別", select: { equals: "意見" } }, [{ property: "日時", direction: "descending" }]); }
+  catch (e) { if (/select option/i.test(String(e.message))) return []; throw e; } // まだ1件も無く「意見」の選択肢が無いとき
   return pages.map(p => { const P = p.properties || {}; let d = {}; try { d = JSON.parse(rtText(P["データ"])); } catch (_) {} return { id: p.id, name: rtText(P["メンバー"]), email: rtText(P["メール"]), ...d }; }).filter(x => x.text);
 }
 export async function updateOpinion(id, patch) {
