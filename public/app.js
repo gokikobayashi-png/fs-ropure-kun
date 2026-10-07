@@ -166,7 +166,7 @@ $("know-add").addEventListener("click", async () => {
 });
 async function afterLogin() {
   renderUserChip();
-  loadTemplates(); renderTemplates(); loadChecks(); renderChecks(); loadMissed(); renderMissed(); loadHistory(); loadScenarios();
+  loadTemplates(); renderTemplates(); loadChecks(); renderChecks(); loadMissed(); renderMissed(); loadHistory(); loadScenarios(); loadOpinions();
   $("dash-seg").hidden = !(user && user.admin);
   loadKnow();
   if (shared) {
@@ -188,7 +188,8 @@ function view(name) {
 document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => view(b.dataset.view)));
 document.querySelectorAll("#setnav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("#setnav button").forEach(x => x.classList.toggle("on", x === b));
-  ["co", "sc", "fb", "missed", "know", "data"].forEach(id => { $(id).hidden = id !== b.dataset.set; });
+  ["co", "sc", "fb", "missed", "know", "data", "op"].forEach(id => { $(id).hidden = id !== b.dataset.set; });
+  if (b.dataset.set === "op") loadOpinions();
 }));
 ["sc", "fb", "missed", "know", "data"].forEach(id => { $(id).hidden = true; });
 try { $("rec-default").checked = localStorage.getItem("ropure-rec-default") === "1"; $("rec-on").checked = $("rec-default").checked; } catch (_) {}
@@ -1217,7 +1218,55 @@ function calcLine() {
   const g = guess ? "／暗算：投資" + (guess.invest ?? "—") + "・受注" + (guess.wins ?? "—") + "・回収" + (guess.recover ?? "—") + "・判定" + (guess.judge || "未選択") + (guess.ok ? "○" : "×") : "／暗算せず";
   return g + "／" + k.plan + " 月" + k.monthly + "万×" + k.months + "ヶ月＋準備費" + k.prep + "万＝投資" + k.invest + "万／" + k.calls + "コール×アポ率" + k.apo_rate + "%×受注率" + k.win_rate + "%→受注" + k.wins + "件×" + k.revenue + "万＝回収" + k.recover + "万 → " + (k.ok ? "成立" : "不成立");
 }
+/* ---------- ご意見BOX ---------- */
+const OP_CATS = ["相手役の話し方・中身", "採点・振り返り", "画面・使いやすさ", "不具合", "こんな機能がほしい", "その他"];
+const OP_ST = ["未対応", "対応中", "対応済み", "検討中", "見送り"];
+let opinions = [], opFilter = "", opCat = { op: "", op2: "" }, lastOpCtx = null;
+function renderOpCats(boxId, key) {
+  const box = $(boxId); box.textContent = "";
+  OP_CATS.forEach(c => { const b = document.createElement("button"); b.type = "button"; b.textContent = c; b.className = opCat[key] === c ? "on" : ""; b.addEventListener("click", () => { opCat[key] = opCat[key] === c ? "" : c; renderOpCats(boxId, key); }); box.appendChild(b); });
+}
+async function sendOpinion(textId, statusId, key, ctx) {
+  const text = $(textId).value.trim();
+  if (text.length < 3) { status(statusId, "ご意見を入れてください", true); return; }
+  status(statusId, "送っています…");
+  try {
+    await api("opinion", { action: "add", text, cat: opCat[key] || "その他", ...(ctx || {}) });
+    $(textId).value = ""; opCat[key] = ""; renderOpCats(key === "op" ? "op-cats" : "op-cats2", key);
+    status(statusId, "ありがとうございます。今夜23時以降に確認して、アプリに反映します。");
+    loadOpinions();
+  } catch (e) { status(statusId, e.message, true); }
+}
+async function loadOpinions() {
+  try { const j = await api("opinion", { action: "list" }); opinions = j.items || []; } catch (_) {}
+  renderOpinions();
+}
+function renderOpinions() {
+  const open = opinions.filter(x => x.status === "未対応" || x.status === "対応中").length;
+  $("op-cnt").textContent = open ? open : "";
+  const f = $("op-filter"); f.textContent = "";
+  ["", ...OP_ST].forEach(s => { const n = s ? opinions.filter(x => x.status === s).length : opinions.length; if (s && !n) return; const b = document.createElement("button"); b.type = "button"; b.textContent = (s || "すべて") + " " + n; b.className = opFilter === s ? "on" : ""; b.addEventListener("click", () => { opFilter = s; renderOpinions(); }); f.appendChild(b); });
+  const list = $("op-list"); list.textContent = "";
+  const items = opinions.filter(x => !opFilter || x.status === opFilter);
+  if (!items.length) { const p = document.createElement("p"); p.className = "hint"; p.textContent = opinions.length ? "この状態のご意見はありません。" : "まだご意見はありません。"; list.appendChild(p); return; }
+  items.forEach(x => {
+    const d = document.createElement("div"); d.className = "op-item";
+    const m = document.createElement("div"); m.className = "meta";
+    const st = document.createElement("span"); st.className = "st s" + Math.max(0, OP_ST.indexOf(x.status)); st.textContent = x.status || "未対応"; m.appendChild(st);
+    [x.cat, x.name, new Date(x.at || 0).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }), x.company ? "相手：" + x.company : ""].filter(Boolean).forEach(t => { const s = document.createElement("span"); s.textContent = t; m.appendChild(s); });
+    d.appendChild(m);
+    const tx = document.createElement("p"); tx.className = "tx"; tx.textContent = x.text; d.appendChild(tx);
+    if (x.reply) { const rp = document.createElement("p"); rp.className = "rp"; const b = document.createElement("b"); b.textContent = "対応内容" + (x.doneAt ? "（" + new Date(x.doneAt).toLocaleDateString("ja-JP") + "）" : "") + "："; rp.appendChild(b); rp.appendChild(document.createTextNode(x.reply)); d.appendChild(rp); }
+    list.appendChild(d);
+  });
+}
+renderOpCats("op-cats", "op"); renderOpCats("op-cats2", "op2");
+$("op-send").addEventListener("click", () => sendOpinion("op-text", "op-status", "op", lastOpCtx));
+$("op-send2").addEventListener("click", () => sendOpinion("op-text2", "op-status2", "op2", null));
+
 function showRecord(r) {
+  lastOpCtx = { company: persona ? persona.company : "", mode, recordUrl: r.recordUrl || "" };
+  $("opbox").hidden = false; status("op-status", "");
   $("record").hidden = false;
   $("record-link").hidden = $("record-copy").hidden = !r.recordUrl;
   if (r.recordUrl) {
@@ -1343,7 +1392,7 @@ $("grade").addEventListener("click", async () => {
     showRecord(r);
   } catch (e) { status("grade-status", e.message, true); $("grade").disabled = false; }
 });
-$("again").addEventListener("click", () => { $("record").hidden = true; $("counts-panel").hidden = true; $("playback").hidden = true; $("score-strip").hidden = true; step(1); lockStart(false); window.scrollTo(0, 0); });
+$("again").addEventListener("click", () => { $("record").hidden = true; $("counts-panel").hidden = true; $("opbox").hidden = true; $("playback").hidden = true; $("score-strip").hidden = true; step(1); lockStart(false); window.scrollTo(0, 0); });
 
 /* ---------- 起動 ---------- */
 loadUser();

@@ -222,6 +222,21 @@ input[type=number]{width:100%;font-family:var(--sans);font-size:15px;color:var(-
 .sc-card .ac .btn{font-size:12px;padding:4px 10px}
 .sc-empty{font-size:13px;color:var(--ink-2);margin-top:12px}
 .sc-form{border:1px solid #B5E3E8;background:#F7FCFC;border-radius:10px;padding:14px 16px;margin-top:12px}
+.opbox{border-color:#FCD34D;background:#FFFDF5}
+.op-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.op-bubble{width:220px;max-width:70%;height:auto;flex:none}
+.op-cats{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 8px}
+.op-cats button,.op-filter button{font-family:var(--sans);font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;padding:4px 12px;cursor:pointer}
+.op-cats button.on,.op-filter button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.op-filter{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.op-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.op-item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.op-item .meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:11px;color:var(--ink-2)}
+.op-item .st{font-weight:700;border-radius:999px;padding:1px 8px}
+.op-item .st.s0{background:#FEF3C7;color:#92400E}.op-item .st.s1{background:#DBEAFE;color:#1E40AF}.op-item .st.s2{background:#DCFCE7;color:#166534}.op-item .st.s3{background:#EDE9FE;color:#5B21B6}.op-item .st.s4{background:#F3F4F6;color:#4B5563}
+.op-item .tx{font-size:14px;margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.op-item .rp{font-size:13px;margin:8px 0 0;padding:8px 10px;background:var(--case-soft);border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere}
+.op-item .rp b{color:var(--navy)}
 .realbox{background:var(--case-soft);border:1px solid #B5E3E8;border-radius:8px;padding:10px 12px 6px;margin-bottom:6px}
 .realbox label.f:first-of-type{margin-top:6px}
 .realnote{font-size:12px;color:var(--ink-2);margin:8px 0 0;overflow-wrap:anywhere}
@@ -877,6 +892,12 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
           <div class="score-strip" id="score-strip" hidden></div>
         </div>
         <div class="verdict" id="feedback" hidden style="background:var(--surface);border:1px solid var(--line)"></div>
+        <div class="panel opbox" id="opbox" hidden>
+          <div class="op-head"><svg class="op-bubble" viewBox="0 0 300 150" role="img" aria-label="ご意見をお聞かせください！"><g stroke="#1F2937" stroke-width="5" stroke-linejoin="round"><ellipse cx="150" cy="72" rx="62" ry="46" fill="#1F2937"/><ellipse cx="78" cy="74" rx="40" ry="34" fill="#1F2937"/><ellipse cx="222" cy="74" rx="40" ry="34" fill="#1F2937"/><ellipse cx="110" cy="44" rx="34" ry="28" fill="#1F2937"/><ellipse cx="190" cy="44" rx="34" ry="28" fill="#1F2937"/><ellipse cx="108" cy="104" rx="36" ry="28" fill="#1F2937"/><ellipse cx="192" cy="104" rx="36" ry="28" fill="#1F2937"/><ellipse cx="150" cy="112" rx="44" ry="26" fill="#1F2937"/><ellipse cx="50" cy="82" rx="24" ry="22" fill="#1F2937"/><ellipse cx="250" cy="82" rx="24" ry="22" fill="#1F2937"/><path d="M84 118l-16 26 34-20z" fill="#1F2937"/></g><g><ellipse cx="150" cy="72" rx="62" ry="46" fill="#fff"/><ellipse cx="78" cy="74" rx="40" ry="34" fill="#fff"/><ellipse cx="222" cy="74" rx="40" ry="34" fill="#fff"/><ellipse cx="110" cy="44" rx="34" ry="28" fill="#fff"/><ellipse cx="190" cy="44" rx="34" ry="28" fill="#fff"/><ellipse cx="108" cy="104" rx="36" ry="28" fill="#fff"/><ellipse cx="192" cy="104" rx="36" ry="28" fill="#fff"/><ellipse cx="150" cy="112" rx="44" ry="26" fill="#fff"/><ellipse cx="50" cy="82" rx="24" ry="22" fill="#fff"/><ellipse cx="250" cy="82" rx="24" ry="22" fill="#fff"/><path d="M84 118l-16 26 34-20z" fill="#fff"/></g><text x="150" y="70" text-anchor="middle" font-size="30" font-weight="900" fill="#111827" font-family="'Hiragino Maru Gothic ProN','Zen Maru Gothic','M PLUS Rounded 1c','Noto Sans JP',sans-serif">ご意見を</text><text x="150" y="104" text-anchor="middle" font-size="19" font-weight="900" fill="#111827" font-family="'Hiragino Maru Gothic ProN','Zen Maru Gothic','M PLUS Rounded 1c','Noto Sans JP',sans-serif">お聞かせください<tspan fill="#EF4444" font-size="24">!</tspan></text></svg><div><h2 style="margin:0;font-size:16px">ご意見BOX</h2><p class="hint" style="margin:4px 0 0">使ってみて気になったこと・直してほしいこと・ほしい機能を、ひとことでどうぞ。<b>毎晩23時以降にアプリへ反映</b>していきます。対応状況は 設定 → ご意見BOX で見られます。</p></div></div>
+          <div class="op-cats" id="op-cats"></div>
+          <textarea id="op-text" rows="3" placeholder="例：相手が同じことしか言わない／採点の根拠がわかりにくい／スマホだとボタンが押しにくい"></textarea>
+          <div class="row" style="margin-top:8px"><button class="btn primary" id="op-send" type="button">送る</button><span class="status" id="op-status" style="margin:0"></span></div>
+        </div>
         <div class="record" id="record" hidden>
     <span class="lab">RECORD</span>
     <span id="record-msg"></span>
@@ -960,6 +981,7 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
     <button type="button" data-set="missed">間違えた暗算 <span class="cnt bad" id="miss-cnt"></span></button>
     <button type="button" data-set="know">知見（Notion）</button>
     <button type="button" data-set="data">録画・データ</button>
+    <button type="button" data-set="op">ご意見BOX <span class="cnt" id="op-cnt"></span></button>
   </nav>
   <div class="setbody">
     <section class="panel" id="co">
@@ -1078,6 +1100,15 @@ main.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
   </div>
   <div class="status" id="know-result"></div>
   <details id="know-list-wrap" hidden><summary>最近の知見を見る</summary><ul id="know-list"></ul></details>
+</section>
+    <section class="panel" id="op" hidden>
+  <div class="co-head"><div><div class="pl" style="color:var(--teal)">毎晩23時以降に反映</div><h2>ご意見BOX</h2></div></div>
+  <p class="hint">ロープレのあとに送ってもらったご意見と、その対応状況です。毎晩23時以降に、未対応のご意見を見てアプリを直し、ここに「対応内容」を書きます。ここからも送れます。</p>
+  <div class="op-cats" id="op-cats2"></div>
+  <textarea id="op-text2" rows="2" placeholder="気になったこと・直してほしいこと・ほしい機能"></textarea>
+  <div class="row" style="margin-top:8px"><button class="btn primary" id="op-send2" type="button">送る</button><span class="status" id="op-status2" style="margin:0"></span></div>
+  <div class="op-filter" id="op-filter"></div>
+  <div class="op-list" id="op-list"></div>
 </section>
     <section class="panel" id="data" hidden>
       <h2>録画・データ</h2>

@@ -610,6 +610,37 @@ export async function addResult(user, entry) {
   if (!r.ok) throw new Error("成績の保存失敗: " + r.status + " " + (await r.text()).slice(0, 200));
   return (await r.json()).id;
 }
+/* ご意見BOX：成績DBに 種別=意見 の行として置く */
+export async function addOpinion(user, item) {
+  const db = await findResultsDb();
+  const r = await fetch("https://api.notion.com/v1/pages", { method: "POST", headers: notionHeaders(), body: JSON.stringify({
+    parent: { database_id: db },
+    properties: {
+      "名前": { title: [{ type: "text", text: { content: `意見：${user.short || user.name} ${jstNow()} ${item.text.replace(/\s+/g, " ").slice(0, 40)}`.slice(0, 1900) } }] },
+      "メール": { rich_text: rt(user.email) }, "メンバー": { rich_text: rt(user.name) },
+      "種別": { select: { name: "意見" } }, "日時": { date: { start: new Date(item.at).toISOString() } },
+      "相手": { rich_text: rt(item.company || "") }, "データ": { rich_text: rt(JSON.stringify(item)) },
+    },
+  }) });
+  if (!r.ok) throw new Error("ご意見の保存失敗: " + r.status + " " + (await r.text()).slice(0, 200));
+  return (await r.json()).id;
+}
+export async function listOpinions() {
+  const pages = await queryResults({ property: "種別", select: { equals: "意見" } }, [{ property: "日時", direction: "descending" }]);
+  return pages.map(p => { const P = p.properties || {}; let d = {}; try { d = JSON.parse(rtText(P["データ"])); } catch (_) {} return { id: p.id, name: rtText(P["メンバー"]), email: rtText(P["メール"]), ...d }; }).filter(x => x.text);
+}
+export async function updateOpinion(id, patch) {
+  if (!/^[0-9a-f-]{32,36}$/i.test(id)) throw new Error("id が不正です");
+  const g = await fetch(`https://api.notion.com/v1/pages/${id}`, { headers: notionHeaders() });
+  if (!g.ok) throw new Error("ご意見が見つかりません: " + g.status);
+  const P = (await g.json()).properties || {};
+  if (((P["種別"] || {}).select || {}).name !== "意見") throw new Error("ご意見ではありません");
+  let d = {}; try { d = JSON.parse(rtText(P["データ"])); } catch (_) {}
+  const next = { ...d, ...patch };
+  const r = await fetch(`https://api.notion.com/v1/pages/${id}`, { method: "PATCH", headers: notionHeaders(), body: JSON.stringify({ properties: { "データ": { rich_text: rt(JSON.stringify(next)) } } }) });
+  if (!r.ok) throw new Error("ご意見の更新失敗: " + r.status);
+}
+
 async function queryResults(filter, sorts) {
   const db = await findResultsDb();
   const out = [];
