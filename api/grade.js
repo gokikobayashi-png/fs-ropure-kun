@@ -22,7 +22,7 @@ function byKey(x) {
 }
 const SCORE_KEYS = ["counterpart", "widen", "classify", "rephrase", "converge", "roi", "listening", "closing"];
 export function parseGrade(t, cks = []) {
-  const out = { feedback: t, learnings: [], premiseReview: "", overviewReview: "", calcReview: "", numbersReview: "", scores: null, nextAction: "", custom: null, good: [], improve: [], secondOpinion: "", valid: 0, raw: "" };
+  const out = { feedback: t, learnings: [], premiseReview: "", overviewReview: "", calcReview: "", numbersReview: "", scores: null, nextAction: "", custom: null, good: [], improve: [], secondOpinion: "", valid: 0, withWhy: 0, raw: "" };
   let j;
   try { j = parseLoose(t); } catch (_) { return out; }
   if (Array.isArray(j)) j = j[0] || {};
@@ -33,7 +33,7 @@ export function parseGrade(t, cks = []) {
   out.raw = JSON.stringify(j.scores || null).slice(0, 400);
   if (j.scores && typeof j.scores === "object") {
     const src = byKey(j.scores); out.scores = {};
-    for (const k of SCORE_KEYS) { const r = readScore(src[k]); if (r) out.valid++; out.scores[k] = r || { score: 1, why: "（採点を読み取れませんでした）" }; }
+    for (const k of SCORE_KEYS) { const r = readScore(src[k]); if (r) out.valid++; if (r && r.why) out.withWhy++; out.scores[k] = r || { score: 1, why: "（採点を読み取れませんでした）" }; }
   }
   if (cks.length && j.custom && typeof j.custom === "object") {
     const src = byKey(j.custom); out.custom = {};
@@ -202,9 +202,10 @@ JSONだけを返す：
     if (!counts && countsError) { try { counts = await countTurns(ai, persona, transcript); countsError = ""; } catch (e) { countsError = String(e.message || e).slice(0, 200); console.error("count retry failed", countsError); } }
     let g = parseGrade(r.text || "", cks);
     // スコアの形が崩れていたら（8軸のうち読めたのが5つ以下）、採点を1回だけやり直して、ましな方を使う
-    if (g.valid < 6) {
+    // 根拠が空のまま全軸1点のような、手抜きの採点もやり直す
+    if (g.valid < 6 || g.withWhy < 5) {
       console.error("grade scores malformed, retrying. valid=", g.valid, g.raw.slice(0, 200));
-      try { const r2 = await generate(ai, { contents: prompt + "\n\n■ 重要：scores は必ず上の形（軸ごとに {\"score\":整数,\"why\":\"根拠\"}）で、8軸すべてを返す。", config: { responseMimeType: "application/json", temperature: 0.2 } }); const g2 = parseGrade(r2.text || "", cks); if (g2.valid > g.valid) g = g2; } catch (e) { console.error("grade retry failed", e); }
+      try { const r2 = await generate(ai, { contents: prompt + "\n\n■ 重要：scores は必ず上の形（軸ごとに {\"score\":整数,\"why\":\"根拠\"}）で、8軸すべてを返す。", config: { responseMimeType: "application/json", temperature: 0.2 } }); const g2 = parseGrade(r2.text || "", cks); if (g2.valid + g2.withWhy > g.valid + g.withWhy) g = g2; } catch (e) { console.error("grade retry failed", e); }
     }
     const { feedback, learnings, premiseReview, overviewReview, calcReview, numbersReview, scores, nextAction, custom, good, improve, secondOpinion } = g;
     let saved = false;
